@@ -12,10 +12,10 @@ class JwtMiddleware
     /**
      * @var mixed
      */
-    private $secret;
+    private string | null $secret;
 
     /**
-     * @param $secret
+     * @param  string|null $secret
      */
     public function __construct($secret)
     {
@@ -37,8 +37,8 @@ class JwtMiddleware
         $token = $_COOKIE['access_token'];
         $payload = Jwt::decode($token, $this->secret);
         if ($payload && isset($payload['sub'])) {
-            // Populate session to keep backward compatibility
-            $data = [
+            // Populate session to keep backward compatibility (as object)
+            $data = (object) [
                 'id' => $payload['sub'],
                 'username' => $payload['username'] ?? null,
                 // store token identifier if needed

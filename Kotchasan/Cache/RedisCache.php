@@ -2,64 +2,156 @@
 
 namespace Kotchasan\Cache;
 
-use Kotchasan\Exception\ConfigurationException;
-
 /**
- * Class RedisCache
+ * Redis Cache Implementation
  *
- * Redis-based cache implementation.
- * Requires the Redis extension (https://github.com/phpredis/phpredis).
+ * Stores cache data in Redis server.
+ * Requires the phpredis extension.
  *
  * @package Kotchasan\Cache
  */
 class RedisCache implements CacheInterface
 {
     /**
-     * @var \Redis The Redis instance.
-     */
-    private $redis;
-
-    /**
-     * @var string Optional prefix for cache keys.
-     */
-    private string $prefix;
-
-    /**
-     * RedisCache constructor.
+     * Redis connection instance (phpredis extension).
+     * Kept as a docblock type so IDEs/static analyzers understand the type
+     * even when the phpredis extension is not installed.
      *
-     * @param array $config Redis connection configuration.
-     * @param string $prefix Optional prefix for cache keys.
-     * @throws ConfigurationException If Redis extension is not loaded or connection fails.
+     * @var \Redis|null
      */
-    public function __construct(array $config, string $prefix = 'db_cache:')
-    {
-        if (!extension_loaded('redis') || !class_exists('\\Redis')) {
-            throw new ConfigurationException('Redis extension is not loaded.');
-        }
+    protected $redis = null;
 
+    /**
+     * Redis host.
+     *
+     * @var string
+     */
+    protected string $host;
+
+    /**
+     * Redis port.
+     *
+     * @var int
+     */
+    protected int $port;
+
+    /**
+     * Redis password.
+     *
+     * @var string|null
+     */
+    protected ?string $password;
+
+    /**
+     * Redis database number.
+     *
+     * @var int
+     */
+    protected int $database;
+
+    /**
+     * Key prefix.
+     *
+     * @var string
+     */
+    protected string $prefix;
+
+    /**
+     * Default TTL in seconds.
+     *
+     * @var int
+     */
+    protected int $defaultTtl;
+
+    /**
+     * Cache statistics.
+     *
+     * @var array
+     */
+    protected array $stats = [
+        'hits' => 0,
+        'misses' => 0,
+        'writes' => 0,
+        'deletes' => 0
+    ];
+
+    /**
+     * Constructor.
+     *
+     * @param string $host Redis host.
+     * @param int $port Redis port.
+     * @param string|null $password Redis password.
+     * @param int $database Redis database number.
+     * @param string $prefix Key prefix.
+     * @param int $defaultTtl Default TTL in seconds.
+     */
+    public function __construct(
+        string $host = '127.0.0.1',
+        int $port = 6379,
+        ?string $password = null,
+        int $database = 0,
+        string $prefix = 'kotchasan_',
+        int $defaultTtl = 3600
+    ) {
+        $this->host = $host;
+        $this->port = $port;
+        $this->password = $password;
+        $this->database = $database;
         $this->prefix = $prefix;
-        $this->redis = new \Redis();
+        $this->defaultTtl = $defaultTtl;
+    }
 
-        $host = $config['host'] ?? '127.0.0.1';
-        $port = $config['port'] ?? 6379;
-        $timeout = $config['timeout'] ?? 0.0;
-        $retryInterval = $config['retry_interval'] ?? 0;
-
-        if (!@$this->redis->connect($host, $port, $timeout, null, $retryInterval)) {
-            throw new ConfigurationException("Could not connect to Redis server at {$host}:{$port}.");
+    /**
+     * Connect to Redis server.
+     *
+     * @return bool True if connected successfully.
+     */
+    protected function connect(): bool
+    {
+        if ($this->redis !== null) {
+            return true;
         }
 
-        if (isset($config['password']) && !empty($config['password'])) {
-            if (!$this->redis->auth($config['password'])) {
-                throw new ConfigurationException('Redis authentication failed.');
+        if (!extension_loaded('redis')) {
+            return false;
+        }
+
+        try {
+            $this->redis = new \Redis();
+
+            // suppress warnings from phpredis (connect/auth/select) which emit warnings, not exceptions
+            if (!@$this->redis->connect($this->host, $this->port)) {
+                $this->redis = null;
+                return false;
             }
-        }
 
-        if (isset($config['database']) && is_int($config['database'])) {
-            if (!$this->redis->select($config['database'])) {
-                throw new ConfigurationException("Could not select Redis database {$config['database']}.");
+            if ($this->password !== null) {
+                if (!@$this->redis->auth($this->password)) {
+                    $this->redis = null;
+                    return false;
+                }
             }
+
+            if ($this->database !== 0) {
+                @$this->redis->select($this->database);
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            $this->redis = null;
+            return false;
         }
+    }
+
+    /**
+     * Get the full key with prefix.
+     *
+     * @param string $key The cache key.
+     * @return string The prefixed key.
+     */
+    protected function getKey(string $key): string
+    {
+        return $this->prefix.$key;
     }
 
     /**
@@ -67,12 +159,25 @@ class RedisCache implements CacheInterface
      */
     public function get(string $key, $default = null)
     {
-        $value = $this->redis->get($this->prefix.$key);
-
-        if ($value === false) {
+        if (!$this->connect()) {
             return $default;
         }
 
+        /** @var \Redis $redisInstance */
+        $redisInstance = $this->redis;
+
+        if ($redisInstance === null) {
+            return $default;
+        }
+
+        $value = $redisInstance->get($this->getKey($key));
+
+        if ($value === false) {
+            $this->stats['misses']++;
+            return $default;
+        }
+
+        $this->stats['hits']++;
         return unserialize($value);
     }
 
@@ -81,22 +186,24 @@ class RedisCache implements CacheInterface
      */
     public function set(string $key, $value, ?int $ttl = null): bool
     {
-        $serialized = serialize($value);
-        $prefixedKey = $this->prefix.$key;
-
-        if ($ttl === null) {
-            return $this->redis->set($prefixedKey, $serialized);
+        if (!$this->connect()) {
+            return false;
         }
 
-        return $this->redis->setex($prefixedKey, $ttl, $serialized);
-    }
+        $ttl = $ttl ?? $this->defaultTtl;
+        $serialized = serialize($value);
 
-    /**
-     * {@inheritdoc}
-     */
-    public function has(string $key): bool
-    {
-        return $this->redis->exists($this->prefix.$key) > 0;
+        if ($ttl > 0) {
+            $result = $this->redis->setex($this->getKey($key), $ttl, $serialized);
+        } else {
+            $result = $this->redis->set($this->getKey($key), $serialized);
+        }
+
+        if ($result) {
+            $this->stats['writes']++;
+        }
+
+        return (bool) $result;
     }
 
     /**
@@ -104,7 +211,17 @@ class RedisCache implements CacheInterface
      */
     public function delete(string $key): bool
     {
-        return $this->redis->del($this->prefix.$key) > 0;
+        if (!$this->connect()) {
+            return false;
+        }
+
+        $result = $this->redis->del($this->getKey($key));
+
+        if ($result > 0) {
+            $this->stats['deletes']++;
+        }
+
+        return $result > 0;
     }
 
     /**
@@ -112,30 +229,62 @@ class RedisCache implements CacheInterface
      */
     public function clear(): bool
     {
-        $keys = $this->redis->keys($this->prefix.'*');
-
-        if (empty($keys)) {
-            return true;
+        if (!$this->connect()) {
+            return false;
         }
 
-        return $this->redis->del($keys) > 0;
+        // Clear only keys with our prefix
+        $keys = $this->redis->keys($this->prefix.'*');
+
+        if (!empty($keys)) {
+            $this->redis->del($keys);
+        }
+
+        $this->stats = [
+            'hits' => 0,
+            'misses' => 0,
+            'writes' => 0,
+            'deletes' => 0
+        ];
+
+        return true;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getMultiple(array $keys, $default = null): array
+    public function getMultiple(iterable $keys, $default = null): iterable
     {
-        $prefixedKeys = array_map(function ($key) {
-            return $this->prefix.$key;
-        }, $keys);
+        if (!$this->connect()) {
+            $result = [];
+            foreach ($keys as $key) {
+                $result[$key] = $default;
+            }
+            return $result;
+        }
 
-        $values = $this->redis->mGet($prefixedKeys);
+        $prefixedKeys = [];
+        $keyMap = [];
+
+        foreach ($keys as $key) {
+            $prefixedKey = $this->getKey($key);
+            $prefixedKeys[] = $prefixedKey;
+            $keyMap[$prefixedKey] = $key;
+        }
+
+        $values = $this->redis->mget($prefixedKeys);
         $result = [];
 
-        foreach ($keys as $i => $key) {
-            $value = $values[$i] ?? false;
-            $result[$key] = $value === false ? $default : unserialize($value);
+        foreach ($prefixedKeys as $i => $prefixedKey) {
+            $originalKey = $keyMap[$prefixedKey];
+
+            if ($values[$i] === false) {
+                $result[$originalKey] = $default;
+                $this->stats['misses']++;
+            } else {
+                $result[$originalKey] = unserialize($values[$i]);
+                $this->stats['hits']++;
+            }
         }
 
         return $result;
@@ -144,36 +293,43 @@ class RedisCache implements CacheInterface
     /**
      * {@inheritdoc}
      */
-    public function setMultiple(array $values, ?int $ttl = null): bool
+    public function setMultiple(iterable $values, ?int $ttl = null): bool
     {
-        if (empty($values)) {
-            return true;
+        if (!$this->connect()) {
+            return false;
         }
 
+        $ttl = $ttl ?? $this->defaultTtl;
         $success = true;
 
-        if ($ttl === null) {
-            $prefixedValues = [];
-
-            foreach ($values as $key => $value) {
-                $prefixedValues[$this->prefix.$key] = serialize($value);
-            }
-
-            return $this->redis->mSet($prefixedValues);
-        }
-
-        // For TTL we need to use pipeline since mSetEx doesn't exist
-        $pipe = $this->redis->pipeline();
+        // Use pipeline for better performance
+        $this->redis->multi(\Redis::PIPELINE);
 
         foreach ($values as $key => $value) {
-            $pipe->setex($this->prefix.$key, $ttl, serialize($value));
+            $serialized = serialize($value);
+
+            if ($ttl > 0) {
+                $this->redis->setex($this->getKey($key), $ttl, $serialized);
+            } else {
+                $this->redis->set($this->getKey($key), $serialized);
+            }
         }
 
-        $results = $pipe->exec();
+        $results = $this->redis->exec();
 
-        // Check if all operations succeeded
+        // exec() may return null on error. Ensure we have an array before iterating
+        // to satisfy static analyzers and avoid foreach on null.
+        if (!is_array($results)) {
+            // Treat as failure
+            return false;
+        }
+
         foreach ($results as $result) {
-            $success = $success && $result;
+            if ($result) {
+                $this->stats['writes']++;
+            } else {
+                $success = false;
+            }
         }
 
         return $success;
@@ -182,26 +338,122 @@ class RedisCache implements CacheInterface
     /**
      * {@inheritdoc}
      */
-    public function deleteMultiple(array $keys): bool
+    public function deleteMultiple(iterable $keys): bool
     {
-        if (empty($keys)) {
+        if (!$this->connect()) {
+            return false;
+        }
+
+        $prefixedKeys = [];
+        foreach ($keys as $key) {
+            $prefixedKeys[] = $this->getKey($key);
+        }
+
+        if (empty($prefixedKeys)) {
             return true;
         }
 
-        $prefixedKeys = array_map(function ($key) {
-            return $this->prefix.$key;
-        }, $keys);
+        $deleted = $this->redis->del($prefixedKeys);
+        $this->stats['deletes'] += $deleted;
 
-        return $this->redis->del($prefixedKeys) >= 0;
+        return true;
     }
 
     /**
-     * Gets the Redis instance.
+     * {@inheritdoc}
+     */
+    public function has(string $key): bool
+    {
+        if (!$this->connect()) {
+            return false;
+        }
+
+        return (bool) $this->redis->exists($this->getKey($key));
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function isAvailable(): bool
+    {
+        return $this->connect();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getStats(): array
+    {
+        $info = [];
+
+        if ($this->connect()) {
+            try {
+                $redisInfo = $this->redis->info();
+                $info = [
+                    'redis_version' => $redisInfo['redis_version'] ?? 'unknown',
+                    'used_memory' => $redisInfo['used_memory'] ?? 0,
+                    'connected_clients' => $redisInfo['connected_clients'] ?? 0,
+                    'db_size' => $this->redis->dbSize()
+                ];
+            } catch (\Exception $e) {
+                // Ignore errors
+            }
+        }
+
+        return array_merge($this->stats, [
+            'host' => $this->host,
+            'port' => $this->port,
+            'database' => $this->database,
+            'prefix' => $this->prefix,
+            'connected' => $this->redis !== null
+        ], $info);
+    }
+
+    /**
+     * Set the default TTL.
      *
-     * @return object The Redis instance.
+     * @param int $ttl TTL in seconds.
+     * @return self
+     */
+    public function setDefaultTtl(int $ttl): self
+    {
+        $this->defaultTtl = $ttl;
+        return $this;
+    }
+
+    /**
+     * Get the Redis connection.
+     *
+     * @return \Redis|null
      */
     public function getRedis()
     {
+        $this->connect();
         return $this->redis;
+    }
+
+    /**
+     * Close the Redis connection.
+     *
+     * @return void
+     */
+    public function close(): void
+    {
+        if ($this->redis !== null) {
+            try {
+                $this->redis->close();
+            } catch (\Exception $e) {
+                // Ignore errors
+            }
+            $this->redis = null;
+        }
+    }
+
+    /**
+     * Destructor - close connection.
+     */
+    public function __destruct()
+    {
+        $this->close();
     }
 }

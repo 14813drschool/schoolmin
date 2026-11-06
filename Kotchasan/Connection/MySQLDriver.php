@@ -43,6 +43,10 @@ class MySQLDriver implements DriverInterface
                 \PDO::ATTR_EMULATE_PREPARES => false,
                 \PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES '.($config['charset'] ?? 'utf8mb4')
             ];
+            // เชื่อมต่อแบบเข้ารหัส (TLS) เมื่อกำหนด DB_SSL_CA ไว้ เช่น ฐานข้อมูลบนคลาวด์ที่ใช้กับ Vercel
+            if (defined('DB_SSL_CA') && DB_SSL_CA !== '') {
+                $options[\PDO::MYSQL_ATTR_SSL_CA] = DB_SSL_CA;
+            }
 
             $this->pdo = new \PDO(
                 $dsn,
@@ -327,14 +331,16 @@ class MySQLDriver implements DriverInterface
             case 'CONCAT':
                 $fields = array_map([$this, 'formatFieldOrValue'], $parameters['fields']);
                 if (!empty($parameters['separator'])) {
-                    return "CONCAT_WS('".$parameters['separator']."', ".implode(', ', $fields).')'.$aliasStr;
+                    $sep = str_replace("'", "''", $parameters['separator']);
+                    return "CONCAT_WS('".$sep."', ".implode(', ', $fields).')'.$aliasStr;
                 }
                 return 'CONCAT('.implode(', ', $fields).')'.$aliasStr;
 
             case 'GROUP_CONCAT':
                 $distinct = !empty($parameters['distinct']) ? 'DISTINCT ' : '';
-                $column = $this->quoteIdentifier($parameters['column']);
-                $separator = $parameters['separator'] ?? ',';
+                $fields = array_map([$this, 'formatFieldOrValue'], $parameters['fields']);
+                $concatFields = implode(', ', $fields);
+                $separator = str_replace("'", "''", $parameters['separator'] ?? ',');
                 $orderClause = '';
 
                 if (!empty($parameters['order'])) {
@@ -342,7 +348,7 @@ class MySQLDriver implements DriverInterface
                     $orderClause = ' ORDER BY '.implode(', ', array_map([$this, 'quoteIdentifier'], $orders));
                 }
 
-                return 'GROUP_CONCAT('.$distinct.$column.$orderClause." SEPARATOR '".$separator."')".$aliasStr;
+                return 'GROUP_CONCAT('.$distinct.$concatFields.$orderClause." SEPARATOR '".$separator."')".$aliasStr;
 
             case 'COUNT':
                 $distinct = !empty($parameters['distinct']) ? 'DISTINCT ' : '';
@@ -370,10 +376,123 @@ class MySQLDriver implements DriverInterface
                 return 'IFNULL('.$this->quoteIdentifier($parameters['column1']).', '.$this->formatFieldOrValue($parameters['column2']).')'.$aliasStr;
 
             case 'DATEDIFF':
-                return 'DATEDIFF('.$this->quoteIdentifier($parameters['column1']).', '.$this->quoteIdentifier($parameters['column2']).')'.$aliasStr;
+                return 'DATEDIFF('.$this->formatFieldOrValue($parameters['column1']).', '.$this->formatFieldOrValue($parameters['column2']).')'.$aliasStr;
+
+            case 'TIMEDIFF':
+                return 'TIMEDIFF('.$this->formatFieldOrValue($parameters['column1']).', '.$this->formatFieldOrValue($parameters['column2']).')'.$aliasStr;
+
+            case 'TIMESTAMPDIFF':
+                return 'TIMESTAMPDIFF('.$parameters['unit'].', '.$this->formatFieldOrValue($parameters['column1']).', '.$this->formatFieldOrValue($parameters['column2']).')'.$aliasStr;
+
+            case 'DATE_ADD':
+                return 'DATE_ADD('.$this->formatFieldOrValue($parameters['column']).', INTERVAL '.(int) $parameters['interval'].' '.$parameters['unit'].')'.$aliasStr;
+
+            case 'DATE_SUB':
+                return 'DATE_SUB('.$this->formatFieldOrValue($parameters['column']).', INTERVAL '.(int) $parameters['interval'].' '.$parameters['unit'].')'.$aliasStr;
+
+            case 'FIND_IN_SET':
+                return 'FIND_IN_SET('.$this->formatFieldOrValue($parameters['value']).', '.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'LPAD':
+                $len = (int) $parameters['length'];
+                $pad = str_replace("'", "''", $parameters['pad']);
+                return 'LPAD('.$this->quoteIdentifier($parameters['column']).', '.$len.", '".$pad."')".$aliasStr;
+
+            case 'NULLIF':
+                return 'NULLIF('.$this->formatFieldOrValue($parameters['column1']).', '.$this->formatFieldOrValue($parameters['column2']).')'.$aliasStr;
+
+            case 'QUARTER':
+                return 'QUARTER('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'RPAD':
+                $len = (int) $parameters['length'];
+                $pad = str_replace("'", "''", $parameters['pad']);
+                return 'RPAD('.$this->quoteIdentifier($parameters['column']).', '.$len.", '".$pad."')".$aliasStr;
+
+            case 'STR_TO_DATE':
+                $fmt = str_replace("'", "''", $parameters['format']);
+                return 'STR_TO_DATE('.$this->formatFieldOrValue($parameters['value']).", '".$fmt."')".$aliasStr;
+
+            case 'TIME':
+                return 'TIME('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'WEEK':
+                return 'WEEK('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
 
             case 'DATE_FORMAT':
-                return 'DATE_FORMAT('.$this->quoteIdentifier($parameters['column']).", '".$parameters['format']."')".$aliasStr;
+                $fmt = str_replace("'", "''", $parameters['format']);
+                return 'DATE_FORMAT('.$this->quoteIdentifier($parameters['column']).", '".$fmt."')".$aliasStr;
+
+            case 'LENGTH':
+                return 'LENGTH('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'UPPER':
+                return 'UPPER('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'LOWER':
+                return 'LOWER('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'TRIM':
+                return 'TRIM('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'LTRIM':
+                return 'LTRIM('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'RTRIM':
+                return 'RTRIM('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'SUBSTRING':
+                $start = $parameters['start'];
+                $length = $parameters['length'] ?? null;
+                if ($length === null) {
+                    return 'SUBSTRING('.$this->quoteIdentifier($parameters['column']).', '.$start.')'.$aliasStr;
+                }
+                return 'SUBSTRING('.$this->quoteIdentifier($parameters['column']).', '.$start.', '.$length.')'.$aliasStr;
+
+            case 'REPLACE':
+                return 'REPLACE('.$this->quoteIdentifier($parameters['column']).', '.$this->formatLiteralOrColumn($parameters['search']).', '.$this->formatLiteralOrColumn($parameters['replace']).')'.$aliasStr;
+
+            case 'CURDATE':
+                return 'CURDATE()'.$aliasStr;
+
+            case 'CURTIME':
+                return 'CURTIME()'.$aliasStr;
+
+            case 'IF_EXPR':
+                return 'IF('.$parameters['condition'].', '.$this->formatFieldOrValue($parameters['value_true']).', '.$this->formatFieldOrValue($parameters['value_false']).')'.$aliasStr;
+
+            case 'CASE_WHEN':
+                $cases = $parameters['cases'] ?? [];
+                $sql = 'CASE';
+                foreach ($cases as $case) {
+                    $condition = $case[0] ?? '';
+                    $result = $case[1] ?? null;
+                    $sql .= ' WHEN '.$condition.' THEN '.$this->formatFieldOrValue($result);
+                }
+                if (array_key_exists('else', $parameters)) {
+                    $sql .= ' ELSE '.$this->formatFieldOrValue($parameters['else']);
+                }
+                return $sql.' END'.$aliasStr;
+
+            case 'COALESCE':
+                $values = array_map([$this, 'formatFieldOrValue'], $parameters['values']);
+                return 'COALESCE('.implode(', ', $values).')'.$aliasStr;
+
+            case 'ABS':
+                return 'ABS('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'CEIL':
+                return 'CEIL('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'FLOOR':
+                return 'FLOOR('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'ROUND':
+                $precision = $parameters['precision'] ?? null;
+                if ($precision === null) {
+                    return 'ROUND('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+                }
+                return 'ROUND('.$this->quoteIdentifier($parameters['column']).', '.$precision.')'.$aliasStr;
 
             case 'COLUMN':
                 return $this->quoteIdentifier($parameters['column']);
@@ -391,12 +510,47 @@ class MySQLDriver implements DriverInterface
      */
     protected function formatFieldOrValue($value): string
     {
+        if ($value === null) {
+            return 'NULL';
+        }
+
+        if ($value instanceof \Kotchasan\QueryBuilder\RawExpression) {
+            return $value->toSql();
+        }
+        if ($value instanceof \Kotchasan\QueryBuilder\SqlFunction  && strtoupper($value->getType()) === 'COLUMN') {
+            $params = $value->getParameters();
+            return $this->quoteIdentifier($params['column']);
+        }
+
         if (is_string($value) && preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/', $value)) {
             // Looks like a field name
             return $this->quoteIdentifier($value);
         }
 
         // Treat as literal value
+        return is_string($value) ? "'".str_replace("'", "''", $value)."'" : (string) $value;
+    }
+
+    /**
+     * Format literal value or explicit column reference.
+     * Strings are treated as literals by default.
+     *
+     * @param mixed $value
+     * @return string
+     */
+    protected function formatLiteralOrColumn($value): string
+    {
+        if ($value === null) {
+            return 'NULL';
+        }
+        if ($value instanceof \Kotchasan\QueryBuilder\RawExpression) {
+            return $value->toSql();
+        }
+        if ($value instanceof \Kotchasan\QueryBuilder\SqlFunction  && strtoupper($value->getType()) === 'COLUMN') {
+            $params = $value->getParameters();
+            return $this->quoteIdentifier($params['column']);
+        }
+
         return is_string($value) ? "'".str_replace("'", "''", $value)."'" : (string) $value;
     }
 

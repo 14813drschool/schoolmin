@@ -33,7 +33,7 @@ class InsertBuilder extends QueryBuilder
      */
     public function insert(string $table): self
     {
-        return $this->from($table); // ใช้ from() ที่มีการแปลงชื่อตารางอัตโนมัติ
+        return $this->from($table); // from() applies automatic table-name resolution
     }
 
     /**
@@ -99,18 +99,36 @@ class InsertBuilder extends QueryBuilder
                 $quoted[] = $sqlBuilder->quoteIdentifier($c);
             }
             $query .= '('.implode(', ', $quoted).') VALUES (';
-            if ($this->useNamedParameters) {
-                $placeholders = [];
-                foreach ($this->values as $val) {
-                    $paramName = $this->placeholderPrefix.$this->paramCounter++;
-                    $this->namedBindings[$paramName] = $val;
-                    $placeholders[] = $paramName;
+
+            $placeholders = [];
+            foreach ($this->values as $column => $val) {
+                // Check if value is a Sql object or SqlFunction (raw SQL expression)
+                if ($val instanceof \Kotchasan\Database\Sql) {
+                    // Use raw SQL expression directly
+                    $placeholders[] = $val->toSql();
+                    // Merge any bindings from the Sql object
+                    foreach ($val->getValues([]) as $v) {
+                        $paramName = $this->placeholderPrefix.$this->paramCounter++;
+                        $this->namedBindings[$paramName] = $v;
+                    }
+                } elseif ($val instanceof \Kotchasan\QueryBuilder\SqlFunction) {
+                    // Use SqlFunction's toSql method
+                    $placeholders[] = $val->toSql();
+                } elseif ($val instanceof \Kotchasan\QueryBuilder\RawExpression) {
+                    // Use RawExpression's toSql method
+                    $placeholders[] = $val->toSql();
+                } else {
+                    // Regular value - use placeholder
+                    if ($this->useNamedParameters) {
+                        $paramName = $this->placeholderPrefix.$this->paramCounter++;
+                        $this->namedBindings[$paramName] = $val;
+                        $placeholders[] = $paramName;
+                    } else {
+                        $placeholders[] = '?';
+                    }
                 }
-                $query .= implode(', ', $placeholders).')';
-            } else {
-                $placeholders = array_fill(0, count($this->values), '?');
-                $query .= implode(', ', $placeholders).')';
             }
+            $query .= implode(', ', $placeholders).')';
         }
         // Handle batch insert
         elseif (!empty($this->rows)) {
@@ -124,18 +142,35 @@ class InsertBuilder extends QueryBuilder
 
             $rowPlaceholders = [];
             foreach ($this->rows as $row) {
-                if ($this->useNamedParameters) {
-                    $placeholders = [];
-                    foreach ($row as $val) {
-                        $paramName = $this->placeholderPrefix.$this->paramCounter++;
-                        $this->namedBindings[$paramName] = $val;
-                        $placeholders[] = $paramName;
+                $placeholders = [];
+                foreach ($row as $val) {
+                    // Check if value is a Sql object or SqlFunction (raw SQL expression)
+                    if ($val instanceof \Kotchasan\Database\Sql) {
+                        // Use raw SQL expression directly
+                        $placeholders[] = $val->toSql();
+                        // Merge any bindings from the Sql object
+                        foreach ($val->getValues([]) as $v) {
+                            $paramName = $this->placeholderPrefix.$this->paramCounter++;
+                            $this->namedBindings[$paramName] = $v;
+                        }
+                    } elseif ($val instanceof \Kotchasan\QueryBuilder\SqlFunction) {
+                        // Use SqlFunction's toSql method
+                        $placeholders[] = $val->toSql();
+                    } elseif ($val instanceof \Kotchasan\QueryBuilder\RawExpression) {
+                        // Use RawExpression's toSql method
+                        $placeholders[] = $val->toSql();
+                    } else {
+                        // Regular value - use placeholder
+                        if ($this->useNamedParameters) {
+                            $paramName = $this->placeholderPrefix.$this->paramCounter++;
+                            $this->namedBindings[$paramName] = $val;
+                            $placeholders[] = $paramName;
+                        } else {
+                            $placeholders[] = '?';
+                        }
                     }
-                    $rowPlaceholders[] = '('.implode(', ', $placeholders).')';
-                } else {
-                    $placeholders = array_fill(0, count($row), '?');
-                    $rowPlaceholders[] = '('.implode(', ', $placeholders).')';
                 }
+                $rowPlaceholders[] = '('.implode(', ', $placeholders).')';
             }
 
             $query .= implode(', ', $rowPlaceholders);

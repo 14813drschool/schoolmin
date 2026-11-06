@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan;
 
 /**
@@ -98,14 +97,16 @@ class DB
      *
      * @param string $table Table name
      * @param array $where WHERE conditions (same format as QueryBuilder)
+     * @param int $limit Number of rows to delete (default: 1)
+     * @param string $operator Logical operator for WHERE conditions (default: 'AND')
      * @return int Number of affected rows
      * @throws \Exception If the delete fails
      */
-    public function delete(string $table, array $where = [], int $limit = 0): int
+    public function delete(string $table, array $where = [], int $limit = 1, string $operator = 'AND'): int
     {
         $result = $this->database->createQuery()
             ->delete($table)
-            ->where($where)
+            ->where($where, $operator)
             ->limit($limit)
             ->execute();
 
@@ -117,7 +118,12 @@ class DB
      *
      * @param string $table Table name
      * @param array $where WHERE conditions (same format as QueryBuilder)
-     * @param array $options Additional options (orderBy, limit, etc.)
+     * @param array $options Additional options:
+     *                       - orderBy: string|array Column(s) to order by
+     *                       - limit: int Number of rows
+     *                       - offset: int Offset for pagination
+     *                       - cache: bool Enable caching (default: false)
+     *                       - cacheTtl: int Cache TTL in seconds (default: 3600)
      * @param array $columns Columns to select (default: ['*'])
      * @return array Array of results
      * @throws \Exception If the query fails
@@ -125,7 +131,7 @@ class DB
     public function select(string $table, array $where = [], array $options = [], array $columns = ['*']): array
     {
         $builder = $this->database->createQuery()
-            ->select($columns)
+            ->select(...$columns)
             ->from($table)
             ->where($where);
 
@@ -146,6 +152,12 @@ class DB
             $builder->limit($options['limit'], $offset);
         }
 
+        // Enable caching if requested
+        if (!empty($options['cache'])) {
+            $ttl = $options['cacheTtl'] ?? 3600;
+            $builder->cacheOn(true, $ttl);
+        }
+
         $result = $builder->execute();
 
         return $result ? $result->fetchAll() : [];
@@ -157,12 +169,20 @@ class DB
      * @param string $table Table name
      * @param array $where WHERE conditions
      * @param array $columns Columns to select (default: ['*'])
+     * @param bool $cache Enable caching (default: false)
+     * @param int $cacheTtl Cache TTL in seconds (default: 3600)
      * @return object|null Single record or null if not found
      * @throws \Exception If the query fails
      */
-    public function first(string $table, array $where, array $columns = ['*']): ?object
+    public function first(string $table, array $where = [], array $columns = ['*'], bool $cache = false, int $cacheTtl = 3600): ?object
     {
-        $results = $this->select($table, $where, ['limit' => 1], $columns);
+        $options = ['limit' => 1];
+        if ($cache) {
+            $options['cache'] = true;
+            $options['cacheTtl'] = $cacheTtl;
+        }
+
+        $results = $this->select($table, $where, $options, $columns);
 
         return !empty($results) ? $results[0] : null;
     }
@@ -172,14 +192,29 @@ class DB
      *
      * @param string $table Table name
      * @param array $where WHERE conditions
+     * @param bool $cache Enable caching (default: false)
+     * @param int $cacheTtl Cache TTL in seconds (default: 3600)
      * @return bool True if record exists, false otherwise
      * @throws \Exception If the query fails
      */
-    public function exists(string $table, array $where): bool
+    public function exists(string $table, array $where = [], bool $cache = false, int $cacheTtl = 3600): bool
     {
-        $result = $this->first($table, $where, ['1']);
+        // selectRaw, not select('1 as _exists'): select() quotes every column
+        // name, so the literal became `1` and MySQL rejected it as an unknown
+        // column — every exists() call threw instead of answering
+        $builder = $this->database->createQuery()
+            ->selectRaw('1 AS `_exists`')
+            ->from($table)
+            ->where($where)
+            ->limit(1);
 
-        return !empty($result);
+        if ($cache) {
+            $builder->cacheOn(true, $cacheTtl);
+        }
+
+        $result = $builder->execute();
+
+        return $result ? !empty($result->fetchAll()) : false;
     }
 
     /**
@@ -187,23 +222,216 @@ class DB
      *
      * @param string $table Table name
      * @param array $where WHERE conditions (optional)
+     * @param bool $cache Enable caching (default: false)
+     * @param int $cacheTtl Cache TTL in seconds (default: 3600)
      * @return int Number of records
      * @throws \Exception If the query fails
      */
-    public function count(string $table, array $where = []): int
+    public function count(string $table, array $where = [], bool $cache = false, int $cacheTtl = 3600): int
     {
-        $result = $this->database->createQuery()
+        $builder = $this->database->createQuery()
             ->select(['COUNT(*) as count'])
             ->from($table)
-            ->where($where)
-            ->execute();
+            ->where($where);
+
+        if ($cache) {
+            $builder->cacheOn(true, $cacheTtl);
+        }
+
+        $result = $builder->execute();
 
         if ($result) {
             $row = $result->fetch();
-            return (int) ($row['count'] ?? 0);
+            return (int) ($row->count ?? 0);
         }
 
         return 0;
+    }
+
+    /**
+     * Get a single scalar value from a table.
+     *
+     * @param string $table Table name
+     * @param string $column Column name or expression
+     * @param array $where WHERE conditions
+     * @param mixed $default Default value if not found
+     * @param bool $cache Enable caching (default: false)
+     * @param int $cacheTtl Cache TTL in seconds (default: 3600)
+     * @return mixed
+     */
+    public function value(string $table, string $column, array $where = [], $default = null, bool $cache = false, int $cacheTtl = 3600)
+    {
+        $row = $this->first($table, $where, [$column], $cache, $cacheTtl);
+        if (!$row) {
+            return $default;
+        }
+
+        $key = $this->resolveColumnAlias($column);
+        return $row->$key ?? $default;
+    }
+
+    /**
+     * Get an array of values from a single column.
+     *
+     * @param string $table Table name
+     * @param string $column Column name
+     * @param array $where WHERE conditions
+     * @param array $options Additional options (orderBy, limit, offset, cache, cacheTtl)
+     * @return array
+     */
+    public function pluck(string $table, string $column, array $where = [], array $options = []): array
+    {
+        $rows = $this->select($table, $where, $options, [$column]);
+        $key = $this->resolveColumnAlias($column);
+        $values = [];
+        foreach ($rows as $row) {
+            if (isset($row->$key)) {
+                $values[] = $row->$key;
+            }
+        }
+        return $values;
+    }
+
+    /**
+     * Get the next available ID for a table.
+     *
+     * @param string $table Table name
+     * @param array $where WHERE conditions (optional)
+     * @param string $column Column name (default: 'id')
+     *
+     * @return int Next available ID
+     * @throws \Exception If the query fails
+     */
+    public function nextId(string $table, $where = [], $column = 'id'): int
+    {
+        $result = $this->database->createQuery()
+            ->select(['MAX(CAST('.$this->quoteName($column).' AS INT)) as id'])
+            ->from($table)
+            ->where($where)
+            ->execute()
+            ->fetch();
+        $next = $result ? (int) ($result->id ?? 0) + 1 : 1;
+
+        // PostgreSQL identity/serial column: take the id from its sequence. A row
+        // inserted with an explicit id does not move the sequence, so the next
+        // insert that relies on the default would reuse an id that already exists.
+        if (empty($where) && $this->database->getDriverName() === 'pgsql') {
+            $seq = $this->raw('SELECT pg_get_serial_sequence(?, ?)', [$this->getTableName($table), $column])->fetchColumn();
+            if ($seq) {
+                $next = (int) $this->raw(
+                    'SELECT CASE WHEN nv >= ? THEN nv ELSE setval(?, ?) END FROM (SELECT nextval(?) AS nv) s',
+                    [$next, $seq, $next, $seq]
+                )->fetchColumn();
+            }
+        }
+
+        return $next;
+    }
+
+    /**
+     * Quote a table or column name for the current driver.
+     *
+     * @param string $name
+     *
+     * @return string
+     */
+    protected function quoteName(string $name): string
+    {
+        switch ($this->database->getDriverName()) {
+        case 'mysql':
+            return '`'.$name.'`';
+        case 'sqlsrv':
+            return '['.$name.']';
+        default:
+            return '"'.$name.'"';
+        }
+    }
+
+    /**
+     * Column names of a table, in table order.
+     *
+     * @param string $table Table name (without prefix)
+     *
+     * @return array
+     */
+    public function getColumns(string $table): array
+    {
+        $fullTableName = $this->getTableName($table);
+        switch ($this->database->getDriverName()) {
+        case 'mysql':
+            $sql = 'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION';
+            break;
+        case 'pgsql':
+            $sql = 'SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ? ORDER BY ordinal_position';
+            break;
+        case 'sqlsrv':
+            $sql = 'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? ORDER BY ORDINAL_POSITION';
+            break;
+        default:
+            $sql = 'SELECT name FROM pragma_table_info(?)';
+        }
+        $result = $this->raw($sql, [$fullTableName]);
+        $columns = [];
+        foreach ($result === null ? [] : $result->fetchAll() as $row) {
+            $row = (array) $row;
+            $columns[] = (string) reset($row);
+        }
+
+        return $columns;
+    }
+
+    /**
+     * Increment a numeric column by a given amount.
+     *
+     * @param string $table Table name
+     * @param array $where WHERE conditions
+     * @param string|array $column Column name or array of column names
+     * @param int|float $amount Increment amount (default: 1)
+     * @return int Number of affected rows
+     * @throws \Exception If the update fails
+     */
+    public function increment(string $table, array $where, $column, $amount = 1): int
+    {
+        if (!is_numeric($amount)) {
+            $amount = 1;
+        }
+        $amount = $amount + 0;
+
+        if (is_array($column)) {
+            $set = [];
+            foreach ($column as $col) {
+                $set[$col] = \Kotchasan\Database\Sql::raw($col.' + '.$amount);
+            }
+        } else {
+            $set = [$column => \Kotchasan\Database\Sql::raw($column.' + '.$amount)];
+        }
+
+        $result = $this->database->createQuery()
+            ->update($table)
+            ->set($set)
+            ->where($where)
+            ->execute();
+
+        return $result ? $result->rowCount() : 0;
+    }
+
+    /**
+     * Decrement a numeric column by a given amount.
+     *
+     * @param string $table Table name
+     * @param array $where WHERE conditions
+     * @param string $column Column name
+     * @param int|float $amount Decrement amount (default: 1)
+     * @return int Number of affected rows
+     * @throws \Exception If the update fails
+     */
+    public function decrement(string $table, array $where, string $column, $amount = 1): int
+    {
+        if (!is_numeric($amount)) {
+            $amount = 1;
+        }
+        $amount = $amount + 0;
+        return $this->increment($table, $where, $column, -$amount);
     }
 
     /**
@@ -231,19 +459,61 @@ class DB
     }
 
     /**
+     * Get the configured table prefix.
+     *
+     * @return string The table prefix (without underscore)
+     */
+    public function getPrefix(): string
+    {
+        return $this->database->getPrefix();
+    }
+
+    /**
+     * Get last executed query.
+     *
+     * @return string|null
+     */
+    public function lastQuery(): ?string
+    {
+        return $this->database->getLastQuery();
+    }
+
+    /**
+     * Get last error message.
+     *
+     * @return string|null
+     */
+    public function lastError(): ?string
+    {
+        return $this->database->getLastError();
+    }
+
+    /**
      * Check if a database exists.
      *
      * @param string $databaseName Database name
      * @return bool True if database exists, false otherwise
-     * @throws \Exception If the query fails
+     * @throws \Exception If the current driver does not support this check
      */
     public function databaseExists(string $databaseName): bool
     {
+        switch ($this->database->getDriverName()) {
+        case 'mysql':
+            $sql = 'SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?';
+            break;
+        case 'pgsql':
+            $sql = 'SELECT datname FROM pg_database WHERE datname = ?';
+            break;
+        case 'sqlsrv':
+            $sql = 'SELECT name FROM sys.databases WHERE name = ?';
+            break;
+        default:
+            throw new \Exception("databaseExists() is not supported for the '{$this->database->getDriverName()}' driver.");
+        }
+
         try {
-            // Use raw SQL for checking database existence
-            $sql = "SELECT 1";
-            $result = $this->raw($sql);
-            return $result !== null;
+            $result = $this->raw($sql, [$databaseName]);
+            return $result !== null && $result->fetchColumn(0) !== false;
         } catch (\Exception $e) {
             return false;
         }
@@ -260,11 +530,18 @@ class DB
     public function fieldExists(string $table, string $fieldName): bool
     {
         try {
-            $fullTableName = $this->getTableName($table);
-            // Simple approach: try to select the field
-            $sql = "SELECT `{$fieldName}` FROM `{$fullTableName}` LIMIT 0";
-            $result = $this->raw($sql);
-            return $result !== null;
+            // Read the column list. "SELECT <field> ... WHERE 1 = 0" is not a test: SQLite
+            // reads a double-quoted name that is not a column as a string literal, so the
+            // query succeeds and every field "exists".
+            // Column names compare case-insensitively like MySQL, SQLite and SQL Server do;
+            // PostgreSQL quotes them, which makes them case-sensitive.
+            $caseSensitive = $this->database->getDriverName() === 'pgsql';
+            foreach ($this->getColumns($table) as $column) {
+                if ($caseSensitive ? $column === $fieldName : strcasecmp($column, $fieldName) === 0) {
+                    return true;
+                }
+            }
+            return false;
         } catch (\Exception $e) {
             return false;
         }
@@ -343,5 +620,26 @@ class DB
     public function optimizeTable(string $table): bool
     {
         return $this->database->optimizeTable($table);
+    }
+
+    /**
+     * Resolve output property name for a column/expression.
+     *
+     * @param string $column
+     * @return string
+     */
+    protected function resolveColumnAlias(string $column): string
+    {
+        // Normalize "AS" alias
+        $parts = preg_split('/\s+as\s+/i', $column);
+        if (count($parts) > 1) {
+            return trim(end($parts));
+        }
+        // If it's a table.column, use last segment
+        if (strpos($column, '.') !== false) {
+            $segments = explode('.', $column);
+            return trim(end($segments));
+        }
+        return trim($column);
     }
 }

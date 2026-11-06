@@ -21,11 +21,20 @@ class Kotchasan extends Kotchasan\KBase
     public $char_set = 'utf-8';
 
     /**
+     * คอนโทรลเลอร์ปริยายของเว็บ
+     *
+     * ไฟล์ทางเข้าที่มีไว้เสิร์ฟงานเดียว (export.php · sitemap.php · robots.php ·
+     * manifest.php) กำหนด defaultController ทับค่านี้ run() จึงใช้ความต่างตรงนี้
+     * บอก Router ว่า "ปักคอนโทรลเลอร์ไว้แล้ว อย่าให้ URL เลือกคลาสเอง"
+     */
+    const DEFAULT_CONTROLLER = 'Index\Index\Controller';
+
+    /**
      * The main controller.
      *
      * @var string
      */
-    public $defaultController = 'Index\Index\Controller';
+    public $defaultController = self::DEFAULT_CONTROLLER;
 
     /**
      * The main router.
@@ -69,7 +78,18 @@ class Kotchasan extends Kotchasan\KBase
     public function run()
     {
         $router = new $this->defaultRouter();
-        $router->init($this->defaultController);
+        // ทางเข้าที่ปักคอนโทรลเลอร์ของตัวเองไว้ ห้ามให้ URL พาไปคลาสอื่น
+        $router->init($this->defaultController, $this->defaultController !== self::DEFAULT_CONTROLLER);
+    }
+
+    /**
+     * Returns the configuration object.
+     *
+     * @return \Kotchasan\Config
+     */
+    public function config()
+    {
+        return self::$cfg;
     }
 
     /**
@@ -113,6 +133,66 @@ class Kotchasan extends Kotchasan\KBase
                 $jwtMw->handle(self::$request);
             } catch (\Throwable $e) {
                 // ignore middleware failures to keep backward compatibility
+            }
+        }
+
+        // Initialize database query cache if enabled
+        if (defined('DB_CACHE') && DB_CACHE) {
+            // Define cache constants based on configuration if not already defined (default 3600 seconds)
+            if (!defined('CACHE_TTL')) {
+                define('CACHE_TTL', self::$cfg->cache_expire ?? 3600);
+            }
+
+            $this->initializeQueryCache();
+        }
+    }
+
+    /**
+     * Initialize query cache for database operations.
+     *
+     * @return void
+     */
+    protected function initializeQueryCache(): void
+    {
+        try {
+            $cacheConfig = [
+                'driver' => defined('CACHE_DRIVER') ? CACHE_DRIVER : 'file',
+                'ttl' => CACHE_TTL
+            ];
+
+            // Add driver-specific configuration
+            switch ($cacheConfig['driver']) {
+            case 'file':
+                $cacheConfig['path'] = defined('ROOT_PATH') && defined('DATA_FOLDER')
+                    ? ROOT_PATH.DATA_FOLDER.'cache/'
+                    : null;
+                break;
+
+            case 'redis':
+                // Redis configuration from config if available
+                if (isset(self::$cfg->redis_host)) {
+                    $cacheConfig['host'] = self::$cfg->redis_host;
+                }
+                if (isset(self::$cfg->redis_port)) {
+                    $cacheConfig['port'] = self::$cfg->redis_port;
+                }
+                if (isset(self::$cfg->redis_password)) {
+                    $cacheConfig['password'] = self::$cfg->redis_password;
+                }
+                if (isset(self::$cfg->redis_database)) {
+                    $cacheConfig['database'] = self::$cfg->redis_database;
+                }
+                break;
+            }
+
+            // Configure cache if Database is available
+            if (class_exists('\Kotchasan\Database')) {
+                \Kotchasan\Database::configureCache($cacheConfig, $cacheConfig['ttl']);
+            }
+        } catch (\Throwable $e) {
+            // Log error but don't fail - cache is optional
+            if (defined('DEBUG') && DEBUG > 0) {
+                error_log('Failed to initialize query cache: '.$e->getMessage());
             }
         }
     }

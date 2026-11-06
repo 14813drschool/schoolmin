@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan\Http;
 
 use Kotchasan\Psr\Http\Message\UriInterface;
@@ -137,7 +136,13 @@ class Uri implements UriInterface
         if (isset($_SERVER['HTTP_X_FORWARDED_HOST'])) {
             $host = trim(current(explode(',', $_SERVER['HTTP_X_FORWARDED_HOST'])));
         } elseif (empty($_SERVER['HTTP_HOST'])) {
-            $host = $_SERVER['SERVER_NAME'];
+            if (!empty($_SERVER['SERVER_NAME'])) {
+                $host = $_SERVER['SERVER_NAME'];
+            } elseif (defined('HOST') && HOST !== '') {
+                $host = HOST;
+            } else {
+                $host = 'localhost';
+            }
         } else {
             $host = $_SERVER['HTTP_HOST'];
         }
@@ -147,9 +152,13 @@ class Uri implements UriInterface
         if ($pos !== false) {
             $port = (int) substr($host, $pos + 1);
             $host = strstr($host, ':', true);
-        } elseif (isset($_SERVER['SERVER_PORT'])) {
+        } elseif (isset($_SERVER['HTTP_X_FORWARDED_PORT'])) {
+            $port = (int) $_SERVER['HTTP_X_FORWARDED_PORT'];
+        } elseif (!isset($_SERVER['HTTP_X_FORWARDED_HOST']) && empty($_SERVER['HTTP_HOST']) && isset($_SERVER['SERVER_PORT'])) {
             $port = (int) $_SERVER['SERVER_PORT'];
         } else {
+            // No port in the Host header means the client used the scheme's default port.
+            // SERVER_PORT is the backend port behind a proxy/SSL terminator (e.g. https on 80).
             $port = $scheme === 'https' ? 443 : 80;
         }
 
@@ -418,12 +427,12 @@ class Uri implements UriInterface
     protected function getDefaultPort()
     {
         switch ($this->scheme) {
-            case 'http':
-                return 80;
-            case 'https':
-                return 443;
-            default:
-                return null;
+        case 'http':
+            return 80;
+        case 'https':
+            return 443;
+        default:
+            return null;
         }
     }
 
@@ -668,7 +677,7 @@ class Uri implements UriInterface
         }
 
         $html = [];
-        $html[] = '<div class="pagination">';
+        $html[] = '<nav class="pagination">';
 
         // Previous button
         if ($currentPage > 1) {
@@ -719,7 +728,7 @@ class Uri implements UriInterface
             $html[] = '<a href="'.(string) $nextUri.'" class="next">&raquo;</a>';
         }
 
-        $html[] = '</div>';
+        $html[] = '</nav>';
 
         return implode('', $html);
     }

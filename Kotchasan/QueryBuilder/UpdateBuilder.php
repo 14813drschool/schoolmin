@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan\QueryBuilder;
 
 /**
@@ -24,14 +23,36 @@ class UpdateBuilder extends QueryBuilder
         // Add SET clause
         $sets = [];
         foreach ($this->values as $column => $value) {
-            $sets[] = $sqlBuilder->quoteIdentifier($column).' = :'.$column;
-            $this->namedBindings[':'.$column] = $value;
+            $quotedColumn = $sqlBuilder->quoteIdentifier($column);
+
+            // Check if value is a Sql object or SqlFunction (raw SQL expression)
+            if ($value instanceof \Kotchasan\Database\Sql) {
+                // Use raw SQL expression directly
+                $sets[] = $quotedColumn.' = '.$value->toSql();
+                // Merge any bindings from the Sql object
+                foreach ($value->getValues([]) as $v) {
+                    $this->namedBindings[':'.$column.'_'.$this->paramCounter++] = $v;
+                }
+            } elseif ($value instanceof \Kotchasan\QueryBuilder\SqlFunction) {
+                // Use SqlFunction's toSql method
+                $sets[] = $quotedColumn.' = '.$value->toSql();
+            } elseif ($value instanceof \Kotchasan\QueryBuilder\RawExpression) {
+                // Use RawExpression's toSql method
+                $sets[] = $quotedColumn.' = '.$value->toSql();
+            } else {
+                // Regular value - use placeholder
+                $sets[] = $quotedColumn.' = :'.$column;
+                $this->namedBindings[':'.$column] = $value;
+            }
         }
         $query .= implode(', ', $sets);
 
         // Add WHERE clauses (use existing logic for now)
         if (!empty($this->wheres)) {
-            $query .= ' WHERE '.$this->buildWhereClauses();
+            $whereSql = $this->buildWhereClauses();
+            if ($whereSql !== '') {
+                $query .= ' WHERE '.$whereSql;
+            }
         }
 
         // Add ORDER BY clause using SqlBuilder
@@ -39,9 +60,10 @@ class UpdateBuilder extends QueryBuilder
             $query .= ' '.$sqlBuilder->buildOrderByClause($this->orders);
         }
 
-        // Add LIMIT clause using SqlBuilder
+        // Add row LIMIT in the dialect-correct way (MySQL/SQLite LIMIT,
+        // SQL Server TOP, PostgreSQL throws — UPDATE..LIMIT is non-portable).
         if ($this->limit !== null) {
-            $query .= ' '.$sqlBuilder->buildLimitClause($this->limit, $this->offset);
+            $query = $sqlBuilder->applyUpdateDeleteLimit($query, 'UPDATE', $this->limit);
         }
 
         return $query;

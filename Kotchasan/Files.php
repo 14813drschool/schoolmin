@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan;
 
 use Kotchasan\Http\UploadedFile;
@@ -48,7 +47,7 @@ class Files implements \Iterator
     {
         $this->datas[] = [
             $name,
-            new UploadedFile($path, $originalName, $mimeType, $size, $error)
+            new UploadedFile($path, $size, $error, $originalName, $mimeType)
         ];
     }
 

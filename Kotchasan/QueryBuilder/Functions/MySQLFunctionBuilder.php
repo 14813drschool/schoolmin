@@ -44,6 +44,7 @@ class MySQLFunctionBuilder extends AbstractSQLFunctionBuilder
      */
     public function dateFormat(string $date, string $format): string
     {
+        $format = $this->escapeStringLiteral($format);
         return "DATE_FORMAT({$date}, '{$format}')";
     }
 
@@ -135,7 +136,7 @@ class MySQLFunctionBuilder extends AbstractSQLFunctionBuilder
      * Creates a MATCH AGAINST function for full-text search.
      *
      * @param string|array $columns The columns to search in.
-     * @param string $query The search query.
+     * @param string $query The search query (already formatted boolean term, or raw query for natural language mode).
      * @param string $mode The search mode (IN NATURAL LANGUAGE MODE, IN BOOLEAN MODE, etc.).
      * @return string The MATCH AGAINST function.
      */
@@ -146,5 +147,49 @@ class MySQLFunctionBuilder extends AbstractSQLFunctionBuilder
         }
 
         return "MATCH ({$columns}) AGAINST ('{$query}' {$mode})";
+    }
+
+    /**
+     * Creates a MATCH AGAINST expression in BOOLEAN MODE from raw user input.
+     *
+     * Handles tokenization automatically — no need to call buildBooleanSearchTerm() separately.
+     *
+     * Examples:
+     *   matchBoolean('`job_no`', 'สมชาย ใจดี')
+     *     => "MATCH (`job_no`) AGAINST ('+สมชาย* +ใจดี*' IN BOOLEAN MODE)"
+     *
+     *   matchBoolean(['`name`', '`phone`'], 'บฉ-2662')
+     *     => "MATCH (`name`, `phone`) AGAINST ('+บฉ* +2662*' IN BOOLEAN MODE)"
+     *
+     * @param string|array $columns The columns to search in.
+     * @param string $search Raw user input (spaces / hyphens are handled automatically).
+     * @return string The MATCH AGAINST expression ready for use in whereRaw().
+     */
+    public function matchBoolean($columns, string $search): string
+    {
+        return $this->match($columns, static::buildBooleanSearchTerm($search), 'IN BOOLEAN MODE');
+    }
+
+    /**
+     * Build a FULLTEXT boolean mode search term from raw user input.
+     *
+     * Each token (split on non-letter/digit characters) becomes a required prefix term.
+     * Safe to embed directly — only Unicode letters, marks, digits, '+', '*', and spaces are emitted.
+     *
+     * Examples:
+     *   "สมชาย ใจดี" => "+สมชาย* +ใจดี*"
+     *   "บฉ-2662"    => "+บฉ* +2662*"
+     *   "62000001"   => "+62000001*"
+     *
+     * @param string $search Raw user search input.
+     * @return string FULLTEXT boolean mode term.
+     */
+    public static function buildBooleanSearchTerm(string $search): string
+    {
+        $tokens = preg_split('/[^\p{L}\p{M}\p{N}]+/u', trim($search), -1, PREG_SPLIT_NO_EMPTY);
+        if (empty($tokens)) {
+            return '+*';
+        }
+        return implode(' ', array_map(static fn($t) => '+'.$t.'*', $tokens));
     }
 }

@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan\Http\Middleware;
 
 use Kotchasan\Http\Request;
@@ -84,10 +83,25 @@ class SecurityMiddleware implements MiddlewareInterface
     {
         // Check CSRF token
         if ($this->csrfProtection && in_array($request->getMethod(), $this->csrfMethods)) {
-            $csrfToken = $request->getHeader('X-CSRF-Token') ?? $request->getParameter('csrf_token');
+            $sessionStartedHere = false;
+            if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
+                session_start();
+                $sessionStartedHere = true;
+            }
 
-            if (!$csrfToken || !$this->validateCsrfToken($csrfToken)) {
-                return Response::makeForbidden(['error' => 'CSRF token validation failed']);
+            try {
+                $csrfToken = $request->getHeaderLine('X-CSRF-Token');
+                if (empty($csrfToken)) {
+                    $csrfToken = $request->getParameter('csrf_token');
+                }
+
+                if (!$csrfToken || !$request->validateCsrfToken((string) $csrfToken)) {
+                    return Response::makeForbidden(['error' => 'CSRF token validation failed']);
+                }
+            } finally {
+                if ($sessionStartedHere && session_status() === PHP_SESSION_ACTIVE) {
+                    session_write_close();
+                }
             }
         }
 
@@ -113,49 +127,6 @@ class SecurityMiddleware implements MiddlewareInterface
     }
 
     /**
-     * Validate CSRF token.
-     *
-     * @param string $token Token to validate
-     * @return bool
-     */
-    protected function validateCsrfToken(string $token): bool
-    {
-        // In a real application, you would validate against a stored token
-        // Here we're just checking if it exists and has the expected format
-        if (empty($token)) {
-            return false;
-        }
-
-        // If using sessions, you would compare against $_SESSION['csrf_token']
-        $storedToken = $_SESSION['csrf_token'] ?? null;
-
-        if ($storedToken) {
-            return hash_equals($storedToken, $token);
-        }
-
-        // For stateless APIs, you might validate token structure/signature
-        // For demonstration, we'll accept tokens that are at least 32 chars
-        return strlen($token) >= 32;
-    }
-
-    /**
-     * Generate a new CSRF token.
-     *
-     * @return string
-     */
-    public static function generateCsrfToken(): string
-    {
-        $token = bin2hex(random_bytes(32));
-
-        // Store in session if using sessions
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            $_SESSION['csrf_token'] = $token;
-        }
-
-        return $token;
-    }
-
-    /**
      * Check rate limit for a client.
      *
      * @param string $clientIp Client IP address
@@ -170,7 +141,10 @@ class SecurityMiddleware implements MiddlewareInterface
         // In a real application, you would use Redis or another storage
         // For this example, we'll use APCu if available
         if (function_exists('apcu_enabled') && function_exists('apcu_fetch') && function_exists('apcu_store')) {
-            $requests = apcu_fetch($key) ?: [];
+            $apcuFetch = 'apcu_fetch';
+            $apcuStore = 'apcu_store';
+
+            $requests = $apcuFetch($key) ?: [];
 
             // Filter out requests older than the window
             $requests = array_filter($requests, fn($timestamp) => $timestamp >= $windowStart);
@@ -179,7 +153,7 @@ class SecurityMiddleware implements MiddlewareInterface
             $requests[] = $now;
 
             // Store updated requests
-            apcu_store($key, $requests, 120); // Store for 2 minutes
+            $apcuStore($key, $requests, 120); // Store for 2 minutes
 
             // Check if rate limit is exceeded
             return count($requests) <= $this->maxRequestsPerMinute;

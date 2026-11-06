@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan;
 
 use Kotchasan\Database;
@@ -93,7 +92,7 @@ class Session extends \Kotchasan\Model
                     'sess_id' => $sess_id,
                     'access' => time(),
                     'data' => $data,
-                    'create_date' => date('Y-m-d H:i:s')
+                    'created_at' => date('Y-m-d H:i:s')
                 ])
                 ->execute();
         }
@@ -142,7 +141,7 @@ class Session extends \Kotchasan\Model
             `sess_id` varchar(32) NOT NULL,
             `data` longtext,
             `access` int(11) NOT NULL,
-            `create_date` datetime NOT NULL,
+            `created_at` datetime NOT NULL,
             PRIMARY KEY (`sess_id`),
             KEY `access` (`access`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
@@ -154,7 +153,6 @@ class Session extends \Kotchasan\Model
             return false;
         }
     }
-
 
     /**
      * Get a value from session.

@@ -38,42 +38,46 @@ trait RequestInfoTrait
     /**
      * Get client IP address with proxy support
      *
-     * @param bool $trustProxies Whether to trust proxy headers
+     * `X-Forwarded-For`, `Client-IP` and `CF-Connecting-IP` are request headers
+     * the client controls. They used to be believed unconditionally, so anyone
+     * could pick their own IP — and with it slip past api_ips allow-lists and the
+     * per-IP login/verification rate limits. They are honoured only when the
+     * direct peer (REMOTE_ADDR) is one of the TRUSTED_PROXIES; otherwise the
+     * peer address is the client. Behind a trusted proxy the right-most hop of
+     * X-Forwarded-For that is not itself a trusted proxy is the client.
+     *
+     * @param bool $trustProxies false = REMOTE_ADDR only, even behind a trusted proxy
      * @return string
      */
     public function getClientIp(bool $trustProxies = true): string
     {
-        if (!$trustProxies) {
-            return $this->server('REMOTE_ADDR', '127.0.0.1');
+        $remote = $this->server('REMOTE_ADDR', '127.0.0.1');
+        $trusted = \Kotchasan\Http\Request::trustedProxies();
+        if (!$trustProxies || empty($trusted) || !in_array($remote, $trusted, true)) {
+            return $remote;
         }
 
-        // Check for IP from shared internet
-        if (!empty($this->serverParams['HTTP_CLIENT_IP'])) {
-            $ip = $this->serverParams['HTTP_CLIENT_IP'];
-            if ($this->isValidIp($ip)) {
-                return $ip;
-            }
-        }
-
-        // Check for IP passed from proxy
-        if (!empty($this->serverParams['HTTP_X_FORWARDED_FOR'])) {
-            $ips = explode(',', $this->serverParams['HTTP_X_FORWARDED_FOR']);
-            $ip = trim($ips[0]);
-            if ($this->isValidIp($ip)) {
-                return $ip;
-            }
-        }
-
-        // Check for IP from CloudFlare
+        $candidates = [];
         if (!empty($this->serverParams['HTTP_CF_CONNECTING_IP'])) {
-            $ip = $this->serverParams['HTTP_CF_CONNECTING_IP'];
-            if ($this->isValidIp($ip)) {
+            $candidates[] = trim((string) $this->serverParams['HTTP_CF_CONNECTING_IP']);
+        }
+        if (!empty($this->serverParams['HTTP_X_FORWARDED_FOR'])) {
+            $hops = array_map('trim', explode(',', (string) $this->serverParams['HTTP_X_FORWARDED_FOR']));
+            for ($i = count($hops) - 1; $i >= 0; $i--) {
+                if (!in_array($hops[$i], $trusted, true)) {
+                    $candidates[] = $hops[$i];
+                }
+            }
+        }
+        if (!empty($this->serverParams['HTTP_CLIENT_IP'])) {
+            $candidates[] = trim((string) $this->serverParams['HTTP_CLIENT_IP']);
+        }
+        foreach ($candidates as $ip) {
+            if (filter_var($ip, FILTER_VALIDATE_IP) !== false) {
                 return $ip;
             }
         }
-
-        // Check for IP from remote address
-        return $this->server('REMOTE_ADDR', '127.0.0.1');
+        return $remote;
     }
 
     /**
@@ -173,7 +177,7 @@ trait RequestInfoTrait
      */
     public function getAcceptableLanguages(): array
     {
-        $acceptLanguage = $this->server('HTTP_ACCEPT_LANGUAGE', '');
+        $acceptLanguage = $this->getHeaderLine('Accept-Language');
 
         if (empty($acceptLanguage)) {
             return [];
@@ -222,8 +226,8 @@ trait RequestInfoTrait
     public function expectsJson(): bool
     {
         return $this->isAjax() ||
-               str_contains($this->getHeaderLine('Accept'), 'application/json') ||
-               str_contains($this->getContentType(), 'application/json');
+        str_contains($this->getHeaderLine('Accept'), 'application/json') ||
+        str_contains($this->getContentType(), 'application/json');
     }
 
     /**
@@ -256,10 +260,12 @@ trait RequestInfoTrait
      */
     public function getFingerprint(): string
     {
+        $acceptLanguage = $this->getHeaderLine('Accept-Language');
+
         return hash('sha256', implode('|', [
             $this->getClientIp(),
             $this->getUserAgent(),
-            $this->server('HTTP_ACCEPT_LANGUAGE', ''),
+            $acceptLanguage,
             $this->server('HTTP_ACCEPT_ENCODING', '')
         ]));
     }

@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan;
 
 /**
@@ -103,14 +102,14 @@ class Text
      */
     public static function htmlspecialchars($text, $double_encode = true)
     {
-        if ($text === null) {
+        if ($text === null || $text === '') {
             return '';
         }
 
         // Replace special characters with their HTML entities
         $str = preg_replace(
-            ['/&/', '/"/', "/'/", '/</', '/>/', '/\\\/', '/\{/', '/\}/', '/\$/'],
-            ['&amp;', '&quot;', '&#039;', '&lt;', '&gt;', '&#92;', '&#x007B;', '&#x007D;', '&#36;'],
+            ['/&/', '/"/', "/'/", '/</', '/>/', '/\\\/', '/\$/'],
+            ['&amp;', '&quot;', '&#039;', '&lt;', '&gt;', '&#92;', '&#36;'],
             $text
         );
 
@@ -134,7 +133,7 @@ class Text
      */
     public static function oneLine($text, $len = 0)
     {
-        if ($text === null) {
+        if ($text === null || $text === '') {
             return '';
         }
 
@@ -156,7 +155,7 @@ class Text
      */
     public static function password($text)
     {
-        if ($text === null) {
+        if ($text === null || $text === '') {
             return '';
         }
 
@@ -233,7 +232,7 @@ class Text
      */
     public static function toEditor($text)
     {
-        if ($text === null) {
+        if ($text === null || $text === '') {
             return '';
         }
 
@@ -248,26 +247,21 @@ class Text
     }
 
     /**
-     * Clean and format a topic text.
+     * Clean a plain text for safe storage (no HTML encoding).
+     * - strip_tags to remove markup
+     * - removeNonCharacters to drop invalid/control bytes
+     * - oneLine to normalize whitespace and optionally limit length
      *
-     * @param string $text           The input text
-     * @param bool   $double_encode  Whether to double encode special characters (default: true)
+     * @param string $text The input text
+     * @param int    $len  Optional max length (0 = no cut)
      *
-     * @return string The cleaned and formatted topic text
+     * @return string Cleaned text
      */
-    public static function topic($text, $double_encode = true)
+    public static function topic($text, $len = 0)
     {
-        // Check if the input text is null
-        if ($text === null) {
-            return '';
-        }
-
-        // Clean and format the text
-        $cleanedText = self::htmlspecialchars($text, $double_encode); // Convert special characters to HTML entities
-        $trimmedText = trim($cleanedText); // Remove leading and trailing whitespace
-        $formattedText = preg_replace('/[\r\n\s\t]+/', ' ', $trimmedText); // Replace consecutive whitespace characters with a single space
-
-        return $formattedText;
+        $clean = strip_tags($text ?? '');
+        $clean = self::removeNonCharacters($clean);
+        return self::oneLine($clean, $len);
     }
 
     /**
@@ -280,7 +274,7 @@ class Text
     public static function unhtmlspecialchars($text)
     {
         // Check if the input text is null
-        if ($text === null) {
+        if ($text === null || $text === '') {
             return '';
         }
 
@@ -295,23 +289,43 @@ class Text
     }
 
     /**
-     * Sanitize a URL string.
+     * Sanitize a URL string for safe use in a hyperlink context.
+     * Rejects dangerous pseudo-schemes (javascript:, vbscript:, data:) — case
+     * insensitively and even when obfuscated with whitespace, control
+     * characters or HTML entities (e.g. "JAVA\tSCRIPT:", "javascript&#58;") —
+     * then strips characters that could break out of an href attribute or be
+     * abused as a tagged-template call (quotes, parentheses, backticks, angle
+     * brackets). Legitimate schemes (http, https, ftp, mailto, tel), relative
+     * paths and anchors are preserved.
      *
      * @param string $text The input URL string
      *
-     * @return string The sanitized URL string
+     * @return string The sanitized URL string, or empty string if it resolves
+     *                to a dangerous scheme
      */
     public static function url($text)
     {
         // Check if the input text is null
-        if ($text === null) {
+        if ($text === null || $text === '') {
             return '';
         }
 
-        // Remove JavaScript and unwanted characters from the URL
-        $text = preg_replace('/(^javascript:|[\(\)\'\"]+)/', '', trim($text));
+        $text = trim($text);
 
-        // Convert special characters to HTML entities
+        // Normalise for scheme detection: decode HTML entities and remove the
+        // whitespace/control characters that browsers ignore when resolving a
+        // scheme, so obfuscated payloads cannot slip past the check.
+        $probe = html_entity_decode($text, ENT_QUOTES | ENT_HTML5);
+        $probe = preg_replace('/[\x00-\x20]+/', '', $probe);
+        if (preg_match('/^(?:javascript|vbscript|data):/i', $probe)) {
+            return '';
+        }
+
+        // Remove characters that could break out of an href attribute or be
+        // abused as a tagged-template call.
+        $text = preg_replace('/[\(\)\'"`<>]+/', '', $text);
+
+        // Convert remaining special characters to HTML entities
         $sanitizedText = self::htmlspecialchars($text, false);
 
         return $sanitizedText;
@@ -327,7 +341,7 @@ class Text
     public static function username($text)
     {
         // Check if the input text is null
-        if ($text === null) {
+        if ($text === null || $text === '') {
             return '';
         }
 
@@ -363,4 +377,346 @@ class Text
         return $output;
     }
 
+    /**
+     * Filter text by keeping only characters matching the pattern.
+     *
+     * @param string|null $text The input text
+     * @param string $pattern Character pattern to keep (regex character class)
+     * @param string $replacement Replacement for non-matching chars
+     *
+     * @return string
+     */
+    public static function filter($text, string $pattern, string $replacement = ''): string
+    {
+        if ($text === null || $text === '') {
+            return '';
+        }
+        return trim(preg_replace('/[^'.$pattern.']/', $replacement, $text));
+    }
+
+    /**
+     * Extract alphanumeric characters only.
+     *
+     * @param string|null $text The input text
+     *
+     * @return string
+     */
+    public static function alphanumeric($text): string
+    {
+        if ($text === null || $text === '') {
+            return '';
+        }
+        return preg_replace('/[^a-zA-Z0-9]/', '', $text);
+    }
+
+    /**
+     * Extract phone number digits only.
+     *
+     * @param string|null $text The input text
+     *
+     * @return string
+     */
+    public static function phone($text): string
+    {
+        if ($text === null || $text === '') {
+            return '';
+        }
+        return preg_replace('/[^0-9]/', '', $text);
+    }
+
+    /**
+     * Validate and sanitize color value.
+     *
+     * @param string|null $text The input color
+     * @param string $default Default color if invalid/empty
+     *
+     * @return string Valid color or default if invalid
+     */
+    public static function color($text, string $default = ''): string
+    {
+        if ($text === null || $text === '') {
+            return $default;
+        }
+        $color = trim($text);
+        if (preg_match('/^\#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?([0-9A-Fa-f]{2})?$/', $color) || preg_match('/^[a-zA-Z]+$/', $color)) {
+            return $color;
+        }
+        return $default;
+    }
+
+    /**
+     * Escape single quotes to HTML entity.
+     *
+     * @param string|null $text The input text
+     *
+     * @return string
+     */
+    public static function quote($text): string
+    {
+        if ($text === null || $text === '') {
+            return '';
+        }
+        return str_replace("'", '&#39;', trim($text));
+    }
+
+    /**
+     * Escape text for textarea display.
+     *
+     * @param string|null $text The input text
+     *
+     * @return string
+     */
+    public static function textarea($text): string
+    {
+        if ($text === null || $text === '') {
+            return '';
+        }
+        return trim(preg_replace(['/</s', '/>/s', '/\\\\/s', '/\{/', '/\}/', '/\$/'], ['&lt;', '&gt;', '&#92;', '&#x007B;', '&#x007D;', '&#36;'], $text), " \n\r\0\x0B");
+    }
+
+    /**
+     * Exact inverse of textarea(): decode only the entities textarea()
+     * produces, back to their original characters. Used when returning
+     * stored textarea content through a JSON API so a client-side
+     * `field.value = ...` shows the real text instead of entity codes.
+     * (Deliberately narrower than unhtmlspecialchars() — that also decodes
+     * &amp;/&quot;/&#039;, which textarea() never encodes, and decoding
+     * those would mutate content where the user literally typed an entity.)
+     *
+     * @param string|null $text The stored, textarea()-encoded text
+     *
+     * @return string
+     */
+    public static function untextarea($text): string
+    {
+        if ($text === null || $text === '') {
+            return '';
+        }
+        return str_replace(
+            ['&lt;', '&gt;', '&#92;', '&#x007B;', '&#x007D;', '&#36;'],
+            ['<', '>', '\\', '{', '}', '$'],
+            $text
+        );
+    }
+
+    /**
+     * Extract digits only from text.
+     *
+     * @param string|null $text The input text
+     *
+     * @return string
+     */
+    public static function number($text): string
+    {
+        if ($text === null || $text === '') {
+            return '';
+        }
+        return preg_replace('/[^\d]/', '', $text);
+    }
+
+    /**
+     * Convert text to decimal
+     *
+     * @param string|null $text The input text
+     *
+     * @return float
+     */
+    public static function toDouble($text): float
+    {
+        if (empty($text)) {
+            return 0;
+        }
+        return (float) str_replace(',', '', $text);
+    }
+
+    /**
+     * Sanitize and truncate keywords.
+     *
+     * @param string|null $text The input text
+     * @param int $len Maximum length (0 = no limit)
+     *
+     * @return string
+     */
+    public static function keywords($text, int $len = 0): string
+    {
+        if ($text === null || $text === '') {
+            return '';
+        }
+        $result = trim(preg_replace('/[\r\n\s\t\"\'\<\>]{1,}/isu', ' ', strip_tags($text)));
+        if ($len > 0 && mb_strlen($result) > $len) {
+            $result = mb_substr($result, 0, $len);
+        }
+        return $result;
+    }
+
+    /**
+     * Sanitize and truncate description text.
+     *
+     * @param string|null $text The input text
+     * @param int $len Maximum length (0 = no limit)
+     *
+     * @return string
+     */
+    public static function description($text, int $len = 0): string
+    {
+        if ($text === null || $text === '') {
+            return '';
+        }
+
+        $patt = [
+            '@<(script|style)[^>]*?>.*?</\\1>@isu' => '',
+            '@<[a-z\/\!\?][^>]{0,}>@isu' => '',
+            '/{(WIDGET|LNG)_[\w\s\.\-\'\(\),%\/:\&#;]+}/su' => '',
+            '/(\[code(.+)?\]|\[\/code\]|\[ex(.+)?\])/ui' => '',
+            '/\[([a-z]+)([\s=].*)?\](.*?)\[\/\\1\]/ui' => '\\3',
+            '/(&rdquo;|&quot;|&nbsp;|&amp;|[\r\n\s\t\"\']){1,}/isu' => ' '
+        ];
+
+        $result = trim(preg_replace(array_keys($patt), array_values($patt), $text));
+
+        if ($len > 0 && mb_strlen($result) > $len) {
+            $result = mb_substr($result, 0, $len);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Escape text for editor content.
+     *
+     * @param string|null $text The input text
+     *
+     * @return string
+     */
+    public static function detail(string $text): string
+    {
+        if ($text === null || $text === '') {
+            return '';
+        }
+
+        // Remove PHP processing instructions to prevent server-side code injection.
+        // All HTML tags (script, style, iframe, event handlers, etc.) are intentionally
+        // preserved — this function is used for trusted editor (admin) content.
+        return str_replace(
+            ['{', '}', '\\'],
+            ['&#x007B;', '&#x007D;', '&#92;'],
+            preg_replace('#<\?(.*?)\?>#is', '', $text)
+        );
+    }
+
+    /**
+     * Parse and validate time format.
+     *
+     * @param string|null $text The input time
+     * @param bool $strict Whether to append :00 for seconds
+     *
+     * @return string|null
+     */
+    public static function time($text, bool $strict = false): ?string
+    {
+        if (empty($text)) {
+            return null;
+        }
+        if (preg_match('/^([0-9]{1,2}:[0-9]{1,2})?(:[0-9]{1,2})?$/', $text, $match)) {
+            if (empty($match[2])) {
+                $match[2] = $strict ? ':00' : '';
+            }
+            return $match[1].$match[2];
+        }
+        return null;
+    }
+
+    /**
+     * Parse and format date.
+     *
+     * @param string|null $text The input date
+     * @param string $format Output date format
+     *
+     * @return string|null
+     */
+    public static function date($text, string $format = 'Y-m-d'): ?string
+    {
+        if ($text === null || $text === '') {
+            return null;
+        }
+        $timestamp = strtotime($text);
+        return $timestamp ? date($format, $timestamp) : null;
+    }
+
+    /**
+     * Get text with only the specified HTML formatting tags allowed.
+     * Every other tag is removed, any attributes on the allowed tags are
+     * stripped (so no event handlers such as onclick/onerror can survive),
+     * and all remaining text is HTML-escaped. The result is safe to embed
+     * directly into HTML output.
+     *
+     * @param string $text The input text
+     * @param array $allowedTags Array of allowed tag names (default: ['em', 'b', 'strong', 'i'])
+     *
+     * @return string The processed text with only the bare allowed tags preserved
+     */
+    public static function htmlText($text, array $allowedTags = ['em', 'b', 'strong', 'i']): string
+    {
+        if ($text === null || $text === '') {
+            return '';
+        }
+
+        // Build strip_tags format: <em><b><strong><i>
+        $stripTagsFormat = implode('', array_map(fn($tag) => "<{$tag}>", $allowedTags));
+
+        // First strip all tags except the allowed ones. strip_tags keeps the
+        // attributes of allowed tags, so they are removed in the next step.
+        $allowed = strip_tags($text, $stripTagsFormat);
+
+        // Build regex pattern for allowed tags
+        $tagPattern = implode('|', array_map('preg_quote', $allowedTags));
+
+        // Replace each allowed tag with a unique placeholder, discarding any
+        // attributes. A random per-call prefix prevents user input from forging
+        // a placeholder that would be turned back into a tag after escaping.
+        $placeholders = [];
+        $i = 0;
+        $token = bin2hex(random_bytes(8));
+
+        // Match allowed tags (opening and closing), including any attributes
+        $allowed = preg_replace_callback(
+            '/<(\/?)('.$tagPattern.')(\s[^>]*)?>/i',
+            function ($matches) use (&$placeholders, &$i, $token) {
+                $placeholder = "\x01{$token}_{$i}\x01";
+                // Keep only the bare tag; drop all attributes
+                $placeholders[$placeholder] = '<'.$matches[1].strtolower($matches[2]).'>';
+                $i++;
+                return $placeholder;
+            },
+            $allowed
+        );
+
+        // Escape HTML special characters in the remaining (non-tag) text so
+        // that stray <, >, &, ", ' cannot break out into markup.
+        $allowed = self::htmlspecialchars($allowed);
+
+        // Restore the sanitized allowed tags
+        return str_replace(array_keys($placeholders), array_values($placeholders), $allowed);
+    }
+
+    /**
+     * Convert an HTML fragment (such as a value stored by htmlText()) to
+     * plain text: tags are removed, then entities are decoded.
+     * Use it wherever the value leaves HTML — JSON for a client that sets
+     * textContent, an email subject or sender name, an HTTP header, a
+     * manifest. Escape the result again if it goes back into HTML.
+     *
+     * @param string|null $text The HTML fragment
+     *
+     * @return string
+     */
+    public static function plainText($text): string
+    {
+        if ($text === null || $text === '') {
+            return '';
+        }
+
+        // Tags first: decoding first would turn &lt;b&gt; typed as text into a tag
+        return trim(html_entity_decode(strip_tags((string) $text), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    }
 }

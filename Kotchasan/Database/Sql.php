@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan\Database;
 
 use Kotchasan\QueryBuilder\QueryBuilder;
@@ -39,7 +38,12 @@ class Sql
      */
     public static function setDatabaseType($type)
     {
-        self::$database_type = strtolower($type);
+        $type = strtolower(trim((string) $type));
+        $supported = ['mysql', 'mssql', 'postgresql', 'sqlite'];
+        if (!in_array($type, $supported, true)) {
+            $type = 'mysql';
+        }
+        self::$database_type = $type;
     }
 
     /**
@@ -50,6 +54,40 @@ class Sql
     public static function getDatabaseType()
     {
         return self::$database_type;
+    }
+
+    /**
+     * Quote an identifier based on database type
+     *
+     * @param string $identifier
+     * @return string
+     */
+    protected static function quoteIdentifier(string $identifier)
+    {
+        $parts = explode('.', $identifier);
+        $dbType = self::getDatabaseType();
+
+        switch ($dbType) {
+        case 'mssql':
+            foreach ($parts as &$part) {
+                $part = '['.str_replace(']', ']]', $part).']';
+            }
+            break;
+        case 'postgresql':
+        case 'sqlite':
+            foreach ($parts as &$part) {
+                $part = '"'.str_replace('"', '""', $part).'"';
+            }
+            break;
+        case 'mysql':
+        default:
+            foreach ($parts as &$part) {
+                $part = '`'.str_replace('`', '``', $part).'`';
+            }
+            break;
+        }
+
+        return implode('.', $parts);
     }
 
     /**
@@ -80,8 +118,13 @@ class Sql
      */
     public static function BETWEEN($column_name, $min, $max)
     {
-        $expression = self::column($column_name).' BETWEEN '.self::column($min).' AND '.self::column($max);
-        return self::create($expression);
+        $obj = new static();
+        $values = [];
+        $minSql = self::quoteValue($column_name, $min, $values);
+        $maxSql = self::quoteValue($column_name, $max, $values);
+        $obj->sql = self::column($column_name).' BETWEEN '.$minSql.' AND '.$maxSql;
+        $obj->values = $values;
+        return $obj;
     }
 
     /**
@@ -104,6 +147,32 @@ class Sql
         return new \Kotchasan\QueryBuilder\SqlFunction('CONCAT', [
             'fields' => $fields,
             'separator' => $separator
+        ], $alias);
+    }
+
+    /**
+     * Create a GROUP_CONCAT SQL statement
+     *
+     * @param string|array $fields      Field name or list of fields to concatenate (e.g., ['column1', '|', 'column2'])
+     * @param string|null  $alias       The alias for the resulting concatenated column, optional
+     * @param string       $separator   The separator to use between concatenated values, default is ','
+     * @param bool         $distinct    If true, returns only distinct values; default is false
+     * @param string|array $order       The order in which concatenated values should appear
+     *
+     * @return static
+     */
+    public static function GROUP_CONCAT($fields, $alias = null, $separator = ',', $distinct = false, $order = null)
+    {
+        // Normalize fields to array format for consistent handling
+        if (!is_array($fields)) {
+            $fields = [$fields];
+        }
+
+        return new \Kotchasan\QueryBuilder\SqlFunction('GROUP_CONCAT', [
+            'fields' => $fields,
+            'separator' => $separator,
+            'distinct' => $distinct,
+            'order' => $order
         ], $alias);
     }
 
@@ -142,11 +211,11 @@ class Sql
     /**
      * Calculate the difference in days between two dates or between a date and NOW()
      *
-     * @param string $column_name1 The first date column or a specific date string
-     * @param string $column_name2 The second date column or a specific date string
-     * @param string $alias        The alias for the resulting difference, optional
+     * @param mixed       $column_name1 Column name (string), date literal (e.g. '2026-01-01'), or Sql/SqlFunction (e.g. Sql::NOW())
+     * @param mixed       $column_name2 Column name (string), date literal, or Sql/SqlFunction
+     * @param string|null $alias        The alias for the resulting difference, optional
      *
-     * @return static
+     * @return \Kotchasan\QueryBuilder\SqlFunction
      */
     public static function DATEDIFF($column_name1, $column_name2, $alias = null)
     {
@@ -198,27 +267,9 @@ class Sql
      */
     public static function DISTINCT($column_name, $alias = null)
     {
-        $expression = 'DISTINCT '.self::column($column_name);
-
-        if ($alias) {
-            // Use database-specific quoting based on current database type
-            $dbType = self::getDatabaseType();
-            switch ($dbType) {
-                case 'mssql':
-                    $expression .= ' AS ['.$alias.']';
-                    break;
-                case 'postgresql':
-                case 'sqlite':
-                    $expression .= ' AS "'.$alias.'"';
-                    break;
-                case 'mysql':
-                default:
-                    $expression .= ' AS `'.$alias.'`';
-                    break;
-            }
-        }
-
-        return self::create($expression);
+        return new \Kotchasan\QueryBuilder\SqlFunction('DISTINCT', [
+            'column' => $column_name
+        ], $alias);
     }
 
     /**
@@ -264,38 +315,18 @@ class Sql
      */
     public static function FORMAT($column_name, $format, $alias = null)
     {
-        // Build the SQL FORMAT expression
-        $expression = 'FORMAT('.self::column($column_name).", '$format')";
+        $obj = new static();
+        $values = [];
+        $formatSql = self::quoteValue('format', $format, $values);
+        $expression = 'FORMAT('.self::column($column_name).", {$formatSql})";
 
-        // Add an alias if provided
         if ($alias) {
-            $expression .= " AS `$alias`";
+            $expression .= ' AS '.self::quoteIdentifier($alias);
         }
 
-        // Create and return the SQL expression
-        return self::create($expression);
-    }
-
-    /**
-     * Create a GROUP_CONCAT SQL statement
-     *
-     * @param string       $column_name The name of the column to concatenate
-     * @param string|null  $alias       The alias for the resulting concatenated column, optional
-     * @param string       $separator   The separator to use between concatenated values, default is ','
-     * @param bool         $distinct    If true, returns only distinct values; default is false
-     * @param string|array $order       The order in which concatenated values should appear
-     *
-     * @return static
-     */
-    public static function GROUP_CONCAT($column_name, $alias = null, $separator = ',', $distinct = false, $order = null)
-    {
-        return new \Kotchasan\QueryBuilder\SqlFunction('GROUP_CONCAT', [
-            'column' => $column_name,
-            'alias' => $alias,
-            'separator' => $separator,
-            'distinct' => $distinct,
-            'order' => $order
-        ], $alias);
+        $obj->sql = $expression;
+        $obj->values = $values;
+        return $obj;
     }
 
     /**
@@ -388,6 +419,137 @@ class Sql
     }
 
     /**
+     * Returns the length of a string
+     *
+     * @param string      $column_name
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function LENGTH($column_name, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('LENGTH', [
+            'column' => $column_name
+        ], $alias);
+    }
+
+    /**
+     * Convert a string to uppercase
+     *
+     * @param string      $column_name
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function UPPER($column_name, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('UPPER', [
+            'column' => $column_name
+        ], $alias);
+    }
+
+    /**
+     * Convert a string to lowercase
+     *
+     * @param string      $column_name
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function LOWER($column_name, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('LOWER', [
+            'column' => $column_name
+        ], $alias);
+    }
+
+    /**
+     * Trim whitespace from both sides of a string
+     *
+     * @param string      $column_name
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function TRIM($column_name, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('TRIM', [
+            'column' => $column_name
+        ], $alias);
+    }
+
+    /**
+     * Trim whitespace from the left side of a string
+     *
+     * @param string      $column_name
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function LTRIM($column_name, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('LTRIM', [
+            'column' => $column_name
+        ], $alias);
+    }
+
+    /**
+     * Trim whitespace from the right side of a string
+     *
+     * @param string      $column_name
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function RTRIM($column_name, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('RTRIM', [
+            'column' => $column_name
+        ], $alias);
+    }
+
+    /**
+     * Extract a substring from a string
+     *
+     * @param string      $column_name
+     * @param int         $start
+     * @param int|null    $length
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function SUBSTRING($column_name, $start, $length = null, $alias = null)
+    {
+        $start = (int) $start;
+        $length = $length === null ? null : (int) $length;
+
+        return new \Kotchasan\QueryBuilder\SqlFunction('SUBSTRING', [
+            'column' => $column_name,
+            'start' => $start,
+            'length' => $length
+        ], $alias);
+    }
+
+    /**
+     * Replace substring within a string
+     *
+     * @param string      $column_name
+     * @param string      $search
+     * @param string      $replace
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function REPLACE($column_name, $search, $replace, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('REPLACE', [
+            'column' => $column_name,
+            'search' => $search,
+            'replace' => $replace
+        ], $alias);
+    }
+
+    /**
      * Extract minutes from a DATETIME column
      *
      * This function generates a SQL MINUTE expression to extract minutes from a DATETIME column.
@@ -444,12 +606,13 @@ class Sql
             $condition = '';
         }
 
-        // Build the SQL expression to find next ID
-        $obj->sql = '(1 + IFNULL((SELECT MAX(`'.$field.'`) FROM '.$table_name.' AS X'.$condition.'), 0))';
+        // Build the SQL expression to find next ID. COALESCE is portable across
+        // all dialects (MySQL IFNULL is not); identifiers quoted per dialect.
+        $obj->sql = '(1 + COALESCE((SELECT MAX('.self::quoteIdentifier($field).') FROM '.$table_name.' AS X'.$condition.'), 0))';
 
         // Add an alias if provided
         if (isset($alias)) {
-            $obj->sql .= " AS `$alias`";
+            $obj->sql .= ' AS '.self::quoteIdentifier($alias);
         }
 
         // Return the SQL object
@@ -466,6 +629,28 @@ class Sql
     public static function NOW($alias = null)
     {
         return new \Kotchasan\QueryBuilder\SqlFunction('NOW', [], $alias);
+    }
+
+    /**
+     * Returns the current date
+     *
+     * @param string|null $alias
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function CURDATE($alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('CURDATE', [], $alias);
+    }
+
+    /**
+     * Returns the current time
+     *
+     * @param string|null $alias
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function CURTIME($alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('CURTIME', [], $alias);
     }
 
     /**
@@ -506,12 +691,35 @@ class Sql
      */
     public static function POSITION($substr, $str, $alias = null, $pos = 0)
     {
-        // Adjust substrings if they are not field names to be SQL-compatible
-        $substr = strpos($substr, '`') === false ? "'$substr'" : $substr;
-        $str = strpos($str, '`') === false ? "'$str'" : $str;
+        // Backtick = field reference (quote per dialect); otherwise a literal.
+        $substr = strpos($substr, '`') === false
+            ? "'".str_replace("'", "''", $substr)."'"
+            : self::quoteIdentifier(trim($substr, '`'));
+        $str = strpos($str, '`') === false
+            ? "'".str_replace("'", "''", $str)."'"
+            : self::quoteIdentifier(trim($str, '`'));
+        $pos = (int) $pos;
 
-        // Build the SQL expression for LOCATE() with optional alias and position
-        $sql = "LOCATE($substr, $str".(empty($pos) ? ')' : ", $pos").($alias ? " AS `$alias`" : '');
+        // Emit the right substring-position function per database dialect.
+        switch (self::getDatabaseType()) {
+            case 'mssql':
+                $sql = empty($pos) ? "CHARINDEX($substr, $str)" : "CHARINDEX($substr, $str, $pos)";
+                break;
+            case 'postgresql':
+                // STRPOS has no start-position argument (pos ignored when set).
+                $sql = "STRPOS($str, $substr)";
+                break;
+            case 'sqlite':
+                $sql = "INSTR($str, $substr)";
+                break;
+            case 'mysql':
+            default:
+                $sql = empty($pos) ? "LOCATE($substr, $str)" : "LOCATE($substr, $str, $pos)";
+                break;
+        }
+        if ($alias) {
+            $sql .= ' AS '.self::quoteIdentifier($alias);
+        }
 
         // Assuming self::create() constructs or modifies a query or model object
         return self::create($sql);
@@ -540,11 +748,9 @@ class Sql
      */
     public static function SECOND($column_name, $alias = null)
     {
-        // Build the SQL expression for SECOND() with optional alias
-        $sql = 'SECOND('.self::column($column_name).')'.($alias ? " AS `$alias`" : '');
-
-        // Assuming self::create() constructs or modifies a query or model object
-        return self::create($sql);
+        return new \Kotchasan\QueryBuilder\SqlFunction('SECOND', [
+            'column' => $column_name
+        ], $alias);
     }
 
     /**
@@ -565,43 +771,384 @@ class Sql
     }
 
     /**
+     * Returns absolute value of a column
+     *
+     * @param string      $column_name
+     * @param string|null $alias
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function ABS($column_name, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('ABS', [
+            'column' => $column_name
+        ], $alias);
+    }
+
+    /**
+     * Returns the smallest integer greater than or equal to a number
+     *
+     * @param string      $column_name
+     * @param string|null $alias
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function CEIL($column_name, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('CEIL', [
+            'column' => $column_name
+        ], $alias);
+    }
+
+    /**
+     * Returns the largest integer less than or equal to a number
+     *
+     * @param string      $column_name
+     * @param string|null $alias
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function FLOOR($column_name, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('FLOOR', [
+            'column' => $column_name
+        ], $alias);
+    }
+
+    /**
+     * Rounds a number to a specified number of decimal places
+     *
+     * @param string      $column_name
+     * @param int|null    $precision
+     * @param string|null $alias
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function ROUND($column_name, $precision = null, $alias = null)
+    {
+        $precision = $precision === null ? null : (int) $precision;
+
+        return new \Kotchasan\QueryBuilder\SqlFunction('ROUND', [
+            'column' => $column_name,
+            'precision' => $precision
+        ], $alias);
+    }
+
+    /**
      * Calculates the time difference between two datetime columns or values.
      *
-     * @param string $column_name1 The first datetime column or value. If it's a column name, it should be enclosed in ``.
-     * @param string $column_name2 The second datetime column or value. If it's a column name, it should be enclosed in ``.
-     * @param string $alias        Optional alias for the TIMEDIFF() function result in SQL.
-     *                             If provided, formats the SQL as TIMEDIFF(...) AS `$alias`.
+     * @param mixed       $column_name1 Column name (string), date literal (e.g. '2026-01-01'), or Sql/SqlFunction (e.g. Sql::NOW())
+     * @param mixed       $column_name2 Column name (string), date literal, or Sql/SqlFunction
+     * @param string|null $alias        Optional alias for the result
      *
-     * @return static
+     * @return \Kotchasan\QueryBuilder\SqlFunction
      */
     public static function TIMEDIFF($column_name1, $column_name2, $alias = null)
     {
-        // Build the SQL expression for TIMEDIFF() with optional alias
-        $sql = 'TIMEDIFF('.self::column($column_name1).', '.self::column($column_name2).')'.($alias ? " AS `$alias`" : '');
-
-        // Assuming self::create() constructs or modifies a query or model object
-        return self::create($sql);
+        return new \Kotchasan\QueryBuilder\SqlFunction('TIMEDIFF', [
+            'column1' => $column_name1,
+            'column2' => $column_name2
+        ], $alias);
     }
 
     /**
      * Calculates the difference between two datetime columns or values in specified units.
      *
-     * @param string $unit        The unit of time difference to calculate:
-     *                            FRAC_SECOND (microseconds), SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.
-     * @param string $column_name1 The first datetime column or value. If it's a column name, it should be enclosed in ``.
-     * @param string $column_name2 The second datetime column or value. If it's a column name, it should be enclosed in ``.
-     * @param string $alias       Optional alias for the TIMESTAMPDIFF() function result in SQL.
-     *                            If provided, formats the SQL as TIMESTAMPDIFF(...) AS `$alias`.
+     * @param string      $unit         FRAC_SECOND, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR
+     * @param mixed       $column_name1 Column name (string), date literal (e.g. '2026-01-01'), or Sql/SqlFunction (e.g. Sql::NOW())
+     * @param mixed       $column_name2 Column name (string), date literal, or Sql/SqlFunction
+     * @param string|null $alias        Optional alias for the result
      *
-     * @return static
+     * @return \Kotchasan\QueryBuilder\SqlFunction
      */
     public static function TIMESTAMPDIFF($unit, $column_name1, $column_name2, $alias = null)
     {
-        // Build the SQL expression for TIMESTAMPDIFF() with optional alias
-        $sql = 'TIMESTAMPDIFF('.$unit.', '.self::column($column_name1).', '.self::column($column_name2).')'.($alias ? " AS `$alias`" : '');
+        return new \Kotchasan\QueryBuilder\SqlFunction('TIMESTAMPDIFF', [
+            'unit' => $unit,
+            'column1' => $column_name1,
+            'column2' => $column_name2
+        ], $alias);
+    }
 
-        // Assuming self::create() constructs or modifies a query or model object
-        return self::create($sql);
+    /**
+     * Add an interval to a date/datetime value
+     *
+     * @param mixed       $column_name Column, date literal (e.g. '2026-01-01'), or Sql/SqlFunction (e.g. Sql::NOW())
+     * @param int         $interval    Number of units to add
+     * @param string      $unit        SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, YEAR
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function DATE_ADD($column_name, int $interval, string $unit, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('DATE_ADD', [
+            'column' => $column_name,
+            'interval' => $interval,
+            'unit' => strtoupper($unit)
+        ], $alias);
+    }
+
+    /**
+     * Subtract an interval from a date/datetime value
+     *
+     * @param mixed       $column_name Column, date literal, or Sql/SqlFunction (e.g. Sql::NOW())
+     * @param int         $interval    Number of units to subtract
+     * @param string      $unit        SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, YEAR
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function DATE_SUB($column_name, int $interval, string $unit, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('DATE_SUB', [
+            'column' => $column_name,
+            'interval' => $interval,
+            'unit' => strtoupper($unit)
+        ], $alias);
+    }
+
+    /**
+     * Find the position of a value in a comma-separated list (1-based; 0 if not found)
+     *
+     * MySQL-native; other drivers approximate using INSTR / CHARINDEX / ARRAY_POSITION.
+     *
+     * @param mixed       $value       Value to search for (column name, literal, or Sql/SqlFunction)
+     * @param string      $column_name The column containing comma-separated values
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function FIND_IN_SET($value, $column_name, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('FIND_IN_SET', [
+            'value' => $value,
+            'column' => $column_name
+        ], $alias);
+    }
+
+    /**
+     * Left-pad a string column to a target length with a pad character
+     *
+     * @param string      $column_name
+     * @param int         $length
+     * @param string      $pad_string  Padding character(s), default '0'
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function LPAD($column_name, int $length, string $pad_string = '0', $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('LPAD', [
+            'column' => $column_name,
+            'length' => $length,
+            'pad' => $pad_string
+        ], $alias);
+    }
+
+    /**
+     * Return NULL if two expressions are equal, otherwise return the first expression
+     *
+     * Typical use: prevent division by zero — e.g. SUM(price) / NULLIF(SUM(qty), 0)
+     *
+     * @param mixed       $column_name1
+     * @param mixed       $column_name2
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function NULLIF($column_name1, $column_name2, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('NULLIF', [
+            'column1' => $column_name1,
+            'column2' => $column_name2
+        ], $alias);
+    }
+
+    /**
+     * Extract the quarter (1–4) from a DATE or DATETIME column
+     *
+     * @param string      $column_name
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function QUARTER($column_name, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('QUARTER', [
+            'column' => $column_name
+        ], $alias);
+    }
+
+    /**
+     * Right-pad a string column to a target length with a pad character
+     *
+     * @param string      $column_name
+     * @param int         $length
+     * @param string      $pad_string  Padding character(s), default ' '
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function RPAD($column_name, int $length, string $pad_string = ' ', $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('RPAD', [
+            'column' => $column_name,
+            'length' => $length,
+            'pad' => $pad_string
+        ], $alias);
+    }
+
+    /**
+     * Convert a string to a DATE using a format pattern
+     *
+     * @param mixed       $value  String value, column name, or Sql/SqlFunction containing the date string
+     * @param string      $format MySQL DATE_FORMAT-compatible format string (e.g. '%Y-%m-%d')
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function STR_TO_DATE($value, string $format, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('STR_TO_DATE', [
+            'value' => $value,
+            'format' => $format
+        ], $alias);
+    }
+
+    /**
+     * Extract the time portion (HH:MM:SS) from a DATETIME column
+     *
+     * @param string      $column_name
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function TIME($column_name, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('TIME', [
+            'column' => $column_name
+        ], $alias);
+    }
+
+    /**
+     * Extract the ISO week number (1–53) from a DATE or DATETIME column
+     *
+     * @param string      $column_name
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function WEEK($column_name, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('WEEK', [
+            'column' => $column_name
+        ], $alias);
+    }
+
+    /**
+     * IF expression helper
+     *
+     * @param string $condition
+     * @param mixed  $value_true
+     * @param mixed  $value_false
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function IF_EXPR($condition, $value_true, $value_false, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('IF_EXPR', [
+            'condition' => $condition,
+            'value_true' => $value_true,
+            'value_false' => $value_false
+        ], $alias);
+    }
+
+    /**
+     * CASE WHEN helper
+     *
+     * @param array       $cases Array of [condition, result]
+     * @param mixed|null  $else
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function CASE_WHEN(array $cases, $else = null, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('CASE_WHEN', [
+            'cases' => $cases,
+            'else' => $else
+        ], $alias);
+    }
+
+    /**
+     * COALESCE helper
+     *
+     * @param array       $values
+     * @param string|null $alias
+     *
+     * @return \Kotchasan\QueryBuilder\SqlFunction
+     */
+    public static function COALESCE(array $values, $alias = null)
+    {
+        return new \Kotchasan\QueryBuilder\SqlFunction('COALESCE', [
+            'values' => $values
+        ], $alias);
+    }
+
+    /**
+     * IN expression helper with bindings
+     *
+     * @param string $column_name
+     * @param array  $values_list
+     *
+     * @return static
+     */
+    public static function IN($column_name, array $values_list)
+    {
+        $obj = new static();
+        $values = [];
+
+        if (empty($values_list)) {
+            $obj->sql = '0=1';
+            $obj->values = $values;
+            return $obj;
+        }
+
+        $placeholders = [];
+        foreach ($values_list as $value) {
+            $placeholders[] = self::quoteValue($column_name, $value, $values);
+        }
+
+        $obj->sql = self::column($column_name).' IN ('.implode(', ', $placeholders).')';
+        $obj->values = $values;
+        return $obj;
+    }
+
+    /**
+     * NOT IN expression helper with bindings
+     *
+     * @param string $column_name
+     * @param array  $values_list
+     *
+     * @return static
+     */
+    public static function NOT_IN($column_name, array $values_list)
+    {
+        $obj = new static();
+        $values = [];
+
+        if (empty($values_list)) {
+            $obj->sql = '1=1';
+            $obj->values = $values;
+            return $obj;
+        }
+
+        $placeholders = [];
+        foreach ($values_list as $value) {
+            $placeholders[] = self::quoteValue($column_name, $value, $values);
+        }
+
+        $obj->sql = self::column($column_name).' NOT IN ('.implode(', ', $placeholders).')';
+        $obj->values = $values;
+        return $obj;
     }
 
     /**
@@ -696,7 +1243,7 @@ class Sql
                         $refQB = new \ReflectionObject($v);
                         if ($refQB->hasProperty('namedBindings')) {
                             $p = $refQB->getProperty('namedBindings');
-                            $p->setAccessible(true);
+                            self::ensurePropertyAccessible($p);
                             $nb = $p->getValue($v);
                             if (!empty($nb)) {
                                 foreach ($nb as $k => $vv) {
@@ -708,7 +1255,7 @@ class Sql
                         }
                         if ($refQB->hasProperty('embeddedBindings')) {
                             $p2 = $refQB->getProperty('embeddedBindings');
-                            $p2->setAccessible(true);
+                            self::ensurePropertyAccessible($p2);
                             $eb = $p2->getValue($v);
                             if (!empty($eb)) {
                                 foreach ($eb as $k => $vv) {
@@ -742,6 +1289,19 @@ class Sql
      * @var int
      */
     protected static $placeholderCounter = 0;
+
+    /**
+     * Safely make a ReflectionProperty accessible when needed.
+     *
+     * @param \ReflectionProperty $property
+     * @return void
+     */
+    protected static function ensurePropertyAccessible(\ReflectionProperty $property): void
+    {
+        if (!$property->isPublic() && method_exists($property, 'setAccessible')) {
+            $property->setAccessible(true);
+        }
+    }
 
     /**
      * Merge bindings and optionally rename named placeholders in the provided SQL fragment to avoid collisions.
@@ -844,7 +1404,7 @@ class Sql
             $ref = new \ReflectionObject($qb);
             if ($ref->hasProperty('columns')) {
                 $prop = $ref->getProperty('columns');
-                $prop->setAccessible(true);
+                self::ensurePropertyAccessible($prop);
                 $cols = $prop->getValue($qb);
                 if (!empty($cols) && is_array($cols)) {
                     foreach ($cols as $col) {
@@ -859,7 +1419,7 @@ class Sql
                                     $refExpr = new \ReflectionObject($expr);
                                     if ($refExpr->hasProperty('namedBindings')) {
                                         $p = $refExpr->getProperty('namedBindings');
-                                        $p->setAccessible(true);
+                                        self::ensurePropertyAccessible($p);
                                         $nb = $p->getValue($expr);
                                         if (!empty($nb)) {
                                             foreach ($nb as $k => $v) {
@@ -869,7 +1429,7 @@ class Sql
                                     }
                                     if ($refExpr->hasProperty('embeddedBindings')) {
                                         $p2 = $refExpr->getProperty('embeddedBindings');
-                                        $p2->setAccessible(true);
+                                        self::ensurePropertyAccessible($p2);
                                         $eb = $p2->getValue($expr);
                                         if (!empty($eb)) {
                                             foreach ($eb as $k => $v) {
@@ -1082,7 +1642,7 @@ class Sql
                             $refItem = new \ReflectionObject($item);
                             if ($refItem->hasProperty('namedBindings')) {
                                 $p = $refItem->getProperty('namedBindings');
-                                $p->setAccessible(true);
+                                self::ensurePropertyAccessible($p);
                                 $nb = $p->getValue($item);
                                 if (!empty($nb)) {
                                     // merge named bindings (may require placeholder renaming)
@@ -1091,7 +1651,7 @@ class Sql
                             }
                             if ($refItem->hasProperty('embeddedBindings')) {
                                 $p2 = $refItem->getProperty('embeddedBindings');
-                                $p2->setAccessible(true);
+                                self::ensurePropertyAccessible($p2);
                                 $eb = $p2->getValue($item);
                                 if (!empty($eb)) {
                                     // merge embedded bindings as well
@@ -1115,7 +1675,6 @@ class Sql
                             $qs[] = $frag;
                             continue;
                         }
-
                     } elseif ($item instanceof self) {
                         $frag = $item->toSql();
                         $bindings = $item->getValues([]);
@@ -1140,7 +1699,7 @@ class Sql
                         $refC = new \ReflectionObject($condition[0]);
                         if ($refC->hasProperty('namedBindings')) {
                             $p = $refC->getProperty('namedBindings');
-                            $p->setAccessible(true);
+                            self::ensurePropertyAccessible($p);
                             $nb = $p->getValue($condition[0]);
                             if (!empty($nb)) {
                                 foreach ($nb as $k => $v) {
@@ -1150,7 +1709,7 @@ class Sql
                         }
                         if ($refC->hasProperty('embeddedBindings')) {
                             $p2 = $refC->getProperty('embeddedBindings');
-                            $p2->setAccessible(true);
+                            self::ensurePropertyAccessible($p2);
                             $eb = $p2->getValue($condition[0]);
                             if (!empty($eb)) {
                                 foreach ($eb as $k => $v) {
@@ -1195,7 +1754,7 @@ class Sql
                             $refC = new \ReflectionObject($condition[1]);
                             if ($refC->hasProperty('namedBindings')) {
                                 $p = $refC->getProperty('namedBindings');
-                                $p->setAccessible(true);
+                                self::ensurePropertyAccessible($p);
                                 $nb = $p->getValue($condition[1]);
                                 if (!empty($nb)) {
                                     foreach ($nb as $k => $v) {
@@ -1205,7 +1764,7 @@ class Sql
                             }
                             if ($refC->hasProperty('embeddedBindings')) {
                                 $p2 = $refC->getProperty('embeddedBindings');
-                                $p2->setAccessible(true);
+                                self::ensurePropertyAccessible($p2);
                                 $eb = $p2->getValue($condition[1]);
                                 if (!empty($eb)) {
                                     foreach ($eb as $k => $v) {
@@ -1248,7 +1807,7 @@ class Sql
                             $refC = new \ReflectionObject($condition[2]);
                             if ($refC->hasProperty('namedBindings')) {
                                 $p = $refC->getProperty('namedBindings');
-                                $p->setAccessible(true);
+                                self::ensurePropertyAccessible($p);
                                 $nb = $p->getValue($condition[2]);
                                 if (!empty($nb)) {
                                     foreach ($nb as $k => $v) {
@@ -1258,7 +1817,7 @@ class Sql
                             }
                             if ($refC->hasProperty('embeddedBindings')) {
                                 $p2 = $refC->getProperty('embeddedBindings');
-                                $p2->setAccessible(true);
+                                self::ensurePropertyAccessible($p2);
                                 $eb = $p2->getValue($condition[2]);
                                 if (!empty($eb)) {
                                     foreach ($eb as $k => $v) {
@@ -1313,7 +1872,7 @@ class Sql
                 $refC = new \ReflectionObject($condition);
                 if ($refC->hasProperty('namedBindings')) {
                     $p = $refC->getProperty('namedBindings');
-                    $p->setAccessible(true);
+                    self::ensurePropertyAccessible($p);
                     $nb = $p->getValue($condition);
                     if (!empty($nb)) {
                         foreach ($nb as $k => $v) {
@@ -1323,7 +1882,7 @@ class Sql
                 }
                 if ($refC->hasProperty('embeddedBindings')) {
                     $p2 = $refC->getProperty('embeddedBindings');
-                    $p2->setAccessible(true);
+                    self::ensurePropertyAccessible($p2);
                     $eb = $p2->getValue($condition);
                     if (!empty($eb)) {
                         foreach ($eb as $k => $v) {
@@ -1384,5 +1943,4 @@ class Sql
     {
         return self::column($name);
     }
-
 }

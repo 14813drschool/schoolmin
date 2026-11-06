@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan;
 
 /**
@@ -36,7 +35,7 @@ class Date
      * Returns the number of days (can be negative), years, months, and days [days, year, month, day].
      *
      * @param string|int  $begin_date The start date or birth date (Unix timestamp or date in the format YYYY-m-d)
-     * @param istring|int $end_date   The end date or today's date (Unix timestamp or date in the format YYYY-m-d)
+     * @param string|int $end_date   The end date or today's date (Unix timestamp or date in the format YYYY-m-d)
      *
      * @return array
      */
@@ -58,7 +57,7 @@ class Date
     }
 
     /**
-     * คืนค่าอายุเป็นข้อความ ปี เดือน วัน
+     * Return the age as a formatted string (years, months, days)
      *
      * @param string $date
      *
@@ -86,8 +85,8 @@ class Date
     /**
      * Returns the time difference in milliseconds.
      *
-     * @param  $firstTime
-     * @param  $lastTime
+     * @param string|int $firstTime The start time (Unix timestamp or date in the format YYYY-m-d H:i:s)
+     * @param string|int $lastTime  The end time (Unix timestamp or date in the format YYYY-m-d H:i:s)
      *
      * @return int
      */
@@ -144,38 +143,45 @@ class Date
         if (!isset(self::$lang)) {
             new static();
         }
+        // allow special relative time formats
         $format = empty($format) ? 'DATE_FORMAT' : $format;
+        // if caller requested a relative/ago format, return result from timeAgo()
+        $lower = is_string($format) ? strtolower($format) : '';
+        if (in_array($lower, ['timeago', 'time_ago', 'relative', 'ago'])) {
+            return self::timeAgo(date('Y-m-d H:i:s', $time));
+        }
+
         $format = Language::get($format);
         if (preg_match_all('/(.)/u', $format, $match)) {
             $ret = '';
             foreach ($match[0] as $item) {
                 switch ($item) {
-                    case ' ':
-                    case ':':
-                    case '/':
-                    case '-':
-                    case '.':
-                    case ',':
-                        $ret .= $item;
-                        break;
-                    case 'l':
-                        $ret .= self::$lang['DATE_SHORT'][date('w', $time)];
-                        break;
-                    case 'L':
-                        $ret .= self::$lang['DATE_LONG'][date('w', $time)];
-                        break;
-                    case 'M':
-                        $ret .= self::$lang['MONTH_SHORT'][date('n', $time)];
-                        break;
-                    case 'F':
-                        $ret .= self::$lang['MONTH_LONG'][date('n', $time)];
-                        break;
-                    case 'Y':
-                        $ret .= (int) date('Y', $time) + (int) self::$lang['YEAR_OFFSET'];
-                        break;
-                    default:
-                        $ret .= trim($item) == '' ? ' ' : date($item, $time);
-                        break;
+                case ' ':
+                case ':':
+                case '/':
+                case '-':
+                case '.':
+                case ',':
+                    $ret .= $item;
+                    break;
+                case 'l':
+                    $ret .= self::$lang['DATE_SHORT'][date('w', $time)];
+                    break;
+                case 'L':
+                    $ret .= self::$lang['DATE_LONG'][date('w', $time)];
+                    break;
+                case 'M':
+                    $ret .= self::$lang['MONTH_SHORT'][date('n', $time)];
+                    break;
+                case 'F':
+                    $ret .= self::$lang['MONTH_LONG'][date('n', $time)];
+                    break;
+                case 'Y':
+                    $ret .= (int) date('Y', $time) + (int) self::$lang['YEAR_OFFSET'];
+                    break;
+                default:
+                    $ret .= trim($item) == '' ? ' ' : date($item, $time);
+                    break;
                 }
             }
         } else {
@@ -240,36 +246,36 @@ class Date
 
         // Check for the time difference in years
         if ($diff->y > 0) {
-            return $diff->y.' {LNG_year} {LNG_ago}';
+            return Language::trans($diff->y.' {LNG_year} {LNG_ago}');
         }
 
         // Check for the time difference in months
         if ($diff->m > 0) {
-            return $diff->m.' {LNG_month} {LNG_ago}';
+            return Language::trans($diff->m.' {LNG_month} {LNG_ago}');
         }
 
         // Check for the time difference in weeks if it's more than 7 days
         if ($diff->d > 7) {
             $week = floor($diff->d / 7);
-            return $week.' {LNG_week} {LNG_ago}';
+            return Language::trans($week.' {LNG_week} {LNG_ago}');
         }
 
         // Check for the time difference in days if it's more than 2 days
         if ($diff->d > 2) {
-            return $diff->d.' {LNG_days} {LNG_ago}';
+            return Language::trans($diff->d.' {LNG_days} {LNG_ago}');
         }
 
         // Check for the time difference in hours
         if ($diff->h > 0) {
-            return $diff->h.' {LNG_hours} {LNG_ago}';
+            return Language::trans($diff->h.' {LNG_hours} {LNG_ago}');
         }
 
         // Check for the time difference in minutes
         if ($diff->i > 0) {
-            return $diff->i.' {LNG_minutes} {LNG_ago}';
+            return Language::trans($diff->i.' {LNG_minutes} {LNG_ago}');
         }
 
         // If there is no significant time difference, return '{LNG_now}'
-        return '{LNG_now}';
+        return Language::get('now');
     }
 }

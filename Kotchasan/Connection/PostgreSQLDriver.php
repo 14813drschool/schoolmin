@@ -228,8 +228,17 @@ class PostgreSQLDriver implements DriverInterface
             throw new DatabaseException("Cannot get last insert ID: Not connected to database.");
         }
 
-        // In PostgreSQL, sequences are typically named with pattern: table_column_seq
-        return $this->pdo->lastInsertId($name);
+        // In PostgreSQL, sequences are typically named table_column_seq. With no
+        // name, PDO uses lastval() which THROWS if no sequence was advanced in
+        // this session. Guard so callers get '0' rather than a fatal error.
+        // (For reliable IDs on PG, pass the sequence name or use INSERT ...
+        // RETURNING.)
+        try {
+            return (string) $this->pdo->lastInsertId($name);
+        } catch (\PDOException $e) {
+            $this->lastError = $e->getMessage();
+            return '0';
+        }
     }
 
     /**
@@ -329,6 +338,40 @@ class PostgreSQLDriver implements DriverInterface
     }
 
     /**
+     * Translate a MySQL DATE_FORMAT() format string to a PostgreSQL TO_CHAR()
+     * template. Uses strtr() (single pass, longest-match) so a converted token
+     * is never re-translated. Literal text segments are wrapped in "double
+     * quotes" so TO_CHAR does not misread them as pattern letters.
+     *
+     * @param string $mysqlFormat
+     * @return string  PostgreSQL TO_CHAR template (already including its literals)
+     */
+    protected function convertDateFormat(string $mysqlFormat): string
+    {
+        $map = [
+            '%Y' => 'YYYY', '%y' => 'YY', '%m' => 'MM', '%c' => 'FMMM',
+            '%d' => 'DD', '%e' => 'FMDD', '%H' => 'HH24', '%k' => 'FMHH24',
+            '%h' => 'HH12', '%I' => 'HH12', '%l' => 'FMHH12', '%i' => 'MI',
+            '%s' => 'SS', '%S' => 'SS', '%p' => 'AM', '%M' => 'FMMonth',
+            '%b' => 'Mon', '%W' => 'FMDay', '%a' => 'Dy', '%j' => 'DDD',
+            '%T' => 'HH24:MI:SS', '%r' => 'HH12:MI:SS AM', '%%' => '%',
+        ];
+        $out = '';
+        $len = strlen($mysqlFormat);
+        for ($i = 0; $i < $len; $i++) {
+            if ($mysqlFormat[$i] === '%' && $i + 1 < $len && isset($map['%'.$mysqlFormat[$i + 1]])) {
+                $out .= $map['%'.$mysqlFormat[$i + 1]];
+                $i++;
+            } else {
+                // literal char — quote letters so TO_CHAR treats them literally
+                $c = $mysqlFormat[$i];
+                $out .= ctype_alpha($c) ? '"'.$c.'"' : $c;
+            }
+        }
+        return $out;
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function formatSqlFunction(string $type, array $parameters, ?string $alias): string
@@ -366,14 +409,17 @@ class PostgreSQLDriver implements DriverInterface
             case 'CONCAT':
                 $fields = array_map([$this, 'formatFieldOrValue'], $parameters['fields']);
                 if (!empty($parameters['separator'])) {
-                    return "CONCAT_WS('".$parameters['separator']."', ".implode(', ', $fields).')'.$aliasStr;
+                    $sep = str_replace("'", "''", $parameters['separator']);
+                    return "CONCAT_WS('".$sep."', ".implode(', ', $fields).')'.$aliasStr;
                 }
                 return 'CONCAT('.implode(', ', $fields).')'.$aliasStr;
 
             case 'GROUP_CONCAT':
                 $distinct = !empty($parameters['distinct']) ? 'DISTINCT ' : '';
-                $column = $this->quoteIdentifier($parameters['column']);
-                $separator = $parameters['separator'] ?? ',';
+                $fields = array_map([$this, 'formatFieldOrValue'], $parameters['fields']);
+                // STRING_AGG takes a single text expression; concat multiple fields.
+                $concatFields = count($fields) > 1 ? 'CONCAT('.implode(', ', $fields).')' : $fields[0];
+                $separator = str_replace("'", "''", $parameters['separator'] ?? ',');
                 $orderClause = '';
 
                 if (!empty($parameters['order'])) {
@@ -381,7 +427,7 @@ class PostgreSQLDriver implements DriverInterface
                     $orderClause = ' ORDER BY '.implode(', ', array_map([$this, 'quoteIdentifier'], $orders));
                 }
 
-                return 'STRING_AGG('.$distinct.$column.", '".$separator."'".$orderClause.')'.$aliasStr;
+                return 'STRING_AGG('.$distinct.$concatFields."::text, '".$separator."'".$orderClause.')'.$aliasStr;
 
             case 'COUNT':
                 $distinct = !empty($parameters['distinct']) ? 'DISTINCT ' : '';
@@ -409,10 +455,131 @@ class PostgreSQLDriver implements DriverInterface
                 return 'COALESCE('.$this->quoteIdentifier($parameters['column1']).', '.$this->formatFieldOrValue($parameters['column2']).')'.$aliasStr;
 
             case 'DATEDIFF':
-                return '('.$this->quoteIdentifier($parameters['column1']).' - '.$this->quoteIdentifier($parameters['column2']).')'.$aliasStr;
+                // MySQL DATEDIFF returns an integer number of days.
+                return '(CAST('.$this->formatFieldOrValue($parameters['column1']).' AS DATE) - CAST('.$this->formatFieldOrValue($parameters['column2']).' AS DATE))'.$aliasStr;
+
+            case 'TIMEDIFF':
+                // Approximate MySQL TIMEDIFF (a TIME duration) with an interval.
+                return '(CAST('.$this->formatFieldOrValue($parameters['column1']).' AS TIMESTAMP) - CAST('.$this->formatFieldOrValue($parameters['column2']).' AS TIMESTAMP))'.$aliasStr;
+
+            case 'TIMESTAMPDIFF':
+                return 'EXTRACT('.$parameters['unit'].' FROM ('.$this->formatFieldOrValue($parameters['column2']).' - '.$this->formatFieldOrValue($parameters['column1']).'))'.$aliasStr;
+
+            case 'DATE_ADD':
+                $interval = (int) $parameters['interval'];
+                $unit = strtolower($parameters['unit']);
+                return '('.$this->formatFieldOrValue($parameters['column']).' + INTERVAL \''.$interval.' '.$unit.'\')'.$aliasStr;
+
+            case 'DATE_SUB':
+                $interval = (int) $parameters['interval'];
+                $unit = strtolower($parameters['unit']);
+                return '('.$this->formatFieldOrValue($parameters['column']).' - INTERVAL \''.$interval.' '.$unit.'\')'.$aliasStr;
+
+            case 'FIND_IN_SET':
+                $val = $this->formatFieldOrValue($parameters['value']);
+                $col = $this->quoteIdentifier($parameters['column']);
+                return 'COALESCE(ARRAY_POSITION(string_to_array('.$col.', \',\'), '.$val.'), 0)'.$aliasStr;
+
+            case 'LPAD':
+                $len = (int) $parameters['length'];
+                $pad = str_replace("'", "''", $parameters['pad']);
+                return 'LPAD(CAST('.$this->quoteIdentifier($parameters['column']).' AS TEXT), '.$len.", '".$pad."')".$aliasStr;
+
+            case 'NULLIF':
+                return 'NULLIF('.$this->formatFieldOrValue($parameters['column1']).', '.$this->formatFieldOrValue($parameters['column2']).')'.$aliasStr;
+
+            case 'QUARTER':
+                return 'EXTRACT(QUARTER FROM '.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'RPAD':
+                $len = (int) $parameters['length'];
+                $pad = str_replace("'", "''", $parameters['pad']);
+                return 'RPAD(CAST('.$this->quoteIdentifier($parameters['column']).' AS TEXT), '.$len.", '".$pad."')".$aliasStr;
+
+            case 'STR_TO_DATE':
+                $fmt = str_replace("'", "''", $this->convertDateFormat((string) $parameters['format']));
+                return 'TO_TIMESTAMP('.$this->formatFieldOrValue($parameters['value']).", '".$fmt."')".$aliasStr;
+
+            case 'TIME':
+                return 'CAST('.$this->quoteIdentifier($parameters['column']).' AS TIME)'.$aliasStr;
+
+            case 'WEEK':
+                return 'EXTRACT(WEEK FROM '.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
 
             case 'DATE_FORMAT':
-                return 'TO_CHAR('.$this->quoteIdentifier($parameters['column']).", '".$parameters['format']."')".$aliasStr;
+                $fmt = str_replace("'", "''", $this->convertDateFormat((string) $parameters['format']));
+                return 'TO_CHAR('.$this->quoteIdentifier($parameters['column']).", '".$fmt."')".$aliasStr;
+
+            case 'LENGTH':
+                return 'LENGTH('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'UPPER':
+                return 'UPPER('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'LOWER':
+                return 'LOWER('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'TRIM':
+                return 'TRIM('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'LTRIM':
+                return 'LTRIM('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'RTRIM':
+                return 'RTRIM('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'SUBSTRING':
+                $start = $parameters['start'];
+                $length = $parameters['length'] ?? null;
+                if ($length === null) {
+                    return 'SUBSTRING('.$this->quoteIdentifier($parameters['column']).' FROM '.$start.')'.$aliasStr;
+                }
+                return 'SUBSTRING('.$this->quoteIdentifier($parameters['column']).' FROM '.$start.' FOR '.$length.')'.$aliasStr;
+
+            case 'REPLACE':
+                return 'REPLACE('.$this->quoteIdentifier($parameters['column']).', '.$this->formatLiteralOrColumn($parameters['search']).', '.$this->formatLiteralOrColumn($parameters['replace']).')'.$aliasStr;
+
+            case 'CURDATE':
+                return 'CURRENT_DATE'.$aliasStr;
+
+            case 'CURTIME':
+                return 'CURRENT_TIME'.$aliasStr;
+
+            case 'IF_EXPR':
+                return 'CASE WHEN '.$parameters['condition'].' THEN '.$this->formatFieldOrValue($parameters['value_true']).' ELSE '.$this->formatFieldOrValue($parameters['value_false']).' END'.$aliasStr;
+
+            case 'CASE_WHEN':
+                $cases = $parameters['cases'] ?? [];
+                $sql = 'CASE';
+                foreach ($cases as $case) {
+                    $condition = $case[0] ?? '';
+                    $result = $case[1] ?? null;
+                    $sql .= ' WHEN '.$condition.' THEN '.$this->formatFieldOrValue($result);
+                }
+                if (array_key_exists('else', $parameters)) {
+                    $sql .= ' ELSE '.$this->formatFieldOrValue($parameters['else']);
+                }
+                return $sql.' END'.$aliasStr;
+
+            case 'COALESCE':
+                $values = array_map([$this, 'formatFieldOrValue'], $parameters['values']);
+                return 'COALESCE('.implode(', ', $values).')'.$aliasStr;
+
+            case 'ABS':
+                return 'ABS('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'CEIL':
+                return 'CEIL('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'FLOOR':
+                return 'FLOOR('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+
+            case 'ROUND':
+                $precision = $parameters['precision'] ?? null;
+                if ($precision === null) {
+                    return 'ROUND('.$this->quoteIdentifier($parameters['column']).')'.$aliasStr;
+                }
+                return 'ROUND('.$this->quoteIdentifier($parameters['column']).', '.$precision.')'.$aliasStr;
 
             case 'COLUMN':
                 return $this->quoteIdentifier($parameters['column']);
@@ -430,12 +597,47 @@ class PostgreSQLDriver implements DriverInterface
      */
     protected function formatFieldOrValue($value): string
     {
+        if ($value === null) {
+            return 'NULL';
+        }
+
+        if ($value instanceof \Kotchasan\QueryBuilder\RawExpression) {
+            return $value->toSql();
+        }
+        if ($value instanceof \Kotchasan\QueryBuilder\SqlFunction  && strtoupper($value->getType()) === 'COLUMN') {
+            $params = $value->getParameters();
+            return $this->quoteIdentifier($params['column']);
+        }
+
         if (is_string($value) && preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/', $value)) {
             // Looks like a field name
             return $this->quoteIdentifier($value);
         }
 
         // Treat as literal value
+        return is_string($value) ? "'".str_replace("'", "''", $value)."'" : (string) $value;
+    }
+
+    /**
+     * Format literal value or explicit column reference.
+     * Strings are treated as literals by default.
+     *
+     * @param mixed $value
+     * @return string
+     */
+    protected function formatLiteralOrColumn($value): string
+    {
+        if ($value === null) {
+            return 'NULL';
+        }
+        if ($value instanceof \Kotchasan\QueryBuilder\RawExpression) {
+            return $value->toSql();
+        }
+        if ($value instanceof \Kotchasan\QueryBuilder\SqlFunction  && strtoupper($value->getType()) === 'COLUMN') {
+            $params = $value->getParameters();
+            return $this->quoteIdentifier($params['column']);
+        }
+
         return is_string($value) ? "'".str_replace("'", "''", $value)."'" : (string) $value;
     }
 

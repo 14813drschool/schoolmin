@@ -67,6 +67,20 @@ class PDOResult implements ResultInterface
     }
 
     /**
+     * Iterate the rows of the result set.
+     *
+     * Model code throughout the framework consumes a query with
+     * `foreach ($query->execute() as $row)`. Without this the loop walks the
+     * object's properties instead of its rows and silently yields nothing.
+     *
+     * @return \Traversable
+     */
+    public function getIterator(): \Traversable
+    {
+        return new \ArrayIterator($this->fetchAll());
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function fetch()

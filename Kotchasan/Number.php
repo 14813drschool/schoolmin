@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan;
 
 /**
@@ -32,8 +31,8 @@ class Number
      * Perform division.
      * If the divisor is equal to 0, return 0.
      *
-     * @param $dividend The dividend
-     * @param $divisor The divisor
+     * @param mixed $dividend The dividend
+     * @param mixed $divisor The divisor
      *
      * @return mixed The result of the division
      */

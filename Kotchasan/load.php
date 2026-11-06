@@ -12,6 +12,18 @@ if (!defined('DEBUG')) {
     define('DEBUG', 0);
 }
 
+/**
+ * Log destination.
+ * LOG_FILE   = Log to error_log.php file only
+ * LOG_SYSTEM = Log to PHP/Apache error log only (error_log())
+ * LOG_BOTH   = Log to both destinations
+ *
+ * @var string
+ */
+if (!defined('LOG_DESTINATION')) {
+    define('LOG_DESTINATION', 'LOG_BOTH');
+}
+
 /* Display errors */
 if (DEBUG > 0) {
     /* During development, display PHP errors and warnings */
@@ -28,7 +40,7 @@ if (DEBUG > 0) {
  *
  * @var string
  */
-define('VERSION', '6.0.0');
+define('VERSION', '7.0.0');
 
 /*
  * Enable database query logging.
@@ -38,6 +50,47 @@ define('VERSION', '6.0.0');
  */
 if (!defined('DB_LOG')) {
     define('DB_LOG', false);
+}
+
+/*
+ * Database query log file.
+ * Used when DB_LOG is enabled.
+ *
+ * @var string
+ */
+if (!defined('DB_LOG_FILE')) {
+    define('DB_LOG_FILE', defined('DATA_FOLDER') ? DATA_FOLDER.'logs/sql_log.php' : 'sql_log.php');
+}
+
+/*
+ * Number of days to retain SQL query logs.
+ *
+ * @var int
+ */
+if (!defined('DB_LOG_RETENTION_DAYS')) {
+    define('DB_LOG_RETENTION_DAYS', 7);
+}
+
+/**
+ * Enable database query caching.
+ * Set to true for production, false for development.
+ *
+ * @var bool
+ */
+if (!defined('DB_CACHE')) {
+    define('DB_CACHE', false);
+}
+
+/**
+ * Cache driver type.
+ * file   = Store cache in files (default)
+ * memory = Store cache in memory (lost when request ends)
+ * redis  = Store cache in Redis server
+ *
+ * @var string
+ */
+if (!defined('CACHE_DRIVER')) {
+    define('CACHE_DRIVER', 'file');
 }
 
 /**
@@ -164,7 +217,7 @@ if (!defined('WEB_URL')) {
  * The limit and age of tokens.
  */
 if (!defined('TOKEN_LIMIT')) {
-    define('TOKEN_LIMIT', 10);
+    define('TOKEN_LIMIT', 100);
 }
 if (!defined('TOKEN_AGE')) {
     define('TOKEN_AGE', 3600);
@@ -187,6 +240,10 @@ function createClass($className, $param = null)
  */
 function doShutdown()
 {
+    // Check if debugger has data (may have been cleared by Response::send())
+    if (empty(\Kotchasan::$debugger) || !is_array(\Kotchasan::$debugger)) {
+        return;
+    }
     echo '<script>';
     foreach (\Kotchasan::$debugger as $item) {
         echo 'console.log('.$item.');';
@@ -196,10 +253,8 @@ function doShutdown()
 
 /**
  * Output debug information to the browser console.
- *
- * @param  mixed $data The variable to be displayed in the console
  */
-function debug($expression)
+function debug()
 {
     if (\Kotchasan::$debugger === null) {
         \Kotchasan::$debugger = [];
@@ -220,35 +275,52 @@ function debug($expression)
  * Custom error handler
  *
  * This code segment defines a custom error handler that handles PHP errors and exceptions.
- * If the application is not in debug mode (DEBUG != 2), errors are logged to a file. Otherwise, errors are displayed.
+ * If the application is not in debug mode (DEBUG != 2), errors are logged based on LOG_DESTINATION.
+ * Supports logging to file, system (Apache/PHP error log), or both.
  */
 if (DEBUG != 2) {
     set_error_handler(function ($errno, $errstr, $errfile, $errline) {
         switch ($errno) {
-            case E_WARNING:
-                $type = 'PHP warning';
-                break;
-            case E_NOTICE:
-                $type = 'PHP notice';
-                break;
-            case E_USER_ERROR:
-                $type = 'User error';
-                break;
-            case E_USER_WARNING:
-                $type = 'User warning';
-                break;
-            case E_USER_NOTICE:
-                $type = 'User notice';
-                break;
-            case E_RECOVERABLE_ERROR:
-                $type = 'Recoverable error';
-                break;
-            default:
-                $type = 'PHP Error';
+        case E_WARNING:
+            $type = 'PHP warning';
+            break;
+        case E_NOTICE:
+            $type = 'PHP notice';
+            break;
+        case E_USER_ERROR:
+            $type = 'User error';
+            break;
+        case E_USER_WARNING:
+            $type = 'User warning';
+            break;
+        case E_USER_NOTICE:
+            $type = 'User notice';
+            break;
+        case E_RECOVERABLE_ERROR:
+            $type = 'Recoverable error';
+            break;
+        default:
+            $type = 'PHP Error';
         }
 
-        // Create a log entry with the error information
-        \Kotchasan\Logger::create()->error('<br>'.$type.' : <em>'.$errstr.'</em> in <b>'.$errfile.'</b> on line <b>'.$errline.'</b>');
+        // Format error message for file logging (with HTML)
+        $htmlMessage = '<br>'.$type.' : <em>'.$errstr.'</em> in <b>'.$errfile.'</b> on line <b>'.$errline.'</b>';
+
+        // Format error message for system log (plain text)
+        $plainMessage = $type.' : '.$errstr.' in '.$errfile.' on line '.$errline;
+
+        // Log based on LOG_DESTINATION
+        $destination = defined('LOG_DESTINATION') ? LOG_DESTINATION : 'LOG_BOTH';
+
+        if ($destination === 'LOG_SYSTEM' || $destination === 'LOG_BOTH') {
+            // Log to PHP/Apache error log
+            error_log($plainMessage);
+        }
+
+        if ($destination === 'LOG_FILE' || $destination === 'LOG_BOTH') {
+            // Log to file
+            \Kotchasan\Logger::create()->error($htmlMessage);
+        }
     });
 
     set_exception_handler(function ($e) {
@@ -261,13 +333,33 @@ if (DEBUG != 2) {
         } else {
             $trace = next($trace);
         }
-        $error = '<br>Exception : <em>'.$e->getMessage().'</em>';
+
+        // Format error message for file logging (with HTML)
+        $htmlMessage = '<br>Exception : <em>'.$e->getMessage().'</em>';
         if (isset($trace['file']) && isset($trace['line'])) {
-            $error .= ' in <b>'.$trace['file'].'</b> on line <b>'.$trace['line'].'</b>';
+            $htmlMessage .= ' in <b>'.$trace['file'].'</b> on line <b>'.$trace['line'].'</b>';
         }
 
-        // Create a log entry with the exception information
-        \Kotchasan\Logger::create()->error($error);
+        // Format error message for system log (plain text)
+        $plainMessage = 'Exception : '.$e->getMessage();
+        if (isset($trace['file']) && isset($trace['line'])) {
+            $plainMessage .= ' in '.$trace['file'].' on line '.$trace['line'];
+        }
+        // Add stack trace for system log
+        $plainMessage .= "\nStack trace:\n".$e->getTraceAsString();
+
+        // Log based on LOG_DESTINATION
+        $destination = defined('LOG_DESTINATION') ? LOG_DESTINATION : 'LOG_BOTH';
+
+        if ($destination === 'LOG_SYSTEM' || $destination === 'LOG_BOTH') {
+            // Log to PHP/Apache error log
+            error_log($plainMessage);
+        }
+
+        if ($destination === 'LOG_FILE' || $destination === 'LOG_BOTH') {
+            // Log to file
+            \Kotchasan\Logger::create()->error($htmlMessage);
+        }
     });
 }
 
@@ -280,10 +372,18 @@ if (DEBUG != 2) {
  */
 function getClassPath($className)
 {
+    // Security: reject null bytes and empty/non-string input.
+    // Path traversal is already prevented by preg_match_all below, which only
+    // extracts separator and alphanumeric characters before any is_file() call.
+    if (!is_string($className) || $className === '' || strpos($className, "\0") !== false) {
+        return null;
+    }
     if (preg_match_all('/([\/\\])([a-zA-Z0-9]+)/', $className, $match)) {
         $className = implode(DIRECTORY_SEPARATOR, $match[1]).'.php';
         if (is_file(ROOT_PATH.$className)) {
             return ROOT_PATH.$className;
+        } elseif (is_file(ROOT_PATH.strtolower($className))) {
+            return ROOT_PATH.strtolower($className);
         } elseif (isset($match[1][2])) {
             if (isset($match[1][3])) {
                 $className = strtolower('modules'.DIRECTORY_SEPARATOR.$match[1][0].DIRECTORY_SEPARATOR.$match[1][3].'s'.DIRECTORY_SEPARATOR.$match[1][1].DIRECTORY_SEPARATOR.$match[1][2].'.php');
@@ -332,7 +432,6 @@ spl_autoload_register(function ($className) {
         'Kotchasan\Execution\StatementInterface' => 'Execution/StatementInterface.php',
         'Kotchasan\Http\Application' => 'Http/Application.php',
         'Kotchasan\Http\Auth\AuthFactory' => 'Http/Auth/AuthFactory.php',
-        'Kotchasan\Http\Controller\ApiController' => 'Http/Controller/ApiController.php',
         'Kotchasan\Http\InputItem' => 'Http/InputItem.php',
         'Kotchasan\Http\Inputs' => 'Http/Inputs.php',
         'Kotchasan\Http\Request' => 'Http/Request.php',
@@ -355,9 +454,12 @@ spl_autoload_register(function ($className) {
         'Kotchasan\Logger\LoggerInterface' => 'Logger/LoggerInterface.php',
         'Kotchasan\Logger\QueryLogger' => 'Logger/QueryLogger.php',
         'Kotchasan\Logger\QueryLoggerInterface' => 'Logger/QueryLoggerInterface.php',
+        'Kotchasan\Logger\SqlFileLogger' => 'Logger/SqlFileLogger.php',
+        'Kotchasan\Logger\SqlQueryLogger' => 'Logger/SqlQueryLogger.php',
+        'Kotchasan\Logger\RetentionFileLogger' => 'Logger/RetentionFileLogger.php',
+        'Kotchasan\Logger\SystemLogger' => 'Logger/SystemLogger.php',
         'Kotchasan\Psr\Http\Message\UploadedFileInterface' => 'Psr/Http/Message/UploadedFileInterface.php',
-        'Psr\Http\Message\ResponseInterface' => 'Psr/Http/Message/ResponseInterface.php',
-        'Psr\Http\Message\UploadedFileInterface' => 'Psr/Http/Message/UploadedFileInterface.php',
+        'Kotchasan\Psr\Http\Message\ResponseInterface' => 'Psr/Http/Message/ResponseInterface.php',
         'Kotchasan\QueryBuilder\DeleteBuilder' => 'QueryBuilder/DeleteBuilder.php',
         'Kotchasan\QueryBuilder\Factory\SqlBuilderFactory' => 'QueryBuilder/Factory/SqlBuilderFactory.php',
         'Kotchasan\QueryBuilder\Functions\AbstractSQLFunctionBuilder' => 'QueryBuilder/Functions/AbstractSQLFunctionBuilder.php',
@@ -381,19 +483,20 @@ spl_autoload_register(function ($className) {
         'Kotchasan\QueryBuilder\RawExpression' => 'QueryBuilder/RawExpression.php',
         'Kotchasan\QueryBuilder\SelectBuilder' => 'QueryBuilder/SelectBuilder.php',
         'Kotchasan\QueryBuilder\UpdateBuilder' => 'QueryBuilder/UpdateBuilder.php',
+        'Kotchasan\Result\ArrayResult' => 'Result/ArrayResult.php',
         'Kotchasan\Result\PDOResult' => 'Result/PDOResult.php',
         'Kotchasan\Result\ResultInterface' => 'Result/ResultInterface.php',
         'Kotchasan\Accordion' => 'Accordion.php',
+        'Kotchasan\ApiController' => 'ApiController.php',
+        'Kotchasan\ApiException' => 'ApiException.php',
         'Kotchasan\ArrayTool' => 'ArrayTool.php',
         'Kotchasan\Barcode' => 'Barcode.php',
-        'Kotchasan\CKEditor' => 'CKEditor.php',
         'Kotchasan\Collection' => 'Collection.php',
         'Kotchasan\Country' => 'Country.php',
         'Kotchasan\Csv' => 'Csv.php',
         'Kotchasan\Curl' => 'Curl.php',
         'Kotchasan\Currency' => 'Currency.php',
         'Kotchasan\Database' => 'Database.php',
-        'Kotchasan\DataTable' => 'DataTable.php',
         'Kotchasan\Date' => 'Date.php',
         'Kotchasan\DOMNode' => 'DOMNode.php',
         'Kotchasan\DOMParser' => 'DOMParser.php',
@@ -403,7 +506,6 @@ spl_autoload_register(function ($className) {
         'Kotchasan\Form' => 'Form.php',
         'Kotchasan\Grid' => 'Grid.php',
         'Kotchasan\Htmldoc' => 'Htmldoc.php',
-        'Kotchasan\Html' => 'Html.php',
         'Kotchasan\HtmlTable' => 'HtmlTable.php',
         'Kotchasan\Image' => 'Image.php',
         'Kotchasan\Input' => 'Input.php',

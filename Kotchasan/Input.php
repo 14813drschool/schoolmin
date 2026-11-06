@@ -1,12 +1,10 @@
 <?php
-
 namespace Kotchasan;
 
 use Kotchasan\Http\InputItem;
 use Kotchasan\Http\Inputs;
 use Kotchasan\Http\Request;
-use Kotchasan\Psr\Http\Message\ServerRequestInterface as KotchasanServerRequestInterface;
-use Psr\Http\Message\ServerRequestInterface as PsrServerRequestInterface;
+use Kotchasan\Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UploadedFileInterface;
 
 /**
@@ -39,16 +37,16 @@ class Input
     protected $customRules = [];
 
     /**
-     * @var PsrServerRequestInterface|KotchasanServerRequestInterface The request object
+     * @var ServerRequestInterface The request object
      */
     protected $request;
 
     /**
      * Constructor.
      *
-     * @param PsrServerRequestInterface|KotchasanServerRequestInterface|null $request The request object (optional)
+     * @param ServerRequestInterface|null $request The request object (optional)
      */
-    public function __construct(PsrServerRequestInterface | KotchasanServerRequestInterface | null $request = null)
+    public function __construct(ServerRequestInterface | null $request = null)
     {
         $this->request = $request ?? new Request(true);
 
@@ -60,10 +58,10 @@ class Input
     /**
      * Creates a new Input instance.
      *
-     * @param PsrServerRequestInterface|KotchasanServerRequestInterface|null $request The request object (optional)
-     * @return static
+     * @param ServerRequestInterface|null $request The request object (optional)
+     * @return self
      */
-    public static function create(PsrServerRequestInterface | KotchasanServerRequestInterface | null $request = null): self
+    public static function create(ServerRequestInterface | null $request = null): self
     {
         return new static($request);
     }
@@ -71,9 +69,9 @@ class Input
     /**
      * Gets the underlying PSR-7 ServerRequestInterface instance.
      *
-     * @return PsrServerRequestInterface|KotchasanServerRequestInterface
+     * @return ServerRequestInterface
      */
-    public function getRequest(): PsrServerRequestInterface | KotchasanServerRequestInterface
+    public function getRequest(): ServerRequestInterface
     {
         return $this->request;
     }
@@ -82,10 +80,10 @@ class Input
      * Creates a new Input instance with a modified request.
      * This method respects PSR-7 immutability principles.
      *
-     * @param PsrServerRequestInterface|KotchasanServerRequestInterface $request The new request object
-     * @return static A new Input instance with the modified request
+     * @param ServerRequestInterface $request The new request object
+     * @return self A new Input instance with the modified request
      */
-    public function withRequest(PsrServerRequestInterface | KotchasanServerRequestInterface $request): self
+    public function withRequest(ServerRequestInterface $request): self
     {
         $clone = clone $this;
         $clone->request = $request;
@@ -99,7 +97,7 @@ class Input
      * This method respects PSR-7 immutability principles.
      *
      * @param array $query The new query parameters
-     * @return static A new Input instance with the modified query parameters
+     * @return self A new Input instance with the modified query parameters
      */
     public function withQueryParams(array $query): self
     {
@@ -111,7 +109,7 @@ class Input
      * This method respects PSR-7 immutability principles.
      *
      * @param array|object|null $data The new parsed body
-     * @return static A new Input instance with the modified parsed body
+     * @return self A new Input instance with the modified parsed body
      */
     public function withParsedBody($data): self
     {
@@ -123,7 +121,7 @@ class Input
      * This method respects PSR-7 immutability principles.
      *
      * @param array $cookies The new cookie parameters
-     * @return static A new Input instance with the modified cookie parameters
+     * @return self A new Input instance with the modified cookie parameters
      */
     public function withCookieParams(array $cookies): self
     {
@@ -135,7 +133,7 @@ class Input
      * This method respects PSR-7 immutability principles.
      *
      * @param array $uploadedFiles The new uploaded files
-     * @return static A new Input instance with the modified uploaded files
+     * @return self A new Input instance with the modified uploaded files
      */
     public function withUploadedFiles(array $uploadedFiles): self
     {
@@ -153,75 +151,75 @@ class Input
     public function get(string $name, $default = null, string $source = 'all')
     {
         switch (strtolower($source)) {
-            case 'post':
-                $body = $this->request->getParsedBody();
-                $value = is_array($body) && array_key_exists($name, $body) ? $body[$name] : null;
-                if ($value === null) {
-                    return $default;
-                }
-                if (is_array($value)) {
-                    return new Inputs($value, 'POST');
-                }
-                return new InputItem($value, 'POST');
-            case 'get':
-                $qp = $this->request->getQueryParams();
-                $value = $qp[$name] ?? null;
-                if ($value === null) {
-                    return $default;
-                }
-                if (is_array($value)) {
-                    return new Inputs($value, 'GET');
-                }
-                return new InputItem($value, 'GET');
-            case 'cookie':
-                $cp = $this->request->getCookieParams();
-                $value = $cp[$name] ?? null;
-                if ($value === null) {
-                    return $default;
-                }
-                if (is_array($value)) {
-                    return new Inputs($value, 'COOKIE');
-                }
-                return new InputItem($value, 'COOKIE');
-            case 'server':
-                return $this->request->getServerParams()[$name] ?? $default;
-            case 'json':
+        case 'post':
+            $body = $this->request->getParsedBody();
+            $value = is_array($body) && array_key_exists($name, $body) ? $body[$name] : null;
+            if ($value === null) {
+                return $default;
+            }
+            if (is_array($value)) {
+                return new Inputs($value, 'POST');
+            }
+            return new InputItem($value, 'POST');
+        case 'get':
+            $qp = $this->request->getQueryParams();
+            $value = $qp[$name] ?? null;
+            if ($value === null) {
+                return $default;
+            }
+            if (is_array($value)) {
+                return new Inputs($value, 'GET');
+            }
+            return new InputItem($value, 'GET');
+        case 'cookie':
+            $cp = $this->request->getCookieParams();
+            $value = $cp[$name] ?? null;
+            if ($value === null) {
+                return $default;
+            }
+            if (is_array($value)) {
+                return new Inputs($value, 'COOKIE');
+            }
+            return new InputItem($value, 'COOKIE');
+        case 'server':
+            return $this->request->getServerParams()[$name] ?? $default;
+        case 'json':
+            $jsonData = $this->getJson();
+            $value = is_array($jsonData) && array_key_exists($name, $jsonData) ? $jsonData[$name] : null;
+            if ($value === null) {
+                return $default;
+            }
+            if (is_array($value)) {
+                return new Inputs($value, 'JSON');
+            }
+            return new InputItem($value, 'JSON');
+        case 'all':
+        default:
+            // Check POST data first
+            $value = $this->request->getParsedBody()[$name] ?? null;
+
+            // If not found in POST, check GET data
+            if ($value === null) {
+                $value = $this->request->getQueryParams()[$name] ?? null;
+            }
+
+            // If not found in GET and request is JSON, check JSON data
+            if ($value === null && $this->isJson()) {
                 $jsonData = $this->getJson();
-                $value = is_array($jsonData) && array_key_exists($name, $jsonData) ? $jsonData[$name] : null;
-                if ($value === null) {
-                    return $default;
-                }
-                if (is_array($value)) {
-                    return new Inputs($value, 'JSON');
-                }
-                return new InputItem($value, 'JSON');
-            case 'all':
-            default:
-                // Check POST data first
-                $value = $this->request->getParsedBody()[$name] ?? null;
+                $value = $jsonData[$name] ?? null;
+            }
 
-                // If not found in POST, check GET data
-                if ($value === null) {
-                    $value = $this->request->getQueryParams()[$name] ?? null;
-                }
+            // If still not found, return default
+            if ($value === null) {
+                return $default;
+            }
 
-                // If not found in GET and request is JSON, check JSON data
-                if ($value === null && $this->isJson()) {
-                    $jsonData = $this->getJson();
-                    $value = $jsonData[$name] ?? null;
-                }
+            // Wrap existing value into InputItem/Inputs for fluent API
+            if (is_array($value)) {
+                return new Inputs($value, 'REQUEST');
+            }
 
-                // If still not found, return default
-                if ($value === null) {
-                    return $default;
-                }
-
-                // Wrap existing value into InputItem/Inputs for fluent API
-                if (is_array($value)) {
-                    return new Inputs($value, 'REQUEST');
-                }
-
-                return new InputItem($value, 'REQUEST');
+            return new InputItem($value, 'REQUEST');
         }
     }
 
@@ -234,35 +232,35 @@ class Input
     public function all(string $source = 'all'): array
     {
         switch (strtolower($source)) {
-            case 'post':
-                return $this->request->getParsedBody() ?? [];
-            case 'get':
-                return $this->request->getQueryParams() ?? [];
-            case 'cookie':
-                return $this->request->getCookieParams() ?? [];
-            case 'server':
-                return $this->request->getServerParams() ?? [];
-            case 'json':
-                return $this->getJson() ?? [];
-            case 'all':
-            default:
-                $data = $this->request->getQueryParams() ?? [];
-                $postData = $this->request->getParsedBody() ?? [];
+        case 'post':
+            return $this->request->getParsedBody() ?? [];
+        case 'get':
+            return $this->request->getQueryParams() ?? [];
+        case 'cookie':
+            return $this->request->getCookieParams() ?? [];
+        case 'server':
+            return $this->request->getServerParams() ?? [];
+        case 'json':
+            return $this->getJson() ?? [];
+        case 'all':
+        default:
+            $data = $this->request->getQueryParams() ?? [];
+            $postData = $this->request->getParsedBody() ?? [];
 
-                // Include JSON data if available and Content-Type is application/json
-                if ($this->isJson()) {
-                    $jsonData = $this->getJson() ?? [];
-                    if (is_array($jsonData)) {
-                        $data = array_merge($data, $jsonData);
-                    }
+            // Include JSON data if available and Content-Type is application/json
+            if ($this->isJson()) {
+                $jsonData = $this->getJson() ?? [];
+                if (is_array($jsonData)) {
+                    $data = array_merge($data, $jsonData);
                 }
+            }
 
-                // Include POST data if available
-                if (is_array($postData)) {
-                    $data = array_merge($data, $postData);
-                }
+            // Include POST data if available
+            if (is_array($postData)) {
+                $data = array_merge($data, $postData);
+            }
 
-                return $data;
+            return $data;
         }
     }
 
@@ -270,7 +268,7 @@ class Input
      * Sets validation rules for the input data.
      *
      * @param array $rules The validation rules
-     * @return $this
+     * @return self The current Input instance for method chaining
      */
     public function rules(array $rules): self
     {
@@ -337,133 +335,133 @@ class Input
 
                 // Validate the field
                 switch ($rule) {
-                    case 'required':
-                        $valid = Validator::required($value);
-                        break;
-                    case 'email':
-                        if (!empty($value)) {
-                            $valid = Validator::email($value);
-                        }
-                        break;
-                    case 'url':
-                        if (!empty($value)) {
-                            $valid = Validator::url($value);
-                        }
-                        break;
-                    case 'integer':
-                        if (!empty($value)) {
-                            $valid = Validator::integer($value);
-                        }
-                        break;
-                    case 'float':
-                        if (!empty($value)) {
-                            $valid = Validator::float($value);
-                        }
-                        break;
-                    case 'date':
-                        if (!empty($value)) {
-                            $valid = Validator::date($value);
-                        }
-                        break;
-                    case 'time':
-                        if (!empty($value)) {
-                            $valid = Validator::time($value);
-                        }
-                        break;
-                    case 'phone':
-                        if (!empty($value)) {
-                            $valid = Validator::phone($value);
-                        }
-                        break;
-                    case 'username':
-                        if (!empty($value)) {
-                            $valid = Validator::username($value);
-                        }
-                        break;
-                    case 'password':
-                        if (!empty($value)) {
-                            $valid = Validator::password($value, is_numeric($ruleParam) ? $ruleParam : 8);
-                        }
-                        break;
-                    case 'pattern':
-                        if (!empty($value)) {
-                            $valid = Validator::pattern($value, $ruleParam);
-                        }
-                        break;
-                    case 'in':
-                        if (!empty($value)) {
-                            $valid = Validator::inList($value, is_array($ruleParam) ? $ruleParam : explode(',', $ruleParam));
-                        }
-                        break;
-                    case 'between':
-                        if (!empty($value)) {
-                            $params = is_array($ruleParam) ? $ruleParam : explode(',', $ruleParam);
-                            $valid = Validator::between($value, $params[0] ?? 0, $params[1] ?? PHP_INT_MAX);
-                        }
-                        break;
-                    case 'min':
-                        if (!empty($value)) {
-                            $valid = is_numeric($value) ? $value >= $ruleParam : mb_strlen($value) >= $ruleParam;
-                        }
-                        break;
-                    case 'max':
-                        if (!empty($value)) {
-                            $valid = is_numeric($value) ? $value <= $ruleParam : mb_strlen($value) <= $ruleParam;
-                        }
-                        break;
-                    case 'same':
-                        $valid = $value === ($this->data[$ruleParam] ?? null);
-                        break;
-                    case 'different':
-                        $valid = $value !== ($this->data[$ruleParam] ?? null);
-                        break;
-                    case 'same_as':
-                        $otherField = $ruleParam;
-                        $otherValue = $this->data[$otherField] ?? null;
-                        $valid = $value === $otherValue;
-                        break;
-                    case 'different_from':
-                        $otherField = $ruleParam;
-                        $otherValue = $this->data[$otherField] ?? null;
-                        $valid = $value !== $otherValue;
-                        break;
-                    case 'greater_than':
-                        $otherField = $ruleParam;
-                        $otherValue = $this->data[$otherField] ?? null;
-                        $valid = is_numeric($value) && is_numeric($otherValue) && $value > $otherValue;
-                        break;
-                    case 'greater_than_or_equal':
-                        $otherField = $ruleParam;
-                        $otherValue = $this->data[$otherField] ?? null;
-                        $valid = is_numeric($value) && is_numeric($otherValue) && $value >= $otherValue;
-                        break;
-                    case 'less_than':
-                        $otherField = $ruleParam;
-                        $otherValue = $this->data[$otherField] ?? null;
-                        $valid = is_numeric($value) && is_numeric($otherValue) && $value < $otherValue;
-                        break;
-                    case 'less_than_or_equal':
-                        $otherField = $ruleParam;
-                        $otherValue = $this->data[$otherField] ?? null;
-                        $valid = is_numeric($value) && is_numeric($otherValue) && $value <= $otherValue;
-                        break;
-                    case 'callback':
-                        if (is_callable($ruleParam)) {
-                            $valid = $ruleParam($value, $this->data);
-                        }
-                        break;
-                    default:
-                        // Check if this is a custom validation rule
-                        if (isset($this->customRules[$rule])) {
-                            $customRule = $this->customRules[$rule];
-                            $valid = $customRule['callback']($value, $ruleParam, $this->data);
+                case 'required':
+                    $valid = Validator::required($value);
+                    break;
+                case 'email':
+                    if (!empty($value)) {
+                        $valid = Validator::email($value);
+                    }
+                    break;
+                case 'url':
+                    if (!empty($value)) {
+                        $valid = Validator::url($value);
+                    }
+                    break;
+                case 'integer':
+                    if (!empty($value)) {
+                        $valid = Validator::integer($value);
+                    }
+                    break;
+                case 'float':
+                    if (!empty($value)) {
+                        $valid = Validator::float($value);
+                    }
+                    break;
+                case 'date':
+                    if (!empty($value)) {
+                        $valid = Validator::date($value);
+                    }
+                    break;
+                case 'time':
+                    if (!empty($value)) {
+                        $valid = Validator::time($value);
+                    }
+                    break;
+                case 'phone':
+                    if (!empty($value)) {
+                        $valid = Validator::phone($value);
+                    }
+                    break;
+                case 'username':
+                    if (!empty($value)) {
+                        $valid = Validator::username($value);
+                    }
+                    break;
+                case 'password':
+                    if (!empty($value)) {
+                        $valid = Validator::password($value, is_numeric($ruleParam) ? $ruleParam : 8);
+                    }
+                    break;
+                case 'pattern':
+                    if (!empty($value)) {
+                        $valid = Validator::pattern($value, $ruleParam);
+                    }
+                    break;
+                case 'in':
+                    if (!empty($value)) {
+                        $valid = Validator::inList($value, is_array($ruleParam) ? $ruleParam : explode(',', $ruleParam));
+                    }
+                    break;
+                case 'between':
+                    if (!empty($value)) {
+                        $params = is_array($ruleParam) ? $ruleParam : explode(',', $ruleParam);
+                        $valid = Validator::between($value, $params[0] ?? 0, $params[1] ?? PHP_INT_MAX);
+                    }
+                    break;
+                case 'min':
+                    if (!empty($value)) {
+                        $valid = is_numeric($value) ? $value >= $ruleParam : mb_strlen($value) >= $ruleParam;
+                    }
+                    break;
+                case 'max':
+                    if (!empty($value)) {
+                        $valid = is_numeric($value) ? $value <= $ruleParam : mb_strlen($value) <= $ruleParam;
+                    }
+                    break;
+                case 'same':
+                    $valid = $value === ($this->data[$ruleParam] ?? null);
+                    break;
+                case 'different':
+                    $valid = $value !== ($this->data[$ruleParam] ?? null);
+                    break;
+                case 'same_as':
+                    $otherField = $ruleParam;
+                    $otherValue = $this->data[$otherField] ?? null;
+                    $valid = $value === $otherValue;
+                    break;
+                case 'different_from':
+                    $otherField = $ruleParam;
+                    $otherValue = $this->data[$otherField] ?? null;
+                    $valid = $value !== $otherValue;
+                    break;
+                case 'greater_than':
+                    $otherField = $ruleParam;
+                    $otherValue = $this->data[$otherField] ?? null;
+                    $valid = is_numeric($value) && is_numeric($otherValue) && $value > $otherValue;
+                    break;
+                case 'greater_than_or_equal':
+                    $otherField = $ruleParam;
+                    $otherValue = $this->data[$otherField] ?? null;
+                    $valid = is_numeric($value) && is_numeric($otherValue) && $value >= $otherValue;
+                    break;
+                case 'less_than':
+                    $otherField = $ruleParam;
+                    $otherValue = $this->data[$otherField] ?? null;
+                    $valid = is_numeric($value) && is_numeric($otherValue) && $value < $otherValue;
+                    break;
+                case 'less_than_or_equal':
+                    $otherField = $ruleParam;
+                    $otherValue = $this->data[$otherField] ?? null;
+                    $valid = is_numeric($value) && is_numeric($otherValue) && $value <= $otherValue;
+                    break;
+                case 'callback':
+                    if (is_callable($ruleParam)) {
+                        $valid = $ruleParam($value, $this->data);
+                    }
+                    break;
+                default:
+                    // Check if this is a custom validation rule
+                    if (isset($this->customRules[$rule])) {
+                        $customRule = $this->customRules[$rule];
+                        $valid = $customRule['callback']($value, $ruleParam, $this->data);
 
-                            // Use custom rule's default message if no specific message was provided
-                            if (!$valid && is_string($message) && empty($message)) {
-                                $message = $customRule['message'];
-                            }
+                        // Use custom rule's default message if no specific message was provided
+                        if (!$valid && is_string($message) && empty($message)) {
+                            $message = $customRule['message'];
                         }
-                        break;
+                    }
+                    break;
                 }
 
                 if (!$valid) {
@@ -517,28 +515,28 @@ class Input
             $operator = $whenRule['operator'] ?? '==';
 
             switch ($operator) {
-                case '==':
-                    return $dependentValue == $expectedValue;
-                case '===':
-                    return $dependentValue === $expectedValue;
-                case '!=':
-                    return $dependentValue != $expectedValue;
-                case '!==':
-                    return $dependentValue !== $expectedValue;
-                case '>':
-                    return $dependentValue > $expectedValue;
-                case '>=':
-                    return $dependentValue >= $expectedValue;
-                case '<':
-                    return $dependentValue < $expectedValue;
-                case '<=':
-                    return $dependentValue <= $expectedValue;
-                case 'in':
-                    return in_array($dependentValue, (array) $expectedValue);
-                case 'not_in':
-                    return !in_array($dependentValue, (array) $expectedValue);
-                default:
-                    return false;
+            case '==':
+                return $dependentValue == $expectedValue;
+            case '===':
+                return $dependentValue === $expectedValue;
+            case '!=':
+                return $dependentValue != $expectedValue;
+            case '!==':
+                return $dependentValue !== $expectedValue;
+            case '>':
+                return $dependentValue > $expectedValue;
+            case '>=':
+                return $dependentValue >= $expectedValue;
+            case '<':
+                return $dependentValue < $expectedValue;
+            case '<=':
+                return $dependentValue <= $expectedValue;
+            case 'in':
+                return in_array($dependentValue, (array) $expectedValue);
+            case 'not_in':
+                return !in_array($dependentValue, (array) $expectedValue);
+            default:
+                return false;
             }
         }
 
@@ -1045,46 +1043,6 @@ class Input
     }
 
     /**
-     * Generates a CSRF token and stores it in the session (unified system).
-     *
-     * @param string $sessionKey The session key to store the token (deprecated, kept for compatibility)
-     * @return string The generated CSRF token
-     */
-    public function generateCsrfToken(string $sessionKey = 'csrf_token'): string
-    {
-        // Use unified token system
-        return \Kotchasan\Http\Auth\AuthFactory::generateCsrfToken($sessionKey);
-    }
-
-    /**
-     * Validates a CSRF token against the one stored in the session (unified system).
-     *
-     * @param string $token The token from the form submission
-     * @param string $sessionKey The session key where the token is stored (deprecated, kept for compatibility)
-     * @return bool True if the token is valid, false otherwise
-     */
-    public function validateCsrfToken(string $token, string $sessionKey = 'csrf_token'): bool
-    {
-        return \Kotchasan\Http\Auth\AuthFactory::validateCsrfToken($token, $sessionKey);
-    }
-
-    /**
-     * Generates HTML for a CSRF token hidden field.
-     *
-     * @param string $name The name of the CSRF token field (default: 'csrf_token')
-     * @param string $sessionKey The session key where the token is stored (default: 'csrf_token')
-     * @return string HTML for the CSRF token hidden field
-     */
-    public function csrfField(string $name = 'csrf_token', string $sessionKey = 'csrf_token'): string
-    {
-        // Generate or get the token
-        $token = $_SESSION[$sessionKey] ?? $this->generateCsrfToken($sessionKey);
-
-        // Return the HTML for the hidden field
-        return '<input type="hidden" name="'.htmlspecialchars($name).'" value="'.htmlspecialchars($token).'">';
-    }
-
-    /**
      * Validates an array with specific validation rules for each element.
      *
      * @param string $name The name of the parameter
@@ -1110,6 +1068,135 @@ class Input
 
             foreach ($rules as $rule => $param) {
                 switch ($rule) {
+                case 'sanitize':
+                    if ($param === true && is_string($itemResult)) {
+                        $itemResult = $this->sanitize($itemResult);
+                    }
+                    break;
+                case 'email':
+                    if (!Validator::email($itemResult)) {
+                        $itemValid = false;
+                    }
+                    break;
+                case 'url':
+                    if (!Validator::url($itemResult)) {
+                        $itemValid = false;
+                    }
+                    break;
+                case 'integer':
+                    if (!Validator::integer($itemResult)) {
+                        $itemValid = false;
+                    } else {
+                        $itemResult = (int) $itemResult;
+                    }
+                    break;
+                case 'float':
+                    if (!Validator::float($itemResult)) {
+                        $itemValid = false;
+                    } else {
+                        $itemResult = (float) $itemResult;
+                    }
+                    break;
+                case 'date':
+                    if (!Validator::date($itemResult)) {
+                        $itemValid = false;
+                    }
+                    break;
+                case 'time':
+                    if (!Validator::time($itemResult)) {
+                        $itemValid = false;
+                    }
+                    break;
+                case 'pattern':
+                    if (!Validator::pattern($itemResult, $param)) {
+                        $itemValid = false;
+                    }
+                    break;
+                case 'in':
+                    if (!Validator::inList($itemResult, is_array($param) ? $param : explode(',', $param))) {
+                        $itemValid = false;
+                    }
+                    break;
+                case 'between':
+                    $params = is_array($param) ? $param : explode(',', $param);
+                    if (!Validator::between($itemResult, $params[0] ?? 0, $params[1] ?? PHP_INT_MAX)) {
+                        $itemValid = false;
+                    }
+                    break;
+                case 'min':
+                    if (is_string($itemResult) && mb_strlen($itemResult) < $param) {
+                        $itemValid = false;
+                    } elseif (is_numeric($itemResult) && $itemResult < $param) {
+                        $itemValid = false;
+                    }
+                    break;
+                case 'max':
+                    if (is_string($itemResult) && mb_strlen($itemResult) > $param) {
+                        $itemValid = false;
+                    } elseif (is_numeric($itemResult) && $itemResult > $param) {
+                        $itemValid = false;
+                    }
+                    break;
+                case 'callback':
+                    if (is_callable($param) && !$param($itemResult)) {
+                        $itemValid = false;
+                    }
+                    break;
+                }
+
+                if (!$itemValid) {
+                    break;
+                }
+            }
+
+            if ($itemValid) {
+                $result[$key] = $itemResult;
+            } else {
+                $valid = false;
+            }
+        }
+
+        return $valid ? $result : $default;
+    }
+
+    /**
+     * Validates a nested array with dot notation paths for validation rules.
+     *
+     * @param string $name The name of the parameter
+     * @param array $rules The validation rules with dot notation paths
+     * @param array $default The default value if the parameter doesn't exist or is invalid
+     * @param string $source The source of the parameter (post, get, cookie, server, all)
+     * @return array The validated array or the default value if invalid
+     */
+    public function validateNestedArray(string $name, array $rules, array $default = [], string $source = 'all'): array
+    {
+        $array = $this->getArray($name, [], $source);
+
+        if (empty($array)) {
+            return $default;
+        }
+
+        $result = $array;
+        $valid = true;
+
+        foreach ($rules as $path => $pathRules) {
+            $value = $this->getValueByPath($array, $path);
+
+            if ($value === null && isset($pathRules['required']) && $pathRules['required']) {
+                $valid = false;
+                break;
+            }
+
+            if ($value !== null) {
+                $itemValid = true;
+                $itemResult = $value;
+
+                foreach ($pathRules as $rule => $param) {
+                    if ($rule === 'required') {
+                        continue;
+                    }
+
+                    switch ($rule) {
                     case 'sanitize':
                         if ($param === true && is_string($itemResult)) {
                             $itemResult = $this->sanitize($itemResult);
@@ -1184,135 +1271,6 @@ class Input
                             $itemValid = false;
                         }
                         break;
-                }
-
-                if (!$itemValid) {
-                    break;
-                }
-            }
-
-            if ($itemValid) {
-                $result[$key] = $itemResult;
-            } else {
-                $valid = false;
-            }
-        }
-
-        return $valid ? $result : $default;
-    }
-
-    /**
-     * Validates a nested array with dot notation paths for validation rules.
-     *
-     * @param string $name The name of the parameter
-     * @param array $rules The validation rules with dot notation paths
-     * @param array $default The default value if the parameter doesn't exist or is invalid
-     * @param string $source The source of the parameter (post, get, cookie, server, all)
-     * @return array The validated array or the default value if invalid
-     */
-    public function validateNestedArray(string $name, array $rules, array $default = [], string $source = 'all'): array
-    {
-        $array = $this->getArray($name, [], $source);
-
-        if (empty($array)) {
-            return $default;
-        }
-
-        $result = $array;
-        $valid = true;
-
-        foreach ($rules as $path => $pathRules) {
-            $value = $this->getValueByPath($array, $path);
-
-            if ($value === null && isset($pathRules['required']) && $pathRules['required']) {
-                $valid = false;
-                break;
-            }
-
-            if ($value !== null) {
-                $itemValid = true;
-                $itemResult = $value;
-
-                foreach ($pathRules as $rule => $param) {
-                    if ($rule === 'required') {
-                        continue;
-                    }
-
-                    switch ($rule) {
-                        case 'sanitize':
-                            if ($param === true && is_string($itemResult)) {
-                                $itemResult = $this->sanitize($itemResult);
-                            }
-                            break;
-                        case 'email':
-                            if (!Validator::email($itemResult)) {
-                                $itemValid = false;
-                            }
-                            break;
-                        case 'url':
-                            if (!Validator::url($itemResult)) {
-                                $itemValid = false;
-                            }
-                            break;
-                        case 'integer':
-                            if (!Validator::integer($itemResult)) {
-                                $itemValid = false;
-                            } else {
-                                $itemResult = (int) $itemResult;
-                            }
-                            break;
-                        case 'float':
-                            if (!Validator::float($itemResult)) {
-                                $itemValid = false;
-                            } else {
-                                $itemResult = (float) $itemResult;
-                            }
-                            break;
-                        case 'date':
-                            if (!Validator::date($itemResult)) {
-                                $itemValid = false;
-                            }
-                            break;
-                        case 'time':
-                            if (!Validator::time($itemResult)) {
-                                $itemValid = false;
-                            }
-                            break;
-                        case 'pattern':
-                            if (!Validator::pattern($itemResult, $param)) {
-                                $itemValid = false;
-                            }
-                            break;
-                        case 'in':
-                            if (!Validator::inList($itemResult, is_array($param) ? $param : explode(',', $param))) {
-                                $itemValid = false;
-                            }
-                            break;
-                        case 'between':
-                            $params = is_array($param) ? $param : explode(',', $param);
-                            if (!Validator::between($itemResult, $params[0] ?? 0, $params[1] ?? PHP_INT_MAX)) {
-                                $itemValid = false;
-                            }
-                            break;
-                        case 'min':
-                            if (is_string($itemResult) && mb_strlen($itemResult) < $param) {
-                                $itemValid = false;
-                            } elseif (is_numeric($itemResult) && $itemResult < $param) {
-                                $itemValid = false;
-                            }
-                            break;
-                        case 'max':
-                            if (is_string($itemResult) && mb_strlen($itemResult) > $param) {
-                                $itemValid = false;
-                            } elseif (is_numeric($itemResult) && $itemResult > $param) {
-                                $itemValid = false;
-                            }
-                            break;
-                        case 'callback':
-                            if (is_callable($param) && !$param($itemResult)) {
-                                $itemValid = false;
-                            }
-                            break;
                     }
 
                     if (!$itemValid) {

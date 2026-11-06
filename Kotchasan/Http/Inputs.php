@@ -2,7 +2,7 @@
 /**
  * @filesource Kotchasan/Http/Inputs.php
  *
- * @copyright 2024 Goragod.com
+ * @copyright 2026 Goragod.com
  * @license https://www.kotchasan.com/license/
  *
  * Enhanced Inputs for array handling with security and performance improvements
@@ -40,12 +40,12 @@ class Inputs implements \Iterator, \Countable, \ArrayAccess
      */
     protected static $securityConfig = [
         'maxDepth' => 5,
-        'maxSize' => 1000,
+        'maxSize' => 2000,
         'allowedMethods' => [
-            'topic', 'filter', 'toInt', 'username', 'url', 'text', 'bool', 'color',
+            'topic', 'filter', 'toInt', 'username', 'email', 'url', 'text', 'htmlText', 'bool', 'color',
             'alphanumeric', 'phone', 'date', 'float', 'json', 'base64', 'password', 'oneLine', 'cut',
             'description', 'detail', 'keywords', 'time', 'quote', 'textarea', 'number',
-            'toBoolean', 'toDouble', 'toFloat', 'toObject', 'toString', 'toArray', 'exists'
+            'toBoolean', 'toDouble', 'toFloat', 'toObject', 'toString', 'toArray', 'toJson', 'exists'
         ]
     ];
 
@@ -238,6 +238,26 @@ class Inputs implements \Iterator, \Countable, \ArrayAccess
             }
         }
         return $result;
+    }
+
+    /**
+     * Convert to JSON string
+     *
+     * @return string
+     */
+    public function toJson(): string
+    {
+        $result = [];
+        foreach ($this->items as $key => $item) {
+            if ($item instanceof InputItem) {
+                $result[$key] = $item->getValue();
+            } elseif ($item instanceof static ) {
+                $result[$key] = json_decode($item->toJson(), true);
+            } else {
+                $result[$key] = $item;
+            }
+        }
+        return json_encode($result);
     }
 
     /**

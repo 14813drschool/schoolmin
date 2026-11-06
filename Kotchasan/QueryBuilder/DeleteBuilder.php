@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan\QueryBuilder;
 
 /**
@@ -23,7 +22,10 @@ class DeleteBuilder extends QueryBuilder
 
         // Add WHERE clauses (use existing logic for now)
         if (!empty($this->wheres)) {
-            $query .= ' WHERE '.$this->buildWhereClauses();
+            $whereSql = $this->buildWhereClauses();
+            if ($whereSql !== '') {
+                $query .= ' WHERE '.$whereSql;
+            }
         }
 
         // Add ORDER BY clause using SqlBuilder
@@ -31,9 +33,10 @@ class DeleteBuilder extends QueryBuilder
             $query .= ' '.$sqlBuilder->buildOrderByClause($this->orders);
         }
 
-        // Add LIMIT clause using SqlBuilder
+        // Add row LIMIT in the dialect-correct way (MySQL/SQLite LIMIT,
+        // SQL Server TOP, PostgreSQL throws — DELETE..LIMIT is non-portable).
         if ($this->limit !== null) {
-            $query .= ' '.$sqlBuilder->buildLimitClause($this->limit, $this->offset);
+            $query = $sqlBuilder->applyUpdateDeleteLimit($query, 'DELETE', $this->limit);
         }
 
         return $query;

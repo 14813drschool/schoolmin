@@ -2,7 +2,7 @@
 /**
  * @filesource Kotchasan/Http/InputItem.php
  *
- * @copyright 2024 Goragod.com
+ * @copyright 2026 Goragod.com
  * @license https://www.kotchasan.com/license/
  *
  * Enhanced InputItem - Direct processing (no cache)
@@ -31,10 +31,10 @@ class InputItem
      * @var array Allowed methods for security
      */
     protected static $allowedMethods = [
-        'topic', 'filter', 'toInt', 'username', 'url', 'text', 'bool', 'color',
-        'alphanumeric', 'phone', 'date', 'float', 'json', 'base64', 'password', 'oneLine', 'cut',
+        'topic', 'filter', 'toInt', 'username', 'email', 'url', 'text', 'htmlText', 'bool', 'color',
+        'alphanumeric', 'phone', 'date', 'datetime', 'float', 'json', 'base64', 'password', 'oneLine', 'cut',
         'description', 'detail', 'keywords', 'time', 'quote', 'textarea', 'number',
-        'toBoolean', 'toDouble', 'toFloat', 'toObject', 'toString', 'toArray', 'exists'
+        'toBoolean', 'toDouble', 'toFloat', 'toObject', 'toString', 'toArray', 'toJson', 'exists'
     ];
 
     /**
@@ -63,9 +63,10 @@ class InputItem
      * Static method for var_export() compatibility
      *
      * @param array $state
+     *
      * @return self
      */
-    public static function __set_state(array $state): self
+    public static function __set_state(array $state)
     {
         $instance = new self();
         $instance->value = $state['value'] ?? null;
@@ -78,7 +79,7 @@ class InputItem
      *
      * @return string
      */
-    public function __toString(): string
+    public function __toString()
     {
         return (string) ($this->value ?? '');
     }
@@ -87,11 +88,21 @@ class InputItem
      * Return value as string (explicit method)
      * Kept for code that expects an object method `toString()`.
      *
-     * @return string
+     * @return mixed
      */
-    public function toString(): string
+    public function toString()
     {
         return (string) ($this->value ?? '');
+    }
+
+    /**
+     * Convert to JSON
+     *
+     * @return mixed
+     */
+    public function toJson()
+    {
+        return json_encode($this->value);
     }
 
     /**
@@ -107,9 +118,9 @@ class InputItem
     /**
      * Get input type
      *
-     * @return string|null
+     * @return mixed
      */
-    public function getType(): ?string
+    public function getType()
     {
         return $this->type;
     }
@@ -117,9 +128,9 @@ class InputItem
     /**
      * Check if value is empty
      *
-     * @return bool
+     * @return mixed
      */
-    public function isEmpty(): bool
+    public function isEmpty()
     {
         return empty($this->value);
     }
@@ -128,6 +139,7 @@ class InputItem
      * Helper: map a callback over the value if it's an array, otherwise apply to single value
      *
      * @param callable $fn
+     *
      * @return mixed
      */
     protected function map(callable $fn)
@@ -145,13 +157,14 @@ class InputItem
     /**
      * Convert to safe topic string
      *
-     * @param bool $double_encode
-     * @return array|string
+     * @param int $len
+     *
+     * @return mixed
      */
-    public function topic(bool $double_encode = true)
+    public function topic(int $len = 0)
     {
-        return $this->map(function ($v) use ($double_encode) {
-            return Text::topic($v ?? '', $double_encode);
+        return $this->map(function ($v) use ($len) {
+            return Text::topic($v ?? '', $len);
         });
     }
 
@@ -160,15 +173,13 @@ class InputItem
      *
      * @param string $pattern
      * @param string $replacement
-     * @return array|string
+     *
+     * @return mixed
      */
     public function filter(string $pattern, string $replacement = '')
     {
         return $this->map(function ($v) use ($pattern, $replacement) {
-            if ($v === null) {
-                return '';
-            }
-            return trim(preg_replace('/[^'.$pattern.']/', $replacement, $v));
+            return Text::filter($v, $pattern, $replacement);
         });
     }
 
@@ -176,7 +187,9 @@ class InputItem
      * Convert to integer
      *
      * @param bool $strict
-     * @return array|int
+     *
+     * @return mixed
+     *
      * @throws \InvalidArgumentException
      */
     public function toInt(bool $strict = false)
@@ -193,10 +206,12 @@ class InputItem
      * Convert to float
      *
      * @param bool $strict
-     * @return float
+     *
+     * @return mixed
+     *
      * @throws \InvalidArgumentException
      */
-    public function float(bool $strict = false): float
+    public function float(bool $strict = false)
     {
         if ($strict && !is_numeric($this->value)) {
             throw new \InvalidArgumentException('Value is not a valid number');
@@ -207,7 +222,7 @@ class InputItem
     /**
      * Convert to boolean
      *
-     * @return bool
+     * @return mixed
      */
     public function bool(): bool
     {
@@ -219,7 +234,8 @@ class InputItem
      * Get safe text with HTML special characters escaped
      *
      * @param bool $double_encode Whether to double encode existing entities
-     * @return string|array
+     *
+     * @return mixed
      */
     public function text(bool $double_encode = true)
     {
@@ -229,13 +245,45 @@ class InputItem
     }
 
     /**
+     * Get text with specified HTML formatting tags allowed
+     *
+     * @param array $allowedTags Array of allowed tag names (default: ['em', 'b', 'strong', 'i'])
+     *
+     * @return mixed
+     */
+    public function htmlText(array $allowedTags = ['em', 'b', 'strong', 'i'])
+    {
+        return $this->map(function ($v) use ($allowedTags) {
+            return Text::htmlText($v, $allowedTags);
+        });
+    }
+
+    /**
      * Get username (supports both email and username formats)
      * Sanitizes input by removing unwanted characters, keeps alphanumeric + @.-_
      *
      * @param string $default Default value when input is null/empty
-     * @return string|array The sanitized username or default if no input; returns array when input is array
+     *
+     * @return mixed The sanitized username or default if no input; returns array when input is array
      */
     public function username(string $default = '')
+    {
+        return $this->map(function ($v) use ($default) {
+            if ($v === null || $v === '') {
+                return $default;
+            }
+            return Text::username(trim($v));
+        });
+    }
+
+    /**
+     * Get email (sanitizes input to valid email format)
+     *
+     * @param string $default Default value when input is null/empty
+     *
+     * @return mixed The sanitized email or default if no input; returns array when input is array
+     */
+    public function email(string $default = '')
     {
         return $this->map(function ($v) use ($default) {
             if ($v === null || $v === '') {
@@ -250,26 +298,17 @@ class InputItem
      * Keeps word characters and specific allowed characters (@#*$&{}!?+_-=.[]ก-ฮ)
      *
      * @param string $default Default value when input is null/empty
-     * @return string|array The password-safe string or default if no input; if the input is an array, returns an array of sanitized values
+     *
+     * @return mixed The password-safe string or default if no input; if the input is an array, returns an array of sanitized values
      */
     public function password(string $default = '')
     {
-        // Return default if no input provided
-        if ($this->value === null || $this->value === '') {
-            return $default;
-        }
-
-        // If the input is an array, sanitize each element and return array
-        if (is_array($this->value)) {
-            $result = [];
-            foreach ($this->value as $k => $v) {
-                $result[$k] = Text::password($v);
+        return $this->map(function ($v) use ($default) {
+            if ($v === null || $v === '') {
+                return $default;
             }
-            return $result;
-        }
-
-        // Single value: sanitize and return
-        return Text::password($this->value);
+            return Text::password((string) $v);
+        });
     }
 
     /**
@@ -278,7 +317,8 @@ class InputItem
      *
      * @param int $maxLength Maximum length (0 = no limit)
      * @param string $default Default value when input is null/empty
-     * @return string|array The one-line text or default if no input; returns array when input is array
+     *
+     * @return mixed The one-line text or default if no input; returns array when input is array
      */
     public function oneLine(int $maxLength = 0, string $default = '')
     {
@@ -296,7 +336,8 @@ class InputItem
      *
      * @param int $length Maximum length (including ellipsis)
      * @param string $default Default value when input is null/empty
-     * @return string|array The cut text or default if no input; returns array when input is array
+     *
+     * @return mixed The cut text or default if no input; returns array when input is array
      */
     public function cut(int $length, string $default = '')
     {
@@ -312,7 +353,8 @@ class InputItem
  * Returns sanitized URL only if valid, empty string if invalid format
  *
  * @param string $default Default value when input is null/empty
- * @return string|array Valid URL, empty string if invalid, or default if no input; returns array when input is array
+ *
+ * @return mixed Valid URL, empty string if invalid, or default if no input; returns array when input is array
  */
     public function url(string $default = '')
     {
@@ -330,43 +372,37 @@ class InputItem
      * Returns color if valid format (#hex or color name), empty string if invalid
      *
      * @param string $default Default value when input is null/empty
-     * @return string|array Valid color, empty string if invalid, or default if no input; returns array when input is array
+     *
+     * @return mixed Valid color, empty string if invalid, or default if no input; returns array when input is array
      */
     public function color(string $default = '#000000')
     {
         return $this->map(function ($v) use ($default) {
-            if ($v === null || $v === '') {
-                return $default;
-            }
-            $color = trim($v);
-            if (preg_match('/^#[0-9A-Fa-f]{6}$/', $color) || preg_match('/^[a-zA-Z]+$/', $color)) {
-                return $color;
-            }
-            return '';
+            return Text::color($v, $default);
         });
     }
 
     /**
      * Get alphanumeric
      *
-     * @return string|array
+     * @return mixed
      */
     public function alphanumeric()
     {
         return $this->map(function ($v) {
-            return preg_replace('/[^a-zA-Z0-9]/', '', $v ?? '');
+            return Text::alphanumeric($v);
         });
     }
 
     /**
      * Get phone number
      *
-     * @return string|array
+     * @return mixed
      */
     public function phone()
     {
         return $this->map(function ($v) {
-            return preg_replace('/[^0-9]/', '', $v ?? '');
+            return Text::phone($v);
         });
     }
 
@@ -374,13 +410,25 @@ class InputItem
      * Get date
      *
      * @param string $format
-     * @return string|array
+     * @return mixed
      */
     public function date(string $format = 'Y-m-d')
     {
         return $this->map(function ($v) use ($format) {
-            $timestamp = strtotime($v ?? '');
-            return $timestamp ? date($format, $timestamp) : '';
+            return Text::date($v, $format);
+        });
+    }
+
+    /**
+     * Get datetime
+     *
+     * @param string $format
+     * @return mixed
+     */
+    public function datetime(string $format = 'Y-m-d H:i:s')
+    {
+        return $this->map(function ($v) use ($format) {
+            return Text::date($v, $format);
         });
     }
 
@@ -388,6 +436,7 @@ class InputItem
      * Get JSON decoded value
      *
      * @param mixed $default
+     *
      * @return mixed
      */
     public function json($default = null)
@@ -401,7 +450,7 @@ class InputItem
     /**
      * Get base64 decoded value
      *
-     * @return string|array
+     * @return mixed
      */
     public function base64()
     {
@@ -417,53 +466,25 @@ class InputItem
      * Removes tags and unwanted characters from the text.
      *
      * @param int $len The maximum length of the text (default: 0)
-     * @return string The sanitized and truncated text
+     *
+     * @return mixed The sanitized and truncated text
      */
-    public function description(int $len = 0): string
+    public function description(int $len = 0)
     {
-        if ($this->value === null || $this->value === '') {
-            return '';
-        }
-
-        $patt = [
-            /* style */
-            '@<(script|style)[^>]*?>.*?</\\1>@isu' => '',
-            /* tag */
-            '@<[a-z\/\!\?][^>]{0,}>@isu' => '',
-            /* keywords */
-            '/{(WIDGET|LNG)_[\w\s\.\-\'\(\),%\/:&\#;]+}/su' => '',
-            /* BBCode (code) */
-            '/(\[code(.+)?\]|\[\/code\]|\[ex(.+)?\])/ui' => '',
-            /* BBCode ทั่วไป [b],[i] */
-            '/\[([a-z]+)([\s=].*)?\](.*?)\[\/\\1\]/ui' => '\\3',
-            /* ตัวอักษรที่ไม่ต้องการ */
-            '/(&rdquo;|&quot;|&nbsp;|&amp;|[\r\n\s\t\"\']){1,}/isu' => ' '
-        ];
-
-        $text = trim(preg_replace(array_keys($patt), array_values($patt), $this->value));
-
-        if ($len > 0 && mb_strlen($text) > $len) {
-            $text = mb_substr($text, 0, $len);
-        }
-
-        return $text;
+        return $this->map(function ($v) use ($len) {
+            return Text::description((string) ($v ?? ''), $len);
+        });
     }
 
     /**
      * Remove PHP tags and escape characters for text input from an editor.
      *
-     * @return string|array The sanitized text or array when input is array
+     * @return mixed The sanitized text or array when input is array
      */
     public function detail()
     {
-        if ($this->value === null || $this->value === '') {
-            return '';
-        }
         return $this->map(function ($v) {
-            if ($v === null || $v === '') {
-                return '';
-            }
-            return preg_replace(['#<\?(.*?)\?>#is', '#\{#', '#\}#', '#\\#'], ['', '&#x007B;', '&#x007D;', '&#92;'], $v);
+            return Text::detail((string) ($v ?? ''));
         });
     }
 
@@ -473,19 +494,13 @@ class InputItem
      * Removes tags, whitespace, and unwanted characters from the input value.
      *
      * @param int $len The maximum length of the keywords (default: 0)
-     * @return string|array The sanitized keywords or array when input is array
+     *
+     * @return mixed The sanitized keywords or array when input is array
      */
     public function keywords(int $len = 0)
     {
         return $this->map(function ($v) use ($len) {
-            if ($v === null || $v === '') {
-                return '';
-            }
-            $text = trim(preg_replace('/[\r\n\s\t\"\'\<>]{1,}/isu', ' ', strip_tags($v)));
-            if ($len > 0 && mb_strlen($text) > $len) {
-                $text = mb_substr($text, 0, $len);
-            }
-            return $text;
+            return Text::keywords((string) ($v ?? ''), $len);
         });
     }
 
@@ -495,36 +510,26 @@ class InputItem
      * Returns null if the time value is empty or in the wrong format.
      *
      * @param bool $strict True to validate the time value strictly, false to skip validation (default: false)
-     * @return string|null|array The time value or array when input is array
+     *
+     * @return mixed The time value or array when input is array
      */
     public function time(bool $strict = false)
     {
-        // Keep scalar behavior; if array is passed, map will return array|null pairs
-        $res = $this->map(function ($v) use ($strict) {
-            if (!empty($v) && preg_match('/^([0-9]{1,2}:[0-9]{1,2})?(:[0-9]{1,2})?$/', $v, $match)) {
-                if (empty($match[2])) {
-                    $match[2] = $strict ? ':00' : '';
-                }
-                return $match[1].$match[2];
-            }
-            return null;
+        return $this->map(function ($v) use ($strict) {
+            return Text::time($v, $strict);
         });
-        return $res;
     }
 
     /**
      * Accepts text input and converts single quotes to HTML entity '&#39;',
      * and trims leading and trailing spaces.
      *
-     * @return string|array The processed text or array when input is array
+     * @return mixed The processed text or array when input is array
      */
     public function quote()
     {
         return $this->map(function ($v) {
-            if ($v === null || $v === '') {
-                return '';
-            }
-            return str_replace("'", '&#39;', trim($v));
+            return Text::quote($v);
         });
     }
 
@@ -533,30 +538,24 @@ class InputItem
      * converts '\n' to '<br>', and trims leading and trailing spaces.
      * Used for receiving data from a textarea input.
      *
-     * @return string|array The processed textarea input or array when input is array
+     * @return mixed The processed textarea input or array when input is array
      */
     public function textarea()
     {
         return $this->map(function ($v) {
-            if ($v === null || $v === '') {
-                return '';
-            }
-            return trim(preg_replace(['/</s', '/>/s', '/\\\\/s', '/\{/', '/\}/', '/\$/'], ['&lt;', '&gt;', '&#92;', '&#x007B;', '&#x007D;', '&#36;'], $v), " \n\r\0\x0B");
+            return Text::textarea($v);
         });
     }
 
     /**
      * Extracts numbers or an array of numbers from the input.
      *
-     * @return string The extracted numbers
+     * @return mixed The extracted numbers
      */
     public function number()
     {
         return $this->map(function ($v) {
-            if ($v === null) {
-                return '';
-            }
-            return preg_replace('/[^\d]/', '', $v);
+            return Text::number($v);
         });
     }
 
@@ -565,9 +564,9 @@ class InputItem
      *
      * This function returns 1 if the input value is not empty, and 0 otherwise.
      *
-     * @return int The converted boolean value 1 or 0
+     * @return mixed The converted boolean value 1 or 0
      */
-    public function toBoolean(): int
+    public function toBoolean()
     {
         $value = $this->value;
         return !empty($value) && $value !== '0' && $value !== 'false' ? 1 : 0;
@@ -579,22 +578,21 @@ class InputItem
      * This function converts the input value to a double. If the value is null,
      * it returns 0. The function removes any commas from the value before conversion.
      *
-     * @return float The converted double value
+     * @return mixed The converted double value
      */
-    public function toDouble(): float
+    public function toDouble()
     {
-        if ($this->value === null) {
-            return 0;
-        }
-        return (float) str_replace(',', '', $this->value);
+        return $this->map(function ($v) {
+            return Text::toDouble($v);
+        });
     }
 
     /**
      * Converts the input value to a float.
      *
-     * @return float The converted float value
+     * @return mixed The converted float value
      */
-    public function toFloat(): float
+    public function toFloat()
     {
         return (float) ($this->value ?? 0);
     }
@@ -602,21 +600,12 @@ class InputItem
     /**
      * Converts the input value to an object.
      *
-     * @return object The converted object value
+     * @return mixed The converted object value
      */
-    public function toObject(): object
+    public function toObject()
     {
         return (object) $this->value;
     }
-
-    /**
-     * Converts the input value to a string, or null.
-     * ***Caution: This function converts the value to a string without any validation.
-     * Use with caution.***
-     *
-     * @return string|null The converted string value
-     */
-    // legacy nullable toString removed; use toString(): string above
 
     /**
      * Converts the input value to an array.
@@ -624,9 +613,9 @@ class InputItem
      * This function returns the input value as an array.
      * If the value is not an array, returns the original value.
      *
-     * @return array The converted array value
+     * @return mixed The converted array value
      */
-    public function toArray(): array
+    public function toArray()
     {
         if (is_array($this->value)) {
             return $this->value;
@@ -639,7 +628,7 @@ class InputItem
      *
      * @return bool True if the input variable exists, false otherwise
      */
-    public function exists(): bool
+    public function exists()
     {
         return $this->value !== null;
     }
@@ -649,7 +638,7 @@ class InputItem
      *
      * @return bool True if the input is from a COOKIE variable, false otherwise
      */
-    public function isCookie(): bool
+    public function isCookie()
     {
         return $this->type === 'COOKIE';
     }
@@ -659,7 +648,7 @@ class InputItem
      *
      * @return bool True if the input is from a GET variable, false otherwise
      */
-    public function isGet(): bool
+    public function isGet()
     {
         return $this->type === 'GET';
     }
@@ -669,7 +658,7 @@ class InputItem
      *
      * @return bool True if the input is from a POST variable, false otherwise
      */
-    public function isPost(): bool
+    public function isPost()
     {
         return $this->type === 'POST';
     }
@@ -689,6 +678,7 @@ class InputItem
      *
      * @param mixed $value
      * @param string|null $type
+     *
      * @return static
      */
     public static function create($value = null, ?string $type = null): self

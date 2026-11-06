@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan;
 
 use Kotchasan\Cache\CacheInterface;
@@ -9,6 +8,8 @@ use Kotchasan\Connection\ConnectionManager;
 use Kotchasan\Exception\DatabaseException;
 use Kotchasan\Logger\LoggerInterface;
 use Kotchasan\Logger\QueryLogger;
+use Kotchasan\Logger\SqlFileLogger;
+use Kotchasan\Logger\SqlQueryLogger;
 use Kotchasan\QueryBuilder\DeleteBuilder;
 use Kotchasan\QueryBuilder\InsertBuilder;
 use Kotchasan\QueryBuilder\QueryBuilderInterface;
@@ -83,6 +84,21 @@ class Database
     {
         $this->connection = $connection;
         $this->connectionName = $connectionName;
+    }
+
+    /**
+     * Resets the Database static state.
+     *
+     * This is useful for testing when you need to reconfigure the database
+     * with different settings without interference from previous configurations.
+     *
+     * @return void
+     */
+    public static function reset(): void
+    {
+        static::$connectionManager = null;
+        static::$queryCache = null;
+        static::$configLoaded = false;
     }
 
     /**
@@ -288,7 +304,28 @@ class Database
      */
     public static function config(array $config): void
     {
+        // Preserve existing query cache if we're reinitializing
+        $existingQueryCache = static::$queryCache;
+
         static::$connectionManager = new ConnectionManager($config);
+
+        if (defined('DB_LOG') && DB_LOG) {
+            $sqlLogger = new SqlFileLogger(DB_LOG_FILE, (int) DB_LOG_RETENTION_DAYS);
+            $sqlLogger->setDebugEnabled(true);
+            static::setLogger(new SqlQueryLogger($sqlLogger));
+        }
+
+        // Mark config as loaded to prevent auto-loading from file
+        static::$configLoaded = true;
+
+        // Restore query cache to new connection manager
+        if ($existingQueryCache !== null) {
+            static::$connectionManager->setCache(
+                $existingQueryCache->getCache(),
+                $existingQueryCache->getDefaultTtl()
+            );
+            static::$queryCache = static::$connectionManager->getQueryCache();
+        }
     }
 
     /**
@@ -300,8 +337,18 @@ class Database
      */
     public static function configureCache(array $config, ?int $defaultTtl = 3600): QueryCache
     {
+        // Auto-initialize connection manager if not already done
         if (static::$connectionManager === null) {
-            throw new DatabaseException('Connection manager is not initialized. Call Database::config() first.');
+            // Try to load config from file first
+            if (!static::$configLoaded) {
+                static::loadConfigFromFile();
+            }
+
+            // If still null after loading, create empty manager for cache-only usage
+            if (static::$connectionManager === null) {
+                static::$connectionManager = new ConnectionManager([]);
+                static::$configLoaded = true;
+            }
         }
 
         static::$queryCache = static::$connectionManager->configureCache($config, $defaultTtl);
@@ -403,22 +450,18 @@ class Database
     /**
      * Creates a SELECT query.
      *
-     * @param string|array $columns The columns to select.
+     * @param mixed ...$columns The columns to select.
      * @return QueryBuilderInterface The query builder instance.
      */
-    public function select($columns = '*'): QueryBuilderInterface
+    public function select(...$columns): QueryBuilderInterface
     {
-        $numArgs = func_num_args();
-        $args = func_get_args();
-        if ($numArgs === 1) {
-            $columns = $args[0];
-        } elseif ($numArgs > 1) {
-            $columns = $args;
-        }
-
         $builder = new SelectBuilder($this->connection);
 
-        return $builder->select($columns);
+        if (empty($columns)) {
+            return $builder->select('*');
+        }
+
+        return $builder->select(...$columns);
     }
 
     /**
@@ -626,9 +669,19 @@ class Database
     }
 
     /**
-     * Gets the last executed query.
+     * Gets the name of the underlying database driver (e.g. 'mysql', 'pgsql', 'sqlsrv', 'sqlite').
      *
-     * @return string|null The last executed query or null if no query has been executed.
+     * @return string The driver name.
+     */
+    public function getDriverName(): string
+    {
+        return $this->connection->getDriver()->getName();
+    }
+
+    /**
+     * Get last executed query.
+     *
+     * @return string|null
      */
     public function getLastQuery(): ?string
     {
@@ -707,7 +760,6 @@ class Database
             }
 
             return $tableConfig->getTableName($table);
-
         } catch (\Exception $e) {
             // Log error and return fallback
             $this->logTableNameError("Error resolving table name", [
@@ -720,9 +772,64 @@ class Database
     }
 
     /**
+     * Resolve logical table name using the same connection as a query builder.
+     *
+     * @param ConnectionInterface $connection
+     * @param string $table
+     *
+     * @return string
+     */
+    public static function resolveTableNameByConnection(ConnectionInterface $connection, string $table): string
+    {
+        try {
+            if (!static::$configLoaded) {
+                static::loadConfigFromFile();
+            }
+
+            if (static::$connectionManager === null) {
+                return $table;
+            }
+
+            $connectionName = static::$connectionManager->getConnectionName($connection);
+            if ($connectionName === null) {
+                return static::create()->getTableName($table);
+            }
+
+            return static::create($connectionName)->getTableName($table);
+        } catch (\Exception $e) {
+            return $table;
+        }
+    }
+
+    /**
+     * Gets the configured table prefix.
+     *
+     * @return string The table prefix (without underscore)
+     */
+    public function getPrefix(): string
+    {
+        try {
+            if (static::$connectionManager === null) {
+                return '';
+            }
+
+            $connectionName = $this->getConnectionName();
+            $tableConfig = static::$connectionManager->getTableConfiguration($connectionName);
+
+            if ($tableConfig === null) {
+                return '';
+            }
+
+            return $tableConfig->getPrefix();
+        } catch (\Exception $e) {
+            return '';
+        }
+    }
+
+    /**
      * Check if a column/field exists in a table.
      *
-     * @param string $table The logical table name or physical table name
+     * @param string $table The logical table name (without prefix)
      * @param string $field The column name to check
      * @return bool True if field exists, false otherwise
      */
@@ -743,7 +850,7 @@ class Database
     /**
      * Quick insert helper: insert associative array into table and return last insert id.
      *
-     * @param string $table Logical or physical table name
+     * @param string $table The logical table name (without prefix)
      * @param array $data  Associative array of column => value
      * @return string Last insert id (string) or empty string on failure
      */
@@ -774,14 +881,14 @@ class Database
     /**
      * Empty (truncate) a table using database-specific optimized method.
      *
-     * @param string $table Logical or physical table name
+     * @param string $table The logical table name (without prefix)
      * @param array $options Driver-specific options
      * @return bool True on success, false on failure
      */
     public function emptyTable(string $table, array $options = []): bool
     {
         try {
-            // Resolve logical table name to physical table name
+            // Resolve the logical table name to the physical one
             $tableName = $this->getTableName($table);
 
             // Delegate to driver for database-specific implementation
@@ -796,7 +903,6 @@ class Database
             // Get error from driver if available
             $this->lastError = $this->connection->getDriver()->getLastError();
             return false;
-
         } catch (\Exception $e) {
             $this->lastError = $e->getMessage();
             return false;

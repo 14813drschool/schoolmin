@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan\Connection;
 
 use Kotchasan\Cache\CacheFactory;
@@ -40,6 +39,7 @@ class ConnectionManager
      */
     protected array $drivers = [
         'mysql' => MySQLDriver::class,
+        'sqlite' => SQLiteDriver::class,
         'pgsql' => PostgreSQLDriver::class,
         'sqlsrv' => MSSQLDriver::class
     ];
@@ -230,6 +230,7 @@ class ConnectionManager
     {
         $cache = CacheFactory::create($config);
         $this->queryCache = new QueryCache($cache, $defaultTtl);
+        $this->queryCache->setPrefix($this->cacheNamespace());
 
         // Set cache for existing connections
         foreach ($this->connections as $connection) {
@@ -249,6 +250,7 @@ class ConnectionManager
     public function setCache(CacheInterface $cache, ?int $defaultTtl = 3600): QueryCache
     {
         $this->queryCache = new QueryCache($cache, $defaultTtl);
+        $this->queryCache->setPrefix($this->cacheNamespace());
 
         // Set cache for existing connections
         foreach ($this->connections as $connection) {
@@ -256,6 +258,35 @@ class ConnectionManager
         }
 
         return $this->queryCache;
+    }
+
+    /**
+     * Cache key prefix unique to the configured databases.
+     *
+     * A cache key is the SQL plus its bindings only, and every database that
+     * shares a cache folder (sites on one server, test databases next to the
+     * development one, a multi-site install switching databases per request)
+     * runs the same SQL against its own tables — without this namespace one
+     * database is answered with another one's cached rows.
+     *
+     * @return string
+     */
+    protected function cacheNamespace(): string
+    {
+        $identity = [];
+        foreach ($this->config as $name => $connection) {
+            if (is_array($connection)) {
+                $identity[$name] = [
+                    $connection['hostname'] ?? $connection['host'] ?? '',
+                    $connection['port'] ?? '',
+                    $connection['dbname'] ?? $connection['database'] ?? '',
+                    $connection['prefix'] ?? ''
+                ];
+            }
+        }
+        ksort($identity);
+
+        return 'query_'.substr(md5(serialize($identity)), 0, 12).'_';
     }
 
     /**
@@ -308,7 +339,6 @@ class ConnectionManager
             }
 
             return $tableConfiguration;
-
         } catch (\Exception $e) {
             // Log configuration loading error
             if ($this->logger !== null) {
@@ -333,5 +363,23 @@ class ConnectionManager
     public function getTableConfiguration(string $connectionName): ?TableConfiguration
     {
         return $this->tableConfigurations[$connectionName] ?? null;
+    }
+
+    /**
+     * Resolve registered connection name for a live connection instance.
+     *
+     * @param ConnectionInterface $connection
+     *
+     * @return string|null
+     */
+    public function getConnectionName(ConnectionInterface $connection): ?string
+    {
+        foreach ($this->connections as $name => $registered) {
+            if ($registered === $connection) {
+                return $name;
+            }
+        }
+
+        return null;
     }
 }

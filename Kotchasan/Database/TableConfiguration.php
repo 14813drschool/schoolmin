@@ -67,7 +67,11 @@ class TableConfiguration
     /**
      * Get the configured table name with prefix applied.
      *
-     * @param string $table The logical table name
+     * The prefix is always added, so pass the logical name only — a name that
+     * already carries the prefix comes back with it twice. A logical name may
+     * itself start with the prefix: on prefix "car", "car_trip" is "car_car_trip".
+     *
+     * @param string $table The logical table name (without prefix)
      * @return string The physical table name with prefix
      */
     public function getTableName(string $table): string
@@ -92,9 +96,8 @@ class TableConfiguration
                 }
             }
 
-            // Apply prefix if configured
             if (!empty($this->prefix)) {
-                return $this->prefix . '_' . $tableName;
+                return $this->prefix.'_'.$tableName;
             }
 
             return $tableName;
@@ -172,7 +175,7 @@ class TableConfiguration
         // Validate prefix
         $prefix = $config['prefix'] ?? '';
         if (!is_string($prefix)) {
-            throw new ConfigurationException("Table prefix must be a string, " . gettype($prefix) . " given");
+            throw new ConfigurationException("Table prefix must be a string, ".gettype($prefix)." given");
         }
 
         if (!empty($prefix)) {
@@ -188,7 +191,7 @@ class TableConfiguration
         // Validate tables configuration
         $tables = $config['tables'] ?? [];
         if (!is_array($tables)) {
-            throw new ConfigurationException("Tables configuration must be an array, " . gettype($tables) . " given");
+            throw new ConfigurationException("Tables configuration must be an array, ".gettype($tables)." given");
         }
 
         // Validate individual table mappings
@@ -316,7 +319,7 @@ class TableConfiguration
 
         // Ensure it starts with a letter or underscore
         if (preg_match('/^[0-9]/', $sanitized)) {
-            $sanitized = 'table_' . $sanitized;
+            $sanitized = 'table_'.$sanitized;
         }
 
         return $sanitized;
@@ -337,7 +340,7 @@ class TableConfiguration
                 $sanitized[$key] = $this->sanitizeConfigForLogging($value);
             } elseif (is_string($value) && strlen($value) > 100) {
                 // Truncate very long strings
-                $sanitized[$key] = substr($value, 0, 100) . '... (truncated)';
+                $sanitized[$key] = substr($value, 0, 100).'... (truncated)';
             } else {
                 $sanitized[$key] = $value;
             }

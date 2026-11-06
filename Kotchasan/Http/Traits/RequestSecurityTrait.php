@@ -26,107 +26,77 @@ trait RequestSecurityTrait
             return $value;
         }
 
-        // Remove null bytes
-        $value = str_replace("\0", '', $value);
-
-        // Remove <script>...</script> and their content
-        $value = preg_replace('#<script(.*?)>(.*?)</script>#is', '', $value);
-
-        // Remove all HTML tags
-        $value = strip_tags($value);
-
-        // Decode HTML entities to plain text
-        $value = html_entity_decode($value, ENT_QUOTES, 'UTF-8');
-
-        // Collapse multiple spaces into one
-        $value = preg_replace('/\s+/u', ' ', $value);
-
-        // Trim whitespace
-        return trim($value);
+        // Remove null bytes only — all other sanitization is delegated to
+        return str_replace("\0", '', $value);
     }
 
     /**
-     * Generate CSRF token
+     * Generates a CSRF token for form protection (backward compatibility)
      *
-     * @return string
+     * @return string The generated token
      */
-    public function generateCsrfToken(string $sessionKey = 'csrf_token'): string
+    public function generateCsrfToken(): string
     {
+        // Generate token and store metadata under the token key
         $token = bin2hex(random_bytes(32));
-
-        $_SESSION[$sessionKey] = $token;
-        $_SESSION[$sessionKey.'_meta'] = [
+        $meta = [
             'times' => 0,
             'expired' => time() + (defined('TOKEN_AGE') ? TOKEN_AGE : 3600),
             'created' => time()
         ];
 
+        // Primary storage: token => meta (used by RequestSecurityTrait)
+        $_SESSION[$token] = $meta;
+
         return $token;
     }
 
     /**
-     * Validate CSRF token
+     * Validate a CSRF token (unified with Request::isSafe)
      *
-     * @param string|null $token Token to validate (if null, gets from request)
-     * @param string $sessionKey Session key to check token against
-     * @return bool
+     * @param string $token The token to validate
+     * @return bool True if the token is valid
      */
-    public function validateCsrfToken(?string $token = null, string $sessionKey = 'csrf_token'): bool
+    public static function validateCsrfToken(string $token): bool
     {
-        if ($token === null) {
-            // request() may return an InputItem (fluent wrapper). Cast to string to get the actual value.
-            $token = (string) $this->request('token', '');
-        }
-
-        if (empty($token) || !isset($_SESSION[$sessionKey])) {
+        if (empty($token)) {
             return false;
         }
 
-        // Check token match
-        if (!hash_equals($_SESSION[$sessionKey], $token)) {
-            return false;
+        // Preferred path: token metadata stored keyed by token
+        if (isset($_SESSION[$token]) && is_array($_SESSION[$token])) {
+            $meta = $_SESSION[$token];
+
+            // Check expiration
+            if ($meta['expired'] < time()) {
+                unset($_SESSION[$token]);
+                return false;
+            }
+
+            // Check usage limit
+            $tokenLimit = defined('TOKEN_LIMIT') ? TOKEN_LIMIT : 100;
+            if ($meta['times'] >= $tokenLimit) {
+                unset($_SESSION[$token]);
+                return false;
+            }
+
+            // Increment usage
+            $_SESSION[$token]['times']++;
+            return true;
         }
 
-        // Check token metadata
-        $metaKey = $sessionKey.'_meta';
-        if (!isset($_SESSION[$metaKey])) {
-            return false;
-        }
-
-        $meta = $_SESSION[$metaKey];
-
-        // Check expiration
-        if ($meta['expired'] < time()) {
-            $this->clearCsrfToken($sessionKey);
-            return false;
-        }
-
-        // Check usage limit
-        $limit = defined('TOKEN_LIMIT') ? TOKEN_LIMIT : 10;
-        if ($meta['times'] >= $limit) {
-            return false;
-        }
-
-        // Check referer
-        if (!$this->isValidReferer()) {
-            return false;
-        }
-
-        // Increment usage counter
-        $_SESSION[$metaKey]['times']++;
-
-        return true;
+        return false;
     }
 
     /**
-     * Clear CSRF token
+     * Remove CSRF token (backward compatibility)
      *
-     * @param string $sessionKey Session key to clear
+     * @param string $token Token to remove
      * @return void
      */
-    public function clearCsrfToken(string $sessionKey = 'csrf_token'): void
+    public function removeCsrfToken($token): void
     {
-        unset($_SESSION[$sessionKey], $_SESSION[$sessionKey.'_meta']);
+        unset($_SESSION[$token]);
     }
 
     /**
@@ -146,16 +116,6 @@ trait RequestSecurityTrait
         $currentHost = $this->server('HTTP_HOST', $this->server('SERVER_NAME'));
 
         return $refererHost === $currentHost;
-    }
-
-    /**
-     * Check if request is safe (CSRF protected)
-     *
-     * @return bool
-     */
-    public function isSafe(): bool
-    {
-        return $this->validateCsrfToken();
     }
 
     /**

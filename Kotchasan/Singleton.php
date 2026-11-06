@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan;
 
 /**
@@ -73,12 +72,15 @@ abstract class Singleton
     /**
      * Wakeup method.
      *
-     * This method is private to prevent deserialization of the instance.
+     * PHP 8 requires magic methods to be public, so deserialization is
+     * blocked by throwing instead of by visibility.
+     *
+     * @throws \LogicException
      *
      * @return void
      */
-    private function __wakeup()
+    public function __wakeup()
     {
-        // Do nothing
+        throw new \LogicException('Cannot unserialize a singleton.');
     }
 }

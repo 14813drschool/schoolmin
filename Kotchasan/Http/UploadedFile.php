@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan\Http;
 
 use Kotchasan\Image;
@@ -117,6 +116,8 @@ class UploadedFile implements UploadedFileInterface
             throw new \InvalidArgumentException('Invalid path provided for move operation');
         }
 
+        $this->assertSafeTargetPath($targetPath);
+
         $targetDirectory = dirname($targetPath);
         if (!is_dir($targetDirectory) || !is_writable($targetDirectory)) {
             throw new \RuntimeException('The target directory is not writable');
@@ -136,6 +137,35 @@ class UploadedFile implements UploadedFileInterface
         }
 
         $this->moved = true;
+    }
+
+    /**
+     * Validate a destination path before writing an uploaded file to it.
+     * Rejects null bytes / control characters and directory-traversal
+     * sequences ("..") that could let a client-derived filename escape the
+     * intended upload directory.
+     *
+     * @param string $targetPath
+     * @throws \InvalidArgumentException
+     */
+    protected function assertSafeTargetPath($targetPath)
+    {
+        // Null byte / control-character injection
+        if (preg_match('/[\x00-\x1f]/', $targetPath)) {
+            throw new \InvalidArgumentException('Invalid characters in target path');
+        }
+        // Directory traversal: reject any ".." path segment
+        $normalized = str_replace('\\', '/', $targetPath);
+        foreach (explode('/', $normalized) as $segment) {
+            if ($segment === '..') {
+                throw new \InvalidArgumentException('Path traversal detected in target path');
+            }
+        }
+        // The basename must be non-empty and must not itself be a dot-path
+        $base = basename($normalized);
+        if ($base === '' || $base === '.' || $base === '..') {
+            throw new \InvalidArgumentException('Invalid target filename');
+        }
     }
 
     /**
@@ -209,22 +239,22 @@ class UploadedFile implements UploadedFileInterface
     public function getErrorMessage(): string
     {
         switch ($this->error) {
-            case UPLOAD_ERR_INI_SIZE:
-                return 'The uploaded file exceeds the upload_max_filesize directive in php.ini';
-            case UPLOAD_ERR_FORM_SIZE:
-                return 'The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form';
-            case UPLOAD_ERR_PARTIAL:
-                return 'The uploaded file was only partially uploaded';
-            case UPLOAD_ERR_NO_FILE:
-                return 'No file was uploaded';
-            case UPLOAD_ERR_NO_TMP_DIR:
-                return 'Missing a temporary folder';
-            case UPLOAD_ERR_CANT_WRITE:
-                return 'Failed to write file to disk';
-            case UPLOAD_ERR_EXTENSION:
-                return 'A PHP extension stopped the file upload';
-            default:
-                return 'Unknown upload error';
+        case UPLOAD_ERR_INI_SIZE:
+            return 'The uploaded file exceeds the upload_max_filesize directive in php.ini';
+        case UPLOAD_ERR_FORM_SIZE:
+            return 'The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form';
+        case UPLOAD_ERR_PARTIAL:
+            return 'The uploaded file was only partially uploaded';
+        case UPLOAD_ERR_NO_FILE:
+            return 'No file was uploaded';
+        case UPLOAD_ERR_NO_TMP_DIR:
+            return 'Missing a temporary folder';
+        case UPLOAD_ERR_CANT_WRITE:
+            return 'Failed to write file to disk';
+        case UPLOAD_ERR_EXTENSION:
+            return 'A PHP extension stopped the file upload';
+        default:
+            return 'Unknown upload error';
         }
     }
 
@@ -258,6 +288,18 @@ class UploadedFile implements UploadedFileInterface
     {
         if ($this->moved) {
             throw new \RuntimeException('Cannot move file; already moved!');
+        }
+        if ($this->error !== UPLOAD_ERR_OK) {
+            throw new \RuntimeException('Cannot copy file due to upload error');
+        }
+        if (!is_string($targetPath) || empty($targetPath)) {
+            throw new \InvalidArgumentException('Invalid path provided for copy operation');
+        }
+        $this->assertSafeTargetPath($targetPath);
+        // Confirm the source really is an HTTP upload (skipped under CLI for tests)
+        $sapi = PHP_SAPI;
+        if ((empty($sapi) || substr($sapi, 0, 3) !== 'cli') && !is_uploaded_file($this->file)) {
+            throw new \RuntimeException('Source is not a valid uploaded file');
         }
         $targetDir = dirname($targetPath);
         if (!is_dir($targetDir) || !is_writable($targetDir)) {
@@ -299,6 +341,40 @@ class UploadedFile implements UploadedFileInterface
     }
 
     /**
+     * Get display name from filename
+     * - Removes file extension
+     * - kebab-case (one-two) → Title Case (One Two)
+     * - snake_case (one_two) → Sentence case (One two)
+     *
+     * @return string
+     */
+    public function getDisplayName()
+    {
+        // Get filename without extension
+        $filename = pathinfo($this->clientFilename ?? '', PATHINFO_FILENAME);
+
+        if (empty($filename)) {
+            return '';
+        }
+
+        $hasUnderscore = strpos($filename, '_') !== false;
+
+        // Replace separators with spaces
+        $result = str_replace(['-', '_'], ' ', $filename);
+
+        // Normalize multiple spaces
+        $result = preg_replace('/\s+/', ' ', trim($result));
+
+        if ($hasUnderscore) {
+            // snake_case → Sentence case (first letter uppercase only)
+            return ucfirst(strtolower($result));
+        } else {
+            // kebab-case → Title Case (each word capitalized)
+            return ucwords(strtolower($result));
+        }
+    }
+
+    /**
      * Get client file extension (lowercase)
      *
      * @return string|null
@@ -320,13 +396,12 @@ class UploadedFile implements UploadedFileInterface
      * @param string $name
      * @param int $width
      * @param string $watermark
-     * @param bool $forceConvert
      * @return array
      */
-    public function resizeImage($exts, $target, $name, $width = 0, $watermark = '', $forceConvert = true)
+    public function resizeImage($exts, $target, $name, $width = 0, $watermark = '')
     {
         $this->check($exts, $target);
-        $ret = Image::resize($this->file, $target, $name, $width, $watermark, $forceConvert);
+        $ret = Image::resize($this->file, $target, $name, $width, $watermark);
         if ($ret === false) {
             throw new \RuntimeException(Language::get('Unable to create image'));
         }
@@ -367,7 +442,7 @@ class UploadedFile implements UploadedFileInterface
             throw new \RuntimeException(Language::get('The type of file is invalid'));
         }
         if (!is_writable($targetDir)) {
-            throw new \InvalidArgumentException(Language::sprintf('Target directory "%s" is not writable', $targetDir));
+            throw new \InvalidArgumentException(Language::sprintf('Target directory %s is not writable', $targetDir));
         }
         return true;
     }

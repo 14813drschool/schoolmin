@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan;
 
 /**
@@ -83,6 +82,15 @@ class Config
      * @var int
      */
     public $email_use_phpMailer = 1;
+
+    /**
+     * Seconds to wait for the mail server (connect and each reply) when sending with PHPMailer.
+     * PHPMailer waits 300 seconds by default, so an unreachable mail server froze every
+     * request that sends mail (registration, password reset, notifications) for minutes.
+     *
+     * @var int
+     */
+    public $email_Timeout = 15;
 
     /**
      * The list of supported languages (found in the language/ directory). The default language is 'en' (English).

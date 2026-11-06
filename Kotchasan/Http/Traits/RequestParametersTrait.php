@@ -38,11 +38,75 @@ trait RequestParametersTrait
     {
         $body = $this->getParsedBody();
         $value = null;
-        if (is_array($body) && array_key_exists($name, $body)) {
-            $value = $this->sanitizeValue($body[$name]);
+
+        if (is_array($body)) {
+            // 1) Direct hit (items or plain field)
+            if (array_key_exists($name, $body)) {
+                $value = $this->sanitizeValue($body[$name]);
+            } else {
+                $value = $this->extractNestedParameters($body, $name);
+            }
         }
 
         return $this->createFluentWrapper($value, $default, 'POST');
+    }
+
+    /**
+     * Extract nested parameters such as items[0][name] into a proper array structure.
+     * Supports multiple depths.
+     *
+     * @param array $body
+     * @param string $rootName
+     * @return array|null
+     */
+    protected function extractNestedParameters(array $body, string $rootName)
+    {
+        $result = [];
+        $pattern = '/^'.preg_quote($rootName, '/').'((\[[^\]]+\])+)$/';
+
+        foreach ($body as $fieldName => $fieldValue) {
+            if (!is_string($fieldName)) {
+                continue;
+            }
+            if (preg_match($pattern, $fieldName, $matches)) {
+                $path = $matches[1]; // e.g. [0][name]
+                $keys = [];
+                // Split into tokens without brackets
+                if (preg_match_all('/\[([^\]]+)\]/', $path, $pathMatches)) {
+                    foreach ($pathMatches[1] as $segment) {
+                        $keys[] = is_numeric($segment) ? (int) $segment : $this->sanitizeValue($segment);
+                    }
+                }
+                if (!empty($keys)) {
+                    $this->setNestedValue($result, $keys, $this->sanitizeValue($fieldValue));
+                }
+            }
+        }
+
+        return !empty($result) ? $result : null;
+    }
+
+    /**
+     * Set a nested value by path (e.g., [0,'name']).
+     *
+     * @param array $array Reference array to mutate
+     * @param array $path  List of keys/indexes
+     * @param mixed $value Value to set
+     */
+    protected function setNestedValue(array &$array, array $path, $value)
+    {
+        $ref = &$array;
+        $lastIndex = count($path) - 1;
+        foreach ($path as $i => $key) {
+            if ($i === $lastIndex) {
+                $ref[$key] = $value;
+            } else {
+                if (!isset($ref[$key]) || !is_array($ref[$key])) {
+                    $ref[$key] = [];
+                }
+                $ref = &$ref[$key];
+            }
+        }
     }
 
     /**
@@ -179,8 +243,8 @@ trait RequestParametersTrait
                     throw new \InvalidArgumentException('Array depth exceeds security limit (5)');
                 }
 
-                if (count($value, COUNT_RECURSIVE) > 1000) {
-                    throw new \InvalidArgumentException('Array size exceeds security limit (1000)');
+                if (count($value, COUNT_RECURSIVE) > 2000) {
+                    throw new \InvalidArgumentException('Array size exceeds security limit (2000)');
                 }
 
                 return $value;

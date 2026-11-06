@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan\QueryBuilder;
 
 use Kotchasan\Result\ResultInterface;
@@ -16,10 +15,10 @@ interface QueryBuilderInterface
     /**
      * Creates a SELECT query.
      *
-     * @param string|array $columns The columns to select.
+     * @param mixed ...$columns The columns to select.
      * @return QueryBuilderInterface The query builder instance.
      */
-    public function select($columns = '*'): QueryBuilderInterface;
+    public function select(...$columns): QueryBuilderInterface;
 
     /**
      * Creates a raw SELECT query.
@@ -65,11 +64,11 @@ interface QueryBuilderInterface
     /**
      * Specifies the table to select from.
      *
-     * @param string $table The table name.
+     * @param string|array $table The table name.
      * @param string|null $alias The table alias.
      * @return QueryBuilderInterface The query builder instance.
      */
-    public function from(string $table, ?string $alias = null): QueryBuilderInterface;
+    public function from($table, ?string $alias = null): QueryBuilderInterface;
 
     /**
      * Adds a WHERE clause to the query.
@@ -107,51 +106,136 @@ interface QueryBuilderInterface
     public function where($where, string $condition = 'AND'): QueryBuilderInterface;
 
     /**
+     * Adds a WHERE EXISTS clause to the query.
+     *
+     * Usage similar to join():
+     *  ->whereExists('product_details D', [['D.product_id', 'P.id']])
+     *  ->whereExists('product_details D', [['D.product_id', 'P.id'], ['D.status', 1]])
+     *
+     * @param string|array $table Table name(s) with optional alias.
+     * @param array $condition The conditions (similar to join condition format).
+     * @param string $boolean The boolean connector (AND/OR).
+     * @param bool $not Whether to use NOT EXISTS instead of EXISTS.
+     * @return QueryBuilderInterface The query builder instance.
+     */
+    public function whereExists($table, array $condition = [], string $boolean = 'AND', bool $not = false): QueryBuilderInterface;
+
+    /**
+     * Adds a WHERE NOT EXISTS clause to the query.
+     *
+     * @param string|array $table Table name(s) with optional alias.
+     * @param array $condition The conditions.
+     * @param string $boolean The boolean connector (AND/OR).
+     * @return QueryBuilderInterface The query builder instance.
+     */
+    public function whereNotExists($table, array $condition = [], string $boolean = 'AND'): QueryBuilderInterface;
+
+    /**
+     * Adds an OR WHERE EXISTS clause to the query.
+     *
+     * @param string|array $table Table name(s) with optional alias.
+     * @param array $condition The conditions.
+     * @return QueryBuilderInterface The query builder instance.
+     */
+    public function orWhereExists($table, array $condition = []): QueryBuilderInterface;
+
+    /**
+     * Adds an OR WHERE NOT EXISTS clause to the query.
+     *
+     * @param string|array $table Table name(s) with optional alias.
+     * @param array $condition The conditions.
+     * @return QueryBuilderInterface The query builder instance.
+     */
+    public function orWhereNotExists($table, array $condition = []): QueryBuilderInterface;
+
+    /**
+     * Adds a raw WHERE clause with optional bindings.
+     *
+     * @param string|object $sql Raw SQL string or object exposing toSql()/getValues().
+     * @param string $condition Logical connector (AND/OR), default = "AND".
+     * @param array $bindings Optional positional or named bindings.
+     * @return QueryBuilderInterface The query builder instance.
+     */
+    public function whereRaw($sql, string $condition = 'AND', array $bindings = []): QueryBuilderInterface;
+
+    /**
      * Adds an OR WHERE clause to the query.
      *
      * @param string|array|\Closure $where The column name, an array of conditions, or a closure.
-     * @param string|null $operator The operator.
-     * @param mixed $value The value.
+     *
      * @return QueryBuilderInterface The query builder instance.
      */
-    public function orWhere($where, string $condition = 'OR'): QueryBuilderInterface;
+    public function orWhere($where): QueryBuilderInterface;
+
+    /**
+     * Adds a raw OR WHERE clause with optional bindings.
+     *
+     * @param string|object $sql Raw SQL string or object exposing toSql()/getValues().
+     * @param array $bindings Optional positional or named bindings.
+     * @return QueryBuilderInterface The query builder instance.
+     */
+    public function orWhereRaw($sql, array $bindings = []): QueryBuilderInterface;
 
     /**
      * Adds a JOIN clause to the query.
      *
-     * @param string $table The table to join.
-     * @param string|array $condition The join condition. Can be string or array format:
-     *                                - String: 'u.id = p.user_id'
+     * @param string|array $table The table to join.
+     * @param string|array $condition The join condition. Can be array format:
      *                                - Simple array: ['u.id', 'p.user_id']
      *                                - Complex array: [['u.id', 'p.user_id'], ['u.status', 1], ['p.active', '=', 1]]
      * @param string $type The join type (INNER, LEFT, RIGHT, etc.).
      * @return QueryBuilderInterface The query builder instance.
      */
-    public function join(string $table, $condition, string $type = 'INNER'): QueryBuilderInterface;
+    public function join($table, $condition, string $type = 'INNER'): QueryBuilderInterface;
 
     /**
      * Adds a LEFT JOIN clause to the query.
      *
-     * @param string $table The table to join.
-     * @param string|array $condition The join condition. Can be string or array format:
-     *                                - String: 'u.id = p.user_id'
+     * @param string|array $table The table to join.
+     * @param string|array $condition The join condition. Can be array format:
      *                                - Simple array: ['u.id', 'p.user_id']
      *                                - Complex array: [['u.id', 'p.user_id'], ['u.status', 1], ['p.active', '=', 1]]
      * @return QueryBuilderInterface The query builder instance.
      */
-    public function leftJoin(string $table, $condition): QueryBuilderInterface;
+    public function leftJoin($table, $condition): QueryBuilderInterface;
 
     /**
      * Adds a RIGHT JOIN clause to the query.
      *
-     * @param string $table The table to join.
-     * @param string|array $condition The join condition. Can be string or array format:
-     *                                - String: 'u.id = p.user_id'
+     * @param string|array $table The table to join.
+     * @param string|array $condition The join condition. Can be array format:
      *                                - Simple array: ['u.id', 'p.user_id']
      *                                - Complex array: [['u.id', 'p.user_id'], ['u.status', 1], ['p.active', '=', 1]]
      * @return QueryBuilderInterface The query builder instance.
      */
-    public function rightJoin(string $table, $condition): QueryBuilderInterface;
+    public function rightJoin($table, $condition): QueryBuilderInterface;
+
+    /**
+     * Appends a UNION clause to this SELECT query.
+     *
+     * Can be chained multiple times. The resulting object can be used as a
+     * derived table in from() or join():
+     *
+     *   $union = Model::createQuery()->select('id')->from('a')
+     *       ->union(Model::createQuery()->select('id')->from('b'));
+     *   // Use standalone:
+     *   $union->execute();
+     *   // Or as derived table in join:
+     *   $query->join([$union, 'U'], ['U.id', 'J.id'], 'INNER');
+     *
+     * @param QueryBuilderInterface $query The query to union with.
+     * @param bool $all Use UNION ALL instead of UNION (keeps duplicates).
+     * @return QueryBuilderInterface The query builder instance.
+     */
+    public function union(QueryBuilderInterface $query, bool $all = false): QueryBuilderInterface;
+
+    /**
+     * Appends a UNION ALL clause (alias for union($query, true)).
+     *
+     * @param QueryBuilderInterface $query The query to union with.
+     * @return QueryBuilderInterface The query builder instance.
+     */
+    public function unionAll(QueryBuilderInterface $query): QueryBuilderInterface;
 
     /**
      * Adds an ORDER BY clause to the query.
@@ -218,6 +302,13 @@ interface QueryBuilderInterface
      * @return array The parameter bindings.
      */
     public function getBindings(): array;
+
+    /**
+     * Gets embedded bindings for the query (e.g., from EXISTS subqueries).
+     *
+     * @return array The embedded bindings.
+     */
+    public function getEmbeddedBindings(): array;
 
     /**
      * Enables caching for this query.

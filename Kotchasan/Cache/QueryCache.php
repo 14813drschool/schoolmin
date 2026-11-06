@@ -5,43 +5,250 @@ namespace Kotchasan\Cache;
 use Kotchasan\QueryBuilder\QueryBuilderInterface;
 
 /**
- * Class QueryCache
+ * Query Cache
  *
- * Handles caching of query results.
+ * Specialized cache wrapper for database query caching.
+ * Generates cache keys from SQL queries and parameters.
  *
  * @package Kotchasan\Cache
  */
 class QueryCache
 {
     /**
-     * @var CacheInterface The cache implementation.
+     * The underlying cache implementation.
+     *
+     * @var CacheInterface
      */
-    private CacheInterface $cache;
+    protected CacheInterface $cache;
 
     /**
-     * @var bool Whether caching is enabled.
+     * Default TTL in seconds.
+     *
+     * @var int
      */
-    private bool $enabled = true;
+    protected int $defaultTtl;
 
     /**
-     * @var int|null The default TTL for cache entries.
+     * Flag to enable/disable caching globally.
+     *
+     * @var bool
      */
-    private ?int $defaultTtl;
+    protected bool $enabled = true;
 
     /**
-     * QueryCache constructor.
+     * Cache key prefix for query cache.
+     *
+     * @var string
+     */
+    protected string $prefix = 'query_';
+
+    /**
+     * Cache statistics.
+     *
+     * @var array
+     */
+    protected array $stats = [
+        'hits' => 0,
+        'misses' => 0,
+        'writes' => 0
+    ];
+
+    /**
+     * Constructor.
      *
      * @param CacheInterface $cache The cache implementation.
-     * @param int|null $defaultTtl The default TTL for cache entries (null for indefinite).
+     * @param int $defaultTtl Default TTL in seconds.
      */
-    public function __construct(CacheInterface $cache, ?int $defaultTtl = 3600)
+    public function __construct(CacheInterface $cache, int $defaultTtl = 3600)
     {
         $this->cache = $cache;
         $this->defaultTtl = $defaultTtl;
     }
 
     /**
-     * Enables query caching.
+     * Get a cached query result.
+     *
+     * @param QueryBuilderInterface $query The query builder.
+     * @return mixed|null The cached result or null if not found.
+     */
+    public function get(QueryBuilderInterface $query)
+    {
+        if (!$this->enabled) {
+            return null;
+        }
+
+        $key = $this->generateKey($query);
+        $result = $this->cache->get($key);
+
+        if ($result !== null) {
+            $this->stats['hits']++;
+        } else {
+            $this->stats['misses']++;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Cache a query result.
+     *
+     * @param QueryBuilderInterface $query The query builder.
+     * @param mixed $result The query result to cache.
+     * @param int|null $ttl Optional TTL in seconds.
+     * @return bool True on success.
+     */
+    public function set(QueryBuilderInterface $query, $result, ?int $ttl = null): bool
+    {
+        if (!$this->enabled) {
+            return false;
+        }
+
+        $key = $this->generateKey($query);
+        $success = $this->cache->set($key, $result, $ttl ?? $this->defaultTtl);
+
+        if ($success) {
+            $this->stats['writes']++;
+        }
+
+        return $success;
+    }
+
+    /**
+     * Generate a cache key for a query.
+     *
+     * @param QueryBuilderInterface $query The query builder.
+     * @return string The cache key.
+     */
+    protected function generateKey(QueryBuilderInterface $query): string
+    {
+        // Get the SQL and bindings
+        $sql = $query->toSql();
+        $bindings = $query->getBindings();
+        $embeddedBindings = [];
+        if (method_exists($query, 'getEmbeddedBindings')) {
+            $embeddedBindings = $query->getEmbeddedBindings();
+            if (!empty($embeddedBindings) && is_array($embeddedBindings)) {
+                ksort($embeddedBindings);
+            }
+        }
+
+        // Create a unique key from SQL + bindings (include embedded bindings)
+        $data = $sql.serialize([
+            'bindings' => $bindings,
+            'embedded' => $embeddedBindings
+        ]);
+
+        return $this->prefix.md5($data);
+    }
+
+    /**
+     * Generate a cache key from raw SQL and parameters.
+     *
+     * @param string $sql The SQL query.
+     * @param array $params The query parameters.
+     * @return string The cache key.
+     */
+    public function generateKeyFromSql(string $sql, array $params = []): string
+    {
+        $data = $sql.serialize($params);
+        return $this->prefix.md5($data);
+    }
+
+    /**
+     * Get a cached result by raw SQL.
+     *
+     * @param string $sql The SQL query.
+     * @param array $params The query parameters.
+     * @return mixed|null The cached result or null if not found.
+     */
+    public function getByKey(string $sql, array $params = [])
+    {
+        if (!$this->enabled) {
+            return null;
+        }
+
+        $key = $this->generateKeyFromSql($sql, $params);
+        $result = $this->cache->get($key);
+
+        if ($result !== null) {
+            $this->stats['hits']++;
+        } else {
+            $this->stats['misses']++;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Cache a result by raw SQL.
+     *
+     * @param string $sql The SQL query.
+     * @param array $params The query parameters.
+     * @param mixed $result The result to cache.
+     * @param int|null $ttl Optional TTL in seconds.
+     * @return bool True on success.
+     */
+    public function setByKey(string $sql, array $params, $result, ?int $ttl = null): bool
+    {
+        if (!$this->enabled) {
+            return false;
+        }
+
+        $key = $this->generateKeyFromSql($sql, $params);
+        $success = $this->cache->set($key, $result, $ttl ?? $this->defaultTtl);
+
+        if ($success) {
+            $this->stats['writes']++;
+        }
+
+        return $success;
+    }
+
+    /**
+     * Invalidate a cached query.
+     *
+     * @param QueryBuilderInterface $query The query builder.
+     * @return bool True on success.
+     */
+    public function invalidate(QueryBuilderInterface $query): bool
+    {
+        $key = $this->generateKey($query);
+        return $this->cache->delete($key);
+    }
+
+    /**
+     * Invalidate cache by table name.
+     * This clears all cached queries for a specific table.
+     *
+     * @param string $table The table name.
+     * @return bool True on success.
+     */
+    public function invalidateTable(string $table): bool
+    {
+        // This is a simple implementation - for production use,
+        // you might want to track table -> keys mapping
+        // For now, just clear all cache (safe but not optimal)
+        return $this->clear();
+    }
+
+    /**
+     * Clear all cached queries.
+     *
+     * @return bool True on success.
+     */
+    public function clear(): bool
+    {
+        $this->stats = [
+            'hits' => 0,
+            'misses' => 0,
+            'writes' => 0
+        ];
+
+        return $this->cache->clear();
+    }
+
+    /**
+     * Enable caching.
      *
      * @return self
      */
@@ -52,7 +259,7 @@ class QueryCache
     }
 
     /**
-     * Disables query caching.
+     * Disable caching.
      *
      * @return self
      */
@@ -63,9 +270,9 @@ class QueryCache
     }
 
     /**
-     * Checks if caching is enabled.
+     * Check if caching is enabled.
      *
-     * @return bool True if caching is enabled, false otherwise.
+     * @return bool
      */
     public function isEnabled(): bool
     {
@@ -73,111 +280,63 @@ class QueryCache
     }
 
     /**
-     * Sets the default TTL for cache entries.
+     * Get cache statistics.
      *
-     * @param int|null $ttl The default TTL in seconds (null for indefinite).
+     * @return array
+     */
+    public function getStats(): array
+    {
+        $cacheStats = $this->cache->getStats();
+
+        return array_merge($this->stats, [
+            'enabled' => $this->enabled,
+            'default_ttl' => $this->defaultTtl,
+            'backend' => get_class($this->cache),
+            'backend_stats' => $cacheStats
+        ]);
+    }
+
+    /**
+     * Get the underlying cache instance.
+     *
+     * @return CacheInterface
+     */
+    public function getCache(): CacheInterface
+    {
+        return $this->cache;
+    }
+
+    /**
+     * Get the default TTL.
+     *
+     * @return int TTL in seconds.
+     */
+    public function getDefaultTtl(): int
+    {
+        return $this->defaultTtl;
+    }
+
+    /**
+     * Set the default TTL.
+     *
+     * @param int $ttl TTL in seconds.
      * @return self
      */
-    public function setDefaultTtl(?int $ttl): self
+    public function setDefaultTtl(int $ttl): self
     {
         $this->defaultTtl = $ttl;
         return $this;
     }
 
     /**
-     * Gets the default TTL for cache entries.
+     * Set the cache key prefix.
      *
-     * @return int|null The default TTL in seconds (null for indefinite).
+     * @param string $prefix The prefix.
+     * @return self
      */
-    public function getDefaultTtl(): ?int
+    public function setPrefix(string $prefix): self
     {
-        return $this->defaultTtl;
-    }
-
-    /**
-     * Gets a value from the cache.
-     *
-     * @param QueryBuilderInterface $query The query to get from cache.
-     * @return mixed|null The cached result or null if not found.
-     */
-    public function get(QueryBuilderInterface $query)
-    {
-        if (!$this->enabled) {
-            return null;
-        }
-
-        $key = $this->generateCacheKey($query);
-        return $this->cache->get($key);
-    }
-
-    /**
-     * Sets a value in the cache.
-     *
-     * @param QueryBuilderInterface $query The query to cache.
-     * @param mixed $value The result to cache.
-     * @param int|null $ttl The time-to-live in seconds (null for default).
-     * @return bool True if the value was stored, false otherwise.
-     */
-    public function set(QueryBuilderInterface $query, $value, ?int $ttl = null): bool
-    {
-        if (!$this->enabled) {
-            return false;
-        }
-
-        $key = $this->generateCacheKey($query);
-        return $this->cache->set($key, $value, $ttl ?? $this->defaultTtl);
-    }
-
-    /**
-     * Removes a query result from the cache.
-     *
-     * @param QueryBuilderInterface $query The query to remove from cache.
-     * @return bool True if the value was removed, false otherwise.
-     */
-    public function delete(QueryBuilderInterface $query): bool
-    {
-        $key = $this->generateCacheKey($query);
-        return $this->cache->delete($key);
-    }
-
-    /**
-     * Flushes the entire cache.
-     *
-     * @return bool True if the cache was cleared, false otherwise.
-     */
-    public function flush(): bool
-    {
-        return $this->cache->clear();
-    }
-
-    /**
-     * Generates a cache key for a query.
-     *
-     * @param QueryBuilderInterface $query The query.
-     * @return string The cache key.
-     */
-    public function generateCacheKey(QueryBuilderInterface $query): string
-    {
-        $sql = $query->toSql();
-        $bindings = $query->getBindings();
-
-        // Sort bindings by key to ensure consistent cache keys
-        if (is_array($bindings)) {
-            ksort($bindings);
-        }
-
-        $key = 'query:'.md5($sql.serialize($bindings));
-
-        return $key;
-    }
-
-    /**
-     * Gets the underlying cache implementation.
-     *
-     * @return CacheInterface The cache implementation.
-     */
-    public function getCache(): CacheInterface
-    {
-        return $this->cache;
+        $this->prefix = $prefix;
+        return $this;
     }
 }

@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan\QueryBuilder;
 
 /**
@@ -69,6 +68,10 @@ class SelectBuilder extends QueryBuilder
                         // Embed subquery SQL and merge its bindings into this builder
                         $exprSql = $expr->toSql();
 
+                        // Collect all rename mappings first, then apply with strtr to avoid prefix collision
+                        // (e.g. :p1 must not corrupt :p10, :p11, etc.)
+                        $renameMap = [];
+
                         // First handle any named placeholders in the subquery
                         $subNamed = property_exists($expr, 'namedBindings') ? $expr->namedBindings : [];
                         if (!empty($subNamed)) {
@@ -76,12 +79,30 @@ class SelectBuilder extends QueryBuilder
                                 $newName = $this->placeholderPrefix.$this->paramCounter++;
                                 // Ensure we replace the token form (with leading ':') regardless of how the key is stored
                                 $origToken = (is_string($origName) && strpos($origName, ':') === 0) ? $origName : ':'.$origName;
-                                $exprSql = str_replace($origToken, $newName, $exprSql);
+                                $renameMap[$origToken] = $newName;
                                 // store in embeddedBindings without leading ':' so processNamedParameters works consistently
                                 $p = is_string($newName) && strpos($newName, ':') === 0 ? substr($newName, 1) : $newName;
                                 $this->embeddedBindings[$p] = $origVal;
                             }
                             $this->useNamedParameters = true;
+                        }
+
+                        // Also handle embeddedBindings from the subquery (e.g. from nested WHERE clauses)
+                        $subEmbedded = property_exists($expr, 'embeddedBindings') ? $expr->embeddedBindings : [];
+                        if (!empty($subEmbedded)) {
+                            foreach ($subEmbedded as $origName => $origVal) {
+                                $newName = $this->placeholderPrefix.$this->paramCounter++;
+                                $origToken = (is_string($origName) && strpos($origName, ':') === 0) ? $origName : ':'.$origName;
+                                $renameMap[$origToken] = $newName;
+                                $p = is_string($newName) && strpos($newName, ':') === 0 ? substr($newName, 1) : $newName;
+                                $this->embeddedBindings[$p] = $origVal;
+                            }
+                            $this->useNamedParameters = true;
+                        }
+
+                        // Apply all renames at once using strtr (longest match first, no prefix collision)
+                        if (!empty($renameMap)) {
+                            $exprSql = strtr($exprSql, $renameMap);
                         }
 
                         // Then handle positional bindings (question marks)
@@ -123,8 +144,24 @@ class SelectBuilder extends QueryBuilder
                         }
                     } else {
                         $colStr = (string) $column;
-                        if (preg_match('/^[A-Za-z0-9_\.]+$/', $colStr)) {
-                            $colStr = $sqlBuilder->quoteIdentifier($colStr);
+                        if (preg_match('/^(-?(?:\d+(?:\.\d*)?|\.\d+))\s+(?:AS\s+)?([A-Za-z0-9_]+)$/i', $colStr, $m)) {
+                            // 0 id, 0 AS id, -12.34 amount
+                            $colStr = $m[1].' AS '.$sqlBuilder->quoteIdentifier($m[2]);
+                        } elseif (preg_match('/^[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+|\.\*)*$/', $colStr)) {
+                            $quoted = $sqlBuilder->quoteIdentifier($colStr);
+                            // SQLite matches ORDER BY <name> against AS aliases only; for an
+                            // unaliased "U.name" it searches the tables and fails with
+                            // "ambiguous column name" when a joined table also has "name".
+                            // MySQL, PostgreSQL and SQL Server use the output column. The
+                            // alias is the name the column already has in the result set.
+                            if ($sqlBuilder->getDriverName() === 'sqlite' && preg_match('/\.([A-Za-z0-9_]+)$/', $colStr, $m)) {
+                                $quoted .= ' AS '.$sqlBuilder->quoteIdentifier($m[1]);
+                            }
+                            $colStr = $quoted;
+                        } elseif (preg_match('/^([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)\s+(?:AS\s+)?([A-Za-z0-9_]+)$/i', $colStr, $m)) {
+                            // "O.module src" / "O.module AS src": quote both sides, otherwise
+                            // PostgreSQL folds the bare O to o and loses the "O" table alias
+                            $colStr = $sqlBuilder->quoteIdentifier($m[1]).' AS '.$sqlBuilder->quoteIdentifier($m[2]);
                         }
                         $columnParts[] = $colStr;
                     }
@@ -145,7 +182,10 @@ class SelectBuilder extends QueryBuilder
 
         // Add WHERE clauses (use existing logic for now due to complex binding handling)
         if (!empty($this->wheres)) {
-            $query .= ' WHERE '.$this->buildWhereClauses();
+            $whereSql = $this->buildWhereClauses();
+            if ($whereSql !== '') {
+                $query .= ' WHERE '.$whereSql;
+            }
         }
 
         // Add GROUP BY clause using SqlBuilder
@@ -159,13 +199,30 @@ class SelectBuilder extends QueryBuilder
         }
 
         // Add ORDER BY clause using SqlBuilder
+        $hasLimit = $this->limit !== null || $this->offset !== null;
         if (!empty($this->orders)) {
             $query .= ' '.$sqlBuilder->buildOrderByClause($this->orders);
+        } elseif ($hasLimit && $sqlBuilder->requiresOrderByForLimit()) {
+            // SQL Server OFFSET..FETCH requires an ORDER BY; inject a stable
+            // no-op so paging without an explicit sort does not error.
+            $query .= ' ORDER BY (SELECT NULL)';
         }
 
         // Add LIMIT/OFFSET clause using SqlBuilder
-        if ($this->limit !== null || $this->offset !== null) {
+        if ($hasLimit) {
             $query .= ' '.$sqlBuilder->buildLimitClause($this->limit, $this->offset);
+        }
+
+        // Append UNION / UNION ALL clauses
+        foreach ($this->unions as $union) {
+            $unionPart = $union['query'];
+            $unionSql = $unionPart->toSql();
+            // Merge bindings from the union member into this builder so that
+            // parent queries (from/join subquery merging) see them all in one place.
+            if ($unionPart instanceof QueryBuilder) {
+                $unionSql = $this->mergeSubqueryBindings($unionPart, $unionSql);
+            }
+            $query .= ' '.($union['all'] ? 'UNION ALL' : 'UNION').' '.$unionSql;
         }
 
         $this->lastQuery = $query;
@@ -199,7 +256,7 @@ class SelectBuilder extends QueryBuilder
     public function update(string $table): QueryBuilderInterface
     {
         $builder = new UpdateBuilder($this->connection);
-        $builder->table = \Kotchasan\Database::create()->getTableName($table);
+        $builder->table = \Kotchasan\Database::resolveTableNameByConnection($this->connection, $table);
 
         // copy relevant state
         $builder->wheres = $this->wheres;
@@ -227,7 +284,7 @@ class SelectBuilder extends QueryBuilder
     public function insert(string $table): QueryBuilderInterface
     {
         $builder = new InsertBuilder($this->connection);
-        $builder->table = \Kotchasan\Database::create()->getTableName($table);
+        $builder->table = \Kotchasan\Database::resolveTableNameByConnection($this->connection, $table);
 
         // copy relevant state
         $builder->wheres = $this->wheres;
@@ -253,7 +310,7 @@ class SelectBuilder extends QueryBuilder
     public function delete(string $table): QueryBuilderInterface
     {
         $builder = new DeleteBuilder($this->connection);
-        $builder->table = \Kotchasan\Database::create()->getTableName($table);
+        $builder->table = \Kotchasan\Database::resolveTableNameByConnection($this->connection, $table);
 
         // copy relevant state
         $builder->wheres = $this->wheres;

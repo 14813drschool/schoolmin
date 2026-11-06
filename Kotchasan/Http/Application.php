@@ -274,7 +274,7 @@ class Application
         });
 
         $this->registerErrorHandler(403, function (Request $request, $message = null) {
-            return Response::makeForbidden(['error' => $message ?? 'Access denied']);
+            return Response::makeForbidden(['error' => $message ?? 'Permission required']);
         });
 
         $this->registerErrorHandler(400, function (Request $request, $message = null) {

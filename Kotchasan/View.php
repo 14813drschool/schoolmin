@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan;
 
 /**
@@ -48,13 +47,20 @@ class View extends \Kotchasan\KBase
     protected $scripts = [];
 
     /**
+     * Array to store scripts/styles to be inserted before </body> (footer).
+     *
+     * @var array
+     */
+    protected $footerMetas = [];
+
+    /**
      * Creates an instance of the View class.
      *
      * @return static
      */
     public static function create()
     {
-        return new static;
+        return new static();
     }
 
     /**
@@ -160,6 +166,7 @@ class View extends \Kotchasan\KBase
         $this->contents['/{WEBDESCRIPTION}/'] = self::$cfg->web_description;
         $this->contents['/{WEBURL}/'] = WEB_URL;
         $this->contents['/{SKIN}/'] = Template::get();
+
         foreach ($this->afterContents as $key => $value) {
             $this->contents[$key] = $value;
         }
@@ -172,6 +179,11 @@ class View extends \Kotchasan\KBase
         }
         if ($head != '') {
             $this->contents['/(<head.*)(<\/head>)/isu'] = '$1'.$head.'$2';
+        }
+        // Inject footer scripts/styles before </body>
+        if (!empty($this->footerMetas)) {
+            $footer = implode("\n", $this->footerMetas);
+            $this->contents['/(<\/body>)/isu'] = $footer."\n$1";
         }
         // Replace in the template
         if ($template === null) {
@@ -226,6 +238,18 @@ class View extends \Kotchasan\KBase
     {
         foreach ($array as $key => $value) {
             $this->metas[$key] = $value;
+        }
+    }
+
+    /**
+     * Adds scripts/styles to be inserted just before </body> (footer).
+     *
+     * @param array $array An array of HTML strings (e.g., array(key1 => val1, key2 => val2)).
+     */
+    public function setFooterMetas($array)
+    {
+        foreach ($array as $key => $value) {
+            $this->footerMetas[$key] = $value;
         }
     }
 

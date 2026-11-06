@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan\QueryBuilder\SqlBuilder;
 
 /**
@@ -13,6 +12,24 @@ namespace Kotchasan\QueryBuilder\SqlBuilder;
  */
 interface SqlBuilderInterface
 {
+    /**
+     * Whether this dialect requires ORDER BY when using LIMIT/OFFSET paging.
+     *
+     * @return bool
+     */
+    public function requiresOrderByForLimit(): bool;
+
+    /**
+     * Apply limit syntax for UPDATE/DELETE statements.
+     *
+     * @param string $query
+     * @param string $verb
+     * @param int|null $limit
+     *
+     * @return string
+     */
+    public function applyUpdateDeleteLimit(string $query, string $verb, ?int $limit): string;
+
     /**
      * Quote an identifier (table or column name) for this database.
      *
@@ -140,4 +157,16 @@ interface SqlBuilderInterface
      * @return bool True if supported, false otherwise
      */
     public function supportsDriver(string $driverName): bool;
+
+    /**
+     * The comparison operator to emit for this driver.
+     *
+     * Lets a driver keep the result of a condition the same as on MySQL, whose
+     * default collations compare text case-insensitively (PostgreSQL turns
+     * LIKE into ILIKE). Other operators are returned unchanged.
+     *
+     * @param string $operator Operator as written by the caller (=, LIKE, NOT LIKE, ...)
+     * @return string
+     */
+    public function compareOperator(string $operator): string;
 }

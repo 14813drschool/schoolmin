@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan\QueryBuilder;
 
 use Kotchasan\Connection\ConnectionInterface;
@@ -100,6 +99,13 @@ abstract class QueryBuilder implements QueryBuilderInterface
      * @var array
      */
     protected array $havings = [];
+
+    /**
+     * The UNION clauses.
+     *
+     * @var array Each entry: ['query' => QueryBuilderInterface, 'all' => bool]
+     */
+    protected array $unions = [];
 
     /**
      * The LIMIT value.
@@ -204,6 +210,17 @@ abstract class QueryBuilder implements QueryBuilderInterface
     }
 
     /**
+     * Expose the active connection for callers that must build sibling queries
+     * on the same database (for example COUNT wrappers in DataTable flow).
+     *
+     * @return ConnectionInterface
+     */
+    public function getConnection(): ConnectionInterface
+    {
+        return $this->connection;
+    }
+
+    /**
      * Get the SQL builder for this connection.
      *
      * @return SqlBuilderInterface
@@ -229,27 +246,128 @@ abstract class QueryBuilder implements QueryBuilderInterface
     }
 
     /**
+     * Comparison operator for the current driver (LIKE becomes ILIKE on PostgreSQL
+     * so text matching is case-insensitive on every driver, as on MySQL).
+     *
+     * @param mixed $operator
+     * @return string
+     */
+    protected function compareOperator($operator): string
+    {
+        return $this->getSqlBuilder()->compareOperator((string) $operator);
+    }
+
+    /**
      * {@inheritdoc}
      */
-    public function select($columns = '*'): QueryBuilderInterface
+    public function select(...$columns): QueryBuilderInterface
     {
-        if (empty($columns) && !empty($this->columns)) {
+        if ((empty($columns) || (count($columns) === 1 && empty($columns[0]))) && !empty($this->columns)) {
             // If no columns specified, use previously set columns
             return $this;
         }
 
-        $numArgs = func_num_args();
-        if ($numArgs > 0) {
-            $args = func_get_args();
-            $columns = is_array($args[0]) ? $args[0] : $args;
-        } else {
-            $columns = ['*'];
+        $args = empty($columns) ? ['*'] : $columns;
+        $selectColumns = [];
+
+        foreach ($args as $arg) {
+            $this->normalizeSelectColumns($selectColumns, $arg, false);
+        }
+
+        if (empty($selectColumns)) {
+            $selectColumns = ['*'];
         }
 
         $this->type = 'SELECT';
-        $this->columns = $columns;
+        $this->columns = $selectColumns;
 
         return $this;
+    }
+
+    /**
+     * Normalize select() arguments into a flat columns array.
+     *
+     * @param array $columns
+     * @param mixed $arg
+     * @param bool $allowAliasPair
+     * @return void
+     */
+    protected function normalizeSelectColumns(array &$columns, $arg, bool $allowAliasPair): void
+    {
+        if (is_array($arg)) {
+            if (empty($arg)) {
+                return;
+            }
+
+            $isList = array_keys($arg) === range(0, count($arg) - 1);
+
+            // If this is a direct alias pair or subquery pair, keep it intact
+            if ($allowAliasPair && $isList && count($arg) === 2) {
+                $columns[] = $arg;
+                return;
+            }
+
+            // If this is a subquery pair passed directly (e.g. [$subquery, 'alias'])
+            if ($isList && count($arg) === 2 && is_object($arg[0]) && method_exists($arg[0], 'toSql')) {
+                $columns[] = $arg;
+                return;
+            }
+
+            if ($isList) {
+                foreach ($arg as $item) {
+                    $this->normalizeSelectColumns($columns, $item, true);
+                }
+                return;
+            }
+
+            // Treat associative arrays as column => alias mapping
+            foreach ($arg as $col => $alias) {
+                $columns[] = [$col, $alias];
+            }
+            return;
+        }
+
+        $columns[] = $arg;
+    }
+
+    /**
+     * Merge subquery bindings into parent with unique names to avoid conflicts
+     *
+     * @param QueryBuilder $subquery The subquery to merge bindings from
+     * @param string $sql The SQL string to update placeholders in
+     * @return string Updated SQL with renamed placeholders
+     */
+    protected function mergeSubqueryBindings(QueryBuilder $subquery, string $sql): string
+    {
+        // Collect all rename mappings first, then apply with strtr to avoid prefix collision
+        $renameMap = [];
+
+        // Merge namedBindings with unique keys
+        foreach ($subquery->namedBindings as $oldKey => $value) {
+            // Generate new unique key using parent's counter
+            $newKey = $oldKey.'_'.$this->paramCounter++;
+            $oldToken = (is_string($oldKey) && strpos($oldKey, ':') === 0) ? $oldKey : ':'.$oldKey;
+            $renameMap[$oldToken] = ':'.$newKey;
+            // Add to parent bindings
+            $this->namedBindings[$newKey] = $value;
+        }
+
+        // Merge embeddedBindings with unique keys
+        foreach ($subquery->embeddedBindings as $oldKey => $value) {
+            // Generate new unique key using parent's counter
+            $newKey = $oldKey.'_'.$this->paramCounter++;
+            $oldToken = (is_string($oldKey) && strpos($oldKey, ':') === 0) ? $oldKey : ':'.$oldKey;
+            $renameMap[$oldToken] = ':'.$newKey;
+            // Add to parent bindings
+            $this->embeddedBindings[$newKey] = $value;
+        }
+
+        // Apply all renames at once using strtr (longest match first, no prefix collision)
+        if (!empty($renameMap)) {
+            $sql = strtr($sql, $renameMap);
+        }
+
+        return $sql;
     }
 
     /**
@@ -258,7 +376,7 @@ abstract class QueryBuilder implements QueryBuilderInterface
     public function selectRaw(string $expression, array $bindings = []): QueryBuilderInterface
     {
         $this->type = 'SELECT';
-        $this->columns = [$expression];
+        $this->columns[] = $expression;
         $this->addBindings($bindings);
         return $this;
     }
@@ -282,7 +400,7 @@ abstract class QueryBuilder implements QueryBuilderInterface
         // Create a dedicated InsertBuilder and copy relevant state
         $builder = new InsertBuilder($this->connection);
         $builder->type = 'INSERT';
-        $builder->table = \Kotchasan\Database::create()->getTableName($table);
+        $builder->table = \Kotchasan\Database::resolveTableNameByConnection($this->connection, $table);
 
         // copy shared state
         $builder->wheres = $this->wheres;
@@ -310,7 +428,7 @@ abstract class QueryBuilder implements QueryBuilderInterface
         // Create a dedicated UpdateBuilder and copy relevant state
         $builder = new UpdateBuilder($this->connection);
         $builder->type = 'UPDATE';
-        $builder->table = \Kotchasan\Database::create()->getTableName($table);
+        $builder->table = \Kotchasan\Database::resolveTableNameByConnection($this->connection, $table);
 
         // copy shared state
         $builder->wheres = $this->wheres;
@@ -338,7 +456,7 @@ abstract class QueryBuilder implements QueryBuilderInterface
         // Create a dedicated DeleteBuilder and copy relevant state
         $builder = new DeleteBuilder($this->connection);
         $builder->type = 'DELETE';
-        $builder->table = \Kotchasan\Database::create()->getTableName($table);
+        $builder->table = \Kotchasan\Database::resolveTableNameByConnection($this->connection, $table);
 
         // copy shared state
         $builder->wheres = $this->wheres;
@@ -361,16 +479,27 @@ abstract class QueryBuilder implements QueryBuilderInterface
     /**
      * {@inheritdoc}
      */
-    public function from(string $table, ?string $alias = null): QueryBuilderInterface
+    public function from($table, ?string $alias = null): QueryBuilderInterface
     {
-        // แปลงชื่อตารางอัตโนมัติ
-        if (preg_match('/^([a-z0-9A-Z_]+)(\s+(as|AS))?\s+([a-zA-Z0-9]{1,})$/', $table, $match)) {
-            // กรณี 'category AS C' หรือ 'category C'
-            $this->table = \Kotchasan\Database::create()->getTableName($match[1]);
+        if (is_array($table) && $table[0] instanceof \Kotchasan\QueryBuilder\QueryBuilder) {
+            // subquery
+            $subquery = $table[0];
+            $subquerySql = '('.$subquery->toSql().')';
+            // Rename subquery bindings to avoid conflicts
+            $subquerySql = $this->mergeSubqueryBindings($subquery, $subquerySql);
+            $this->table = $subquerySql;
+            $this->alias = $table[1] ?? null;
+        } elseif (is_array($table)) {
+            // Raw SQL subquery with alias, e.g. ["(SELECT ...) UNION (SELECT ...)", "N"]
+            $this->table = '('.$table[0].')';
+            $this->alias = $table[1] ?? null;
+        } elseif (preg_match('/^([a-z0-9A-Z_]+)(\s+(as|AS))?\s+([a-zA-Z0-9]{1,})$/', $table, $match)) {
+            // case 'category AS C' or 'category C'
+            $this->table = \Kotchasan\Database::resolveTableNameByConnection($this->connection, $match[1]);
             $this->alias = $match[4];
         } else {
-            // กรณีปกติ 'category'
-            $this->table = \Kotchasan\Database::create()->getTableName($table);
+            // Normal case 'category'
+            $this->table = \Kotchasan\Database::resolveTableNameByConnection($this->connection, $table);
             $this->alias = $alias;
         }
 
@@ -382,8 +511,10 @@ abstract class QueryBuilder implements QueryBuilderInterface
      */
     public function where($where, string $condition = 'AND'): QueryBuilderInterface
     {
-        // Only accept Closure, string (raw SQL) or array-based conditions.
-        // Legacy forms where('col', $value) and where('col', 'op', $value) are no longer supported.
+        // Ignore empty parameters completely.
+        if ($where === null) {
+            return $this;
+        }
 
         // Handle closure nested
         if ($where instanceof \Closure) {
@@ -397,6 +528,10 @@ abstract class QueryBuilder implements QueryBuilderInterface
 
         // If string provided, treat as raw where condition
         if (is_string($where)) {
+            if (trim($where) === '') {
+                return $this;
+            }
+
             $this->wheres[] = [
                 'type' => 'raw',
                 'sql' => $where,
@@ -406,9 +541,14 @@ abstract class QueryBuilder implements QueryBuilderInterface
             return $this;
         }
 
+        // Support raw-expression objects such as \Kotchasan\Database\Sql::create(...)
+        if (is_object($where) && method_exists($where, 'toSql')) {
+            return $this->whereRaw($where, $condition);
+        }
+
         // Ensure array for structured where
         if (!is_array($where)) {
-            throw new \InvalidArgumentException('where() accepts string, array or Closure only.');
+            throw new \InvalidArgumentException('where() accepts string, array, Closure or raw-expression objects only.');
         }
 
         // If this is an associative array of multiple conditions, convert to nested group
@@ -462,23 +602,28 @@ abstract class QueryBuilder implements QueryBuilderInterface
             throw new \InvalidArgumentException('Invalid where() array format.');
         }
 
-        // If only two parameters are provided, assume equals operator
-        // If value omitted, assume operator = '='
-        if (!isset($val)) {
-            $val = null;
-            $op = '=';
-        }
-
         // Process column using unified approach - support both strings and SqlFunction objects
         $processedCol = $this->processColumnReference($col);
 
-        // Handle array values (IN clause)
+        // Handle NULL values - ['col', null] or ['col', '=', null] -> IS NULL
+        //                       ['col', '!=', null] or ['col', '<>', null] -> IS NOT NULL
+        if ($val === null) {
+            $nullOperator = ($op === '!=' || $op === '<>') ? 'IS NOT NULL' : 'IS NULL';
+            $this->wheres[] = [
+                'type' => 'raw',
+                'sql' => $processedCol.' '.$nullOperator,
+                'boolean' => 'AND'
+            ];
+            return $this;
+        }
+
+        // Handle array values (IN / NOT IN clause)
         if (is_array($val)) {
             if (empty($val)) {
-                // Empty array - add impossible condition
+                // Empty list: IN () matches nothing, NOT IN () matches everything
                 $this->wheres[] = [
                     'type' => 'raw',
-                    'sql' => '1 = 0',
+                    'sql' => $this->isNegatedListOperator($op) ? '1 = 1' : '1 = 0',
                     'boolean' => 'AND'
                 ];
             } else {
@@ -493,7 +638,7 @@ abstract class QueryBuilder implements QueryBuilderInterface
                     $this->useNamedParameters = true;
                 }
 
-                $inOperator = ($op === '!=' || $op === '<>') ? 'NOT IN' : 'IN';
+                $inOperator = $this->isNegatedListOperator($op) ? 'NOT IN' : 'IN';
                 $this->wheres[] = [
                     'type' => 'raw',
                     'sql' => $processedCol.' '.$inOperator.' ('.implode(', ', $placeholders).')',
@@ -568,36 +713,80 @@ abstract class QueryBuilder implements QueryBuilderInterface
                 }
             }
 
-            // Also handle QueryBuilder-like namedBindings and embeddedBindings properties (if present)
+            // Also handle QueryBuilder-like namedBindings and embeddedBindings via getter methods
             if (!$handled) {
-                if (property_exists($val, 'namedBindings')) {
+                // Collect all rename mappings first, then apply with strtr to avoid prefix collision
+                $renameMap = [];
+
+                // Try getNamedBindings() method first (preferred for QueryBuilder objects)
+                if (method_exists($val, 'getNamedBindings')) {
+                    $subNamed = $val->getNamedBindings();
+                    if (!empty($subNamed)) {
+                        foreach ($subNamed as $origName => $origVal) {
+                            $origPlaceholder = ':'.$origName;
+                            $newName = $this->placeholderPrefix.$this->paramCounter++;
+                            $renameMap[$origPlaceholder] = $newName;
+                            $k = ltrim($newName, ':');
+                            $this->namedBindings[$k] = $origVal;
+                        }
+                        $this->useNamedParameters = true;
+                        $handled = true;
+                    }
+                }
+                // Fallback to property access (for non-QueryBuilder objects)
+                elseif (property_exists($val, 'namedBindings')) {
                     $subNamed = $val->namedBindings;
                     if (!empty($subNamed)) {
                         foreach ($subNamed as $origName => $origVal) {
+                            $origToken = (is_string($origName) && strpos($origName, ':') === 0) ? $origName : ':'.$origName;
                             $newName = $this->placeholderPrefix.$this->paramCounter++;
-                            $subSql = str_replace($origName, $newName, $subSql);
+                            $renameMap[$origToken] = $newName;
                             $k = is_string($newName) && strpos($newName, ':') === 0 ? substr($newName, 1) : $newName;
                             $this->namedBindings[$k] = $origVal;
                         }
                         $this->useNamedParameters = true;
+                        $handled = true;
                     }
                 }
-                if (property_exists($val, 'embeddedBindings')) {
+
+                // Also handle embedded bindings
+                if (method_exists($val, 'getEmbeddedBindings')) {
+                    $subEmbedded = $val->getEmbeddedBindings();
+                    if (!empty($subEmbedded)) {
+                        foreach ($subEmbedded as $origName => $origVal) {
+                            $origPlaceholder = ':'.$origName;
+                            $newName = $this->placeholderPrefix.$this->paramCounter++;
+                            $renameMap[$origPlaceholder] = $newName;
+                            $k = ltrim($newName, ':');
+                            $this->namedBindings[$k] = $origVal;
+                        }
+                        $this->useNamedParameters = true;
+                        $handled = true;
+                    }
+                } elseif (property_exists($val, 'embeddedBindings')) {
                     $subEmbedded = $val->embeddedBindings;
                     if (!empty($subEmbedded)) {
                         foreach ($subEmbedded as $origName => $origVal) {
+                            $origToken = (is_string($origName) && strpos($origName, ':') === 0) ? $origName : ':'.$origName;
                             $newName = $this->placeholderPrefix.$this->paramCounter++;
-                            $subSql = str_replace($origName, $newName, $subSql);
+                            $renameMap[$origToken] = $newName;
                             $k = is_string($newName) && strpos($newName, ':') === 0 ? substr($newName, 1) : $newName;
                             $this->namedBindings[$k] = $origVal;
                         }
                         $this->useNamedParameters = true;
+                        $handled = true;
                     }
+                }
+
+                // Apply all renames at once using strtr (longest match first, no prefix collision)
+                if (!empty($renameMap)) {
+                    $subSql = strtr($subSql, $renameMap);
                 }
             }
 
-            // Finally, handle any remaining positional bindings via getBindings() if available
-            if (method_exists($val, 'getBindings')) {
+            // Only handle positional bindings via getBindings() if NOT already handled via named bindings
+            // This prevents double-processing of the same bindings
+            if (!$handled && method_exists($val, 'getBindings')) {
                 $subBindings = $val->getBindings();
                 if (!empty($subBindings)) {
                     foreach ($subBindings as $bindVal) {
@@ -662,9 +851,58 @@ abstract class QueryBuilder implements QueryBuilderInterface
     }
 
     /**
+     * Add a raw WHERE clause with optional bindings.
+     *
+     * @param string|object $sql Raw SQL string or object exposing toSql()/getValues()
+     * @param string $condition AND/OR
+     * @param array $bindings Optional positional or named bindings
+     * @return QueryBuilderInterface
+     */
+    public function whereRaw($sql, string $condition = 'AND', array $bindings = []): QueryBuilderInterface
+    {
+        // Support Sql/RawExpression-like objects
+        if (is_object($sql) && method_exists($sql, 'toSql')) {
+            $bindings = array_merge($bindings, method_exists($sql, 'getValues') ? $sql->getValues([]) : []);
+            $sql = $sql->toSql();
+        }
+
+        $this->wheres[] = [
+            'type' => 'raw',
+            'sql' => (string) $sql,
+            'boolean' => $condition
+        ];
+
+        if (!empty($bindings)) {
+            foreach ($bindings as $k => $v) {
+                if (is_string($k)) {
+                    $name = $k[0] === ':' ? $k : ':'.$k;
+                    $this->namedBindings[$name] = $v;
+                    $this->useNamedParameters = true;
+                } else {
+                    $this->addBinding($v, 'where');
+                }
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Add a raw OR WHERE clause with optional bindings.
+     *
+     * @param string|object $sql Raw SQL string or object exposing toSql()/getValues()
+     * @param array $bindings Optional positional or named bindings
+     * @return QueryBuilderInterface
+     */
+    public function orWhereRaw($sql, array $bindings = []): QueryBuilderInterface
+    {
+        return $this->whereRaw($sql, 'OR', $bindings);
+    }
+
+    /**
      * {@inheritdoc}
      */
-    public function orWhere($where, $condition = 'OR'): QueryBuilderInterface
+    public function orWhere($where): QueryBuilderInterface
     {
         if ($where instanceof \Closure) {
             return $this->orWhereNested($where);
@@ -682,7 +920,7 @@ abstract class QueryBuilder implements QueryBuilderInterface
 
         // reuse where logic but set boolean to OR for the last added clause
         $beforeCount = count($this->wheres);
-        $this->where($where, $condition);
+        $this->where($where, 'OR');
         $afterCount = count($this->wheres);
         if ($afterCount > $beforeCount) {
             $this->wheres[$afterCount - 1]['boolean'] = 'OR';
@@ -703,41 +941,6 @@ abstract class QueryBuilder implements QueryBuilderInterface
         $callback($query);
 
         if (count($query->wheres) > 0) {
-            // Immediately move/rename any named or embedded bindings from the nested query
-            // into this parent query to keep placeholder order stable and avoid later remapping.
-            $mapping = [];
-
-            // move namedBindings
-            if (!empty($query->namedBindings)) {
-                foreach ($query->namedBindings as $orig => $val) {
-                    // normalize orig to be without leading ':' then build token form
-                    $origNorm = is_string($orig) && strpos($orig, ':') === 0 ? substr($orig, 1) : $orig;
-                    $origName = ':'.$origNorm;
-                    $newName = $this->placeholderPrefix.$this->paramCounter++;
-                    $k = is_string($newName) && strpos($newName, ':') === 0 ? substr($newName, 1) : $newName;
-                    $this->namedBindings[$k] = $val;
-                    $mapping[$origName] = $newName;
-                }
-                // clear nested namedBindings (we've moved them)
-                $query->namedBindings = [];
-            }
-
-            // move embeddedBindings
-            if (!empty($query->embeddedBindings)) {
-                foreach ($query->embeddedBindings as $orig => $val) {
-                    $origName = is_string($orig) && strpos($orig, ':') === 0 ? $orig : ':'.$orig;
-                    $newName = $this->placeholderPrefix.$this->paramCounter++;
-                    $k = is_string($newName) && strpos($newName, ':') === 0 ? substr($newName, 1) : $newName;
-                    $this->embeddedBindings[$k] = $val;
-                    $mapping[$origName] = $newName;
-                }
-                $query->embeddedBindings = [];
-            }
-
-            // remap placeholders inside the nested query's wheres so they reference the new names
-            $this->remapPlaceholdersInWheres($query->wheres, $mapping);
-
-            // store the nested query (with bindings removed) — now parent owns the bindings
             $this->wheres[] = [
                 'type' => 'nested',
                 'query' => $query,
@@ -807,19 +1010,101 @@ abstract class QueryBuilder implements QueryBuilderInterface
     }
 
     /**
-     * {@inheritdoc}
+     * Adds a WHERE EXISTS clause to the query.
+     *
+     * Usage similar to join():
+     *  ->whereExists('product_details D', [['D.product_id', 'P.id']])
+     *  ->whereExists('product_details D', [['D.product_id', 'P.id'], ['D.status', 1]])
+     *
+     * With additional joins inside EXISTS:
+     *  ->whereExists(['product_details D', 'product_select S'], [
+     *      ['D.product_id', 'P.id'],
+     *      ['S.select_id', 'D.category_id'],
+     *      ['S.type', 'category_id']
+     *  ])
+     *
+     * @param string|array $table Table name(s) with optional alias. Array for multiple tables.
+     * @param array $condition The conditions (similar to join condition format).
+     * @param string $boolean The boolean connector (AND/OR).
+     * @param bool $not Whether to use NOT EXISTS instead of EXISTS.
+     * @return QueryBuilderInterface The query builder instance.
      */
-    // whereRaw removed: use Sql::raw() with where() instead
+    public function whereExists($table, array $condition = [], string $boolean = 'AND', bool $not = false): QueryBuilderInterface
+    {
+        if (!is_array($table)) {
+            $table = [$table];
+        }
+        foreach ($table as $idx => $tbl) {
+            $table[$idx] = $this->processTableNameForJoin($tbl);
+        }
+
+        $this->wheres[] = [
+            'type' => 'exists',
+            'table' => $table,
+            'condition' => $condition,
+            'boolean' => $boolean,
+            'not' => $not
+        ];
+
+        return $this;
+    }
+
+    /**
+     * Adds a WHERE NOT EXISTS clause to the query.
+     *
+     * @param string|array $table Table name(s) with optional alias.
+     * @param array $condition The conditions.
+     * @param string $boolean The boolean connector (AND/OR).
+     * @return QueryBuilderInterface The query builder instance.
+     */
+    public function whereNotExists($table, array $condition = [], string $boolean = 'AND'): QueryBuilderInterface
+    {
+        return $this->whereExists($table, $condition, $boolean, true);
+    }
+
+    /**
+     * Adds an OR WHERE EXISTS clause to the query.
+     *
+     * @param string|array $table Table name(s) with optional alias.
+     * @param array $condition The conditions.
+     * @return QueryBuilderInterface The query builder instance.
+     */
+    public function orWhereExists($table, array $condition = []): QueryBuilderInterface
+    {
+        return $this->whereExists($table, $condition, 'OR', false);
+    }
+
+    /**
+     * Adds an OR WHERE NOT EXISTS clause to the query.
+     *
+     * @param string|array $table Table name(s) with optional alias.
+     * @param array $condition The conditions.
+     * @return QueryBuilderInterface The query builder instance.
+     */
+    public function orWhereNotExists($table, array $condition = []): QueryBuilderInterface
+    {
+        return $this->whereExists($table, $condition, 'OR', true);
+    }
 
     /**
      * {@inheritdoc}
      */
-    public function join(string $table, $condition, string $type = 'INNER'): QueryBuilderInterface
+    public function join($table, $condition, string $type = 'INNER'): QueryBuilderInterface
     {
-        // แปลงชื่อตารางใน JOIN อัตโนมัติ
-        $processedTable = $this->processTableNameForJoin($table);
+        if (is_array($table) && $table[0] instanceof \Kotchasan\QueryBuilder\QueryBuilder) {
+            // Support subquery in JOIN
+            $subquery = $table[0];
+            $alias = $table[1] ?? null;
+            $subquerySql = '('.$subquery->toSql().')';
+            // Rename subquery bindings to avoid conflicts
+            $subquerySql = $this->mergeSubqueryBindings($subquery, $subquerySql);
+            $processedTable = $subquerySql.($alias ? ' AS '.$this->quoteIdentifier($alias) : '');
+        } else {
+            // Automatically process table name in JOIN
+            $processedTable = $this->processTableNameForJoin($table);
+        }
 
-        // รองรับ condition แบบ array, string หรือ Closure
+        // Support condition as array, string, or Closure
         if ($condition instanceof \Closure) {
             // Build a temporary QueryBuilder to capture nested conditions, then extract its wheres
             $temp = new static($this->connection);
@@ -943,13 +1228,34 @@ abstract class QueryBuilder implements QueryBuilderInterface
         // Use unified column processing
         $quotedColumn = $this->processColumnReference($column);
 
+        // Handle NULL values - always emit IS NULL / IS NOT NULL
+        if ($value === null) {
+            $nullOperator = ($operator === '!=' || $operator === '<>') ? 'IS NOT NULL' : 'IS NULL';
+            return $quotedColumn.' '.$nullOperator;
+        }
+
         // Handle objects with toSql() method (includes SqlFunction)
         if (is_object($value) && method_exists($value, 'toSql')) {
-            return $quotedColumn.' '.$operator.' '.$this->extractExpressionSql($value);
+            return $quotedColumn.' '.$this->compareOperator($operator).' '.$this->extractExpressionSql($value);
         }
 
         // For JOIN conditions (no binding), determine if value is column or literal
         if (!$createBinding) {
+            // Handle array values: convert = to IN (...)
+            if (is_array($value)) {
+                if (empty($value)) {
+                    // "IN ()" is invalid SQL
+                    return $this->isNegatedListOperator($operator) ? '1 = 1' : '1 = 0';
+                }
+                $quotedValues = array_map(function ($v) {
+                    if (is_string($v) && $this->looksLikeColumnReference($v)) {
+                        return $this->quoteIdentifier($v);
+                    }
+                    return $this->quoteValue($v);
+                }, $value);
+                $inOperator = $this->isNegatedListOperator($operator) ? 'NOT IN' : 'IN';
+                return $quotedColumn.' '.$inOperator.' ('.implode(', ', $quotedValues).')';
+            }
             if (is_string($value) && $this->looksLikeColumnReference($value)) {
                 // Value looks like a column reference, quote as identifier
                 $quotedValue = $this->quoteIdentifier($value);
@@ -957,12 +1263,28 @@ abstract class QueryBuilder implements QueryBuilderInterface
                 // Value is a literal, quote as string
                 $quotedValue = $this->quoteValue($value);
             }
-            return $quotedColumn.' '.$operator.' '.$quotedValue;
+            return $quotedColumn.' '.$this->compareOperator($operator).' '.$quotedValue;
         }
 
         // For WHERE conditions, this should be handled by the where() method's binding logic
         // This method shouldn't be called directly for WHERE with createBinding=true
         throw new \InvalidArgumentException('Use where() method for conditions that require parameter binding');
+    }
+
+    /**
+     * Whether an operator used with a list of values means NOT IN.
+     *
+     * '!=', '<>' and 'NOT IN' (any case) negate the list; anything else ('=', 'IN', ...) means IN.
+     * Before this check, ['col', 'NOT IN', [1, 2]] silently rendered as "col IN (1, 2)".
+     *
+     * @param mixed $operator
+     * @return bool
+     */
+    protected function isNegatedListOperator($operator): bool
+    {
+        $operator = strtoupper(trim(preg_replace('/\s+/', ' ', (string) $operator)));
+
+        return $operator === '!=' || $operator === '<>' || $operator === 'NOT IN';
     }
 
     /**
@@ -1079,6 +1401,8 @@ abstract class QueryBuilder implements QueryBuilderInterface
         // Also handle QueryBuilder-like namedBindings/embeddedBindings if present
         try {
             $ref = new \ReflectionObject($expr);
+            $renameMap = [];
+
             if ($ref->hasProperty('namedBindings')) {
                 $p = $ref->getProperty('namedBindings');
                 $p->setAccessible(true);
@@ -1086,24 +1410,31 @@ abstract class QueryBuilder implements QueryBuilderInterface
                 if (!empty($nb)) {
                     foreach ($nb as $orig => $val) {
                         $new = $this->placeholderPrefix.$this->paramCounter++;
-                        $frag = str_replace($orig, $new, $frag);
-                        $p = is_string($new) && strpos($new, ':') === 0 ? substr($new, 1) : $new;
-                        $this->embeddedBindings[$p] = $val;
+                        $origToken = (is_string($orig) && strpos($orig, ':') === 0) ? $orig : ':'.$orig;
+                        $renameMap[$origToken] = $new;
+                        $p2 = is_string($new) && strpos($new, ':') === 0 ? substr($new, 1) : $new;
+                        $this->embeddedBindings[$p2] = $val;
                     }
                 }
             }
             if ($ref->hasProperty('embeddedBindings')) {
-                $p2 = $ref->getProperty('embeddedBindings');
-                $p2->setAccessible(true);
-                $eb = $p2->getValue($expr);
+                $p3 = $ref->getProperty('embeddedBindings');
+                $p3->setAccessible(true);
+                $eb = $p3->getValue($expr);
                 if (!empty($eb)) {
                     foreach ($eb as $orig => $val) {
                         $new = $this->placeholderPrefix.$this->paramCounter++;
-                        $frag = str_replace($orig, $new, $frag);
-                        $p = is_string($new) && strpos($new, ':') === 0 ? substr($new, 1) : $new;
-                        $this->embeddedBindings[$p] = $val;
+                        $origToken = (is_string($orig) && strpos($orig, ':') === 0) ? $orig : ':'.$orig;
+                        $renameMap[$origToken] = $new;
+                        $p4 = is_string($new) && strpos($new, ':') === 0 ? substr($new, 1) : $new;
+                        $this->embeddedBindings[$p4] = $val;
                     }
                 }
+            }
+
+            // Apply all renames at once using strtr (avoids prefix collision)
+            if (!empty($renameMap)) {
+                $frag = strtr($frag, $renameMap);
             }
         } catch (\ReflectionException $e) {
             // ignore
@@ -1122,6 +1453,10 @@ abstract class QueryBuilder implements QueryBuilderInterface
             }
         }
 
+        if ($expr instanceof \Kotchasan\QueryBuilder\QueryBuilderInterface) {
+            return '('.$frag.')';
+        }
+
         return $frag;
     }
 
@@ -1133,14 +1468,24 @@ abstract class QueryBuilder implements QueryBuilderInterface
      */
     protected function processTableNameForJoin(string $table): string
     {
+        $table = trim($table);
+
+        if ($table !== '' && $table[0] === '(') {
+            if (preg_match('/^(\(.*\))(\s+(?:as|AS)\s+|\s+)([a-zA-Z0-9_]{1,})$/s', $table, $match)) {
+                return $match[1].' AS '.$this->quoteIdentifier($match[3]);
+            }
+
+            return $table;
+        }
+
         // Separate table names and alias
         if (preg_match('/^([a-z0-9A-Z_]+)(\s+(as|AS))?\s+([a-zA-Z0-9]{1,})$/', $table, $match)) {
             // In the case of 'Category As C' or 'Category C'
-            $tableName = \Kotchasan\Database::create()->getTableName($match[1]);
+            $tableName = \Kotchasan\Database::resolveTableNameByConnection($this->connection, $match[1]);
             return $this->quoteIdentifier($tableName).' AS '.$this->quoteIdentifier($match[4]);
         } else {
             // In the case of 'category' (no Alias)
-            $tableName = \Kotchasan\Database::create()->getTableName($table);
+            $tableName = \Kotchasan\Database::resolveTableNameByConnection($this->connection, $table);
             return $this->quoteIdentifier($tableName);
         }
     }
@@ -1148,7 +1493,7 @@ abstract class QueryBuilder implements QueryBuilderInterface
     /**
      * {@inheritdoc}
      */
-    public function leftJoin(string $table, $condition): QueryBuilderInterface
+    public function leftJoin($table, $condition): QueryBuilderInterface
     {
         return $this->join($table, $condition, 'LEFT');
     }
@@ -1156,9 +1501,27 @@ abstract class QueryBuilder implements QueryBuilderInterface
     /**
      * {@inheritdoc}
      */
-    public function rightJoin(string $table, $condition): QueryBuilderInterface
+    public function rightJoin($table, $condition): QueryBuilderInterface
     {
         return $this->join($table, $condition, 'RIGHT');
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function union(QueryBuilderInterface $query, bool $all = false): QueryBuilderInterface
+    {
+        $this->unions[] = ['query' => $query, 'all' => $all];
+        $this->lastQuery = null; // invalidate cached SQL
+        return $this;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function unionAll(QueryBuilderInterface $query): QueryBuilderInterface
+    {
+        return $this->union($query, true);
     }
 
     /**
@@ -1254,10 +1617,10 @@ abstract class QueryBuilder implements QueryBuilderInterface
      */
     public function values(array $values): QueryBuilderInterface
     {
-        foreach ($values as $k => $v) {
-            $this->values[$k] = $v;
+        foreach ($values as $key => $val) {
+            $this->values[$key] = $val;
             if (!$this->useNamedParameters) {
-                $this->addBinding($v, 'values');
+                $this->addBinding($val, 'values');
             }
         }
 
@@ -1292,11 +1655,14 @@ abstract class QueryBuilder implements QueryBuilderInterface
 
                 if ($queryCache !== null) {
                     // Try to get from cache
-                    $result = $queryCache->get($this);
+                    $cachedData = $queryCache->get($this);
 
-                    if ($result !== null) {
-                        // Return the cached result
-                        return $result;
+                    if ($cachedData !== null && is_array($cachedData)) {
+                        // Return cached result wrapped in ArrayResult
+                        return new \Kotchasan\Result\ArrayResult(
+                            $cachedData['data'] ?? [],
+                            $cachedData['format'] ?? ($resultFormat ?? 'default')
+                        );
                     }
                 }
             } catch (\Exception $e) {
@@ -1385,7 +1751,16 @@ abstract class QueryBuilder implements QueryBuilderInterface
         // Cache the result if needed (only if auto-save is enabled)
         if ($this->useCache && $this->autoSaveCache && $queryCache !== null && $this->type === 'SELECT') {
             try {
-                $queryCache->set($this, $result, $this->cacheTtl);
+                // Convert result to cacheable array format
+                $cacheData = [
+                    'data' => $result->fetchAll(),
+                    'format' => $resultFormat ?? 'default'
+                ];
+                // Reset result for consumer (fetchAll moves the pointer)
+                if (method_exists($result, 'reset')) {
+                    $result->reset();
+                }
+                $queryCache->set($this, $cacheData, $this->cacheTtl);
             } catch (\Exception $e) {
                 // If caching fails, we still want to return the result
                 // The error will be logged if a logger is available
@@ -1456,6 +1831,26 @@ abstract class QueryBuilder implements QueryBuilderInterface
     }
 
     /**
+     * Gets the named bindings (associative array with placeholder names as keys)
+     *
+     * @return array The named bindings
+     */
+    public function getNamedBindings(): array
+    {
+        return $this->namedBindings;
+    }
+
+    /**
+     * Gets the embedded bindings (associative array with placeholder names as keys)
+     *
+     * @return array The embedded bindings
+     */
+    public function getEmbeddedBindings(): array
+    {
+        return $this->embeddedBindings;
+    }
+
+    /**
      * Gets the query bindings.
      *
      * @param string|null $type The binding type to retrieve. If null, all bindings are returned.
@@ -1466,8 +1861,6 @@ abstract class QueryBuilder implements QueryBuilderInterface
         if ($type !== null) {
             return $this->bindings[$type] ?? [];
         }
-
-        // If using named parameters, return the values of namedBindings first
 
         // Start with positional bindings grouped by type
         $result = [];
@@ -1485,7 +1878,6 @@ abstract class QueryBuilder implements QueryBuilderInterface
                     if (!empty($nestedBindings)) {
                         $result = array_merge($result, $nestedBindings);
                     }
-                    // (nested->getBindings() already includes named/embedded bindings)
                 }
             }
         }
@@ -1494,11 +1886,6 @@ abstract class QueryBuilder implements QueryBuilderInterface
         if ($this->useNamedParameters && !empty($this->namedBindings)) {
             $result = array_merge($result, array_values($this->namedBindings));
         }
-
-        // Note: do not automatically include embeddedBindings here. Embedded bindings are
-        // intended for debug-time substitution and are merged when building SQL for
-        // specific contexts. Nested query bindings are already merged above via
-        // $nestedQuery->getBindings().
 
         return $result;
     }
@@ -1538,6 +1925,11 @@ abstract class QueryBuilder implements QueryBuilderInterface
      */
     public function cacheOn(bool $auto_save = true, int $ttl = 3600): QueryBuilderInterface
     {
+        // Use CACHE_TTL constant if exists
+        if (defined('CACHE_TTL')) {
+            $ttl = CACHE_TTL;
+        }
+
         $this->useCache = true;
         $this->cacheTtl = $ttl;
         $this->autoSaveCache = $auto_save;
@@ -1766,12 +2158,22 @@ abstract class QueryBuilder implements QueryBuilderInterface
                 // Use unified column processing
                 $colDisplay = $this->processColumnReference($where['column']);
 
+                // Safety net: null value should always become IS NULL / IS NOT NULL
+                if ($where['value'] === null) {
+                    $nullOperator = ($where['operator'] === '!=' || $where['operator'] === '<>') ? 'IS NOT NULL' : 'IS NULL';
+                    $expr = $colDisplay.' '.$nullOperator;
+                    $wrapped = '('.$expr.')';
+                    $parts[] = ['boolean' => $first ? '' : $where['boolean'], 'expr' => $wrapped];
+                    $first = false;
+                    continue;
+                }
+
                 if (is_object($where['value']) && $where['value'] instanceof \Kotchasan\QueryBuilder\SqlFunction) {
                     // Handle SqlFunction objects by formatting them with connection
                     $rhs = $this->extractExpressionSql($where['value']);
-                    $expr = $colDisplay.' '.$where['operator'].' '.$rhs;
+                    $expr = $colDisplay.' '.$this->compareOperator($where['operator']).' '.$rhs;
                 } elseif (is_object($where['value']) && $where['value'] instanceof \Kotchasan\QueryBuilder\RawExpression) {
-                    $expr = $colDisplay.' '.$where['operator'].' '.(string) $where['value'];
+                    $expr = $colDisplay.' '.$this->compareOperator($where['operator']).' '.(string) $where['value'];
                 } else {
                     // Prefer existing param_name if present
                     if (isset($where['param_name']) && $where['param_name'] !== null) {
@@ -1784,7 +2186,7 @@ abstract class QueryBuilder implements QueryBuilderInterface
                         $this->useNamedParameters = true;
                     }
 
-                    $expr = $colDisplay.' '.$where['operator'].' '.$placeholder;
+                    $expr = $colDisplay.' '.$this->compareOperator($where['operator']).' '.$placeholder;
                 }
 
                 $wrapped = '('.$expr.')';
@@ -1794,39 +2196,172 @@ abstract class QueryBuilder implements QueryBuilderInterface
                 $wrapped = '('.$where['sql'].')';
                 $parts[] = ['boolean' => empty($parts) ? '' : $where['boolean'], 'expr' => $wrapped];
                 $first = false;
+            } elseif ($where['type'] === 'exists') {
+                // Build an EXISTS(...) subquery from table + condition (join-like syntax)
+                $not = !empty($where['not']) ? 'NOT ' : '';
+                $sqlBuilder = $this->getSqlBuilder();
+
+                $table = $where['table'] ?? '';
+                $condition = $where['condition'] ?? [];
+
+                if (!empty($table)) {
+                    if (is_array($table)) {
+                        $tables = $table;
+                        $fromTable = array_shift($tables);
+                        $fromQuoted = $sqlBuilder->quoteIdentifier($fromTable);
+
+                        $sub = 'SELECT 1 FROM '.$fromQuoted;
+                        foreach ($tables as $joinTable) {
+                            $sub .= ', '.$sqlBuilder->quoteIdentifier($joinTable);
+                        }
+                    } else {
+                        $fromQuoted = $sqlBuilder->quoteIdentifier($table);
+                        $sub = 'SELECT 1 FROM '.$fromQuoted;
+                    }
+
+                    if (!empty($condition)) {
+                        $whereParts = [];
+                        foreach ($condition as $cond) {
+                            if (is_array($cond)) {
+                                if (count($cond) === 2) {
+                                    // ['colA', 'colB'] -> colA = colB (column-to-column) or colA = ? (literal)
+                                    $left = $this->processColumnReference($cond[0]);
+                                    $rightVal = $cond[1];
+                                    if ($rightVal === null) {
+                                        $whereParts[] = $left.' IS NULL';
+                                        continue;
+                                    }
+                                    if (is_array($rightVal)) {
+                                        if (empty($rightVal)) {
+                                            $whereParts[] = '1 = 0';
+                                            continue;
+                                        }
+                                        $placeholders = [];
+                                        foreach ($rightVal as $item) {
+                                            $paramName = $this->placeholderPrefix.$this->paramCounter++;
+                                            $p = is_string($paramName) && strpos($paramName, ':') === 0 ? substr($paramName, 1) : $paramName;
+                                            $this->embeddedBindings[$p] = $item;
+                                            $this->useNamedParameters = true;
+                                            $placeholders[] = $paramName;
+                                        }
+                                        $whereParts[] = $left.' IN ('.implode(', ', $placeholders).')';
+                                        continue;
+                                    }
+                                    if (is_string($rightVal) && preg_match('/^[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*$/', $rightVal)) {
+                                        $right = $this->processColumnReference($rightVal);
+                                    } else {
+                                        $paramName = $this->placeholderPrefix.$this->paramCounter++;
+                                        $p = is_string($paramName) && strpos($paramName, ':') === 0 ? substr($paramName, 1) : $paramName;
+                                        $this->embeddedBindings[$p] = $rightVal;
+                                        $this->useNamedParameters = true;
+                                        $right = $paramName;
+                                    }
+                                    $whereParts[] = $left.' = '.$right;
+                                } elseif (count($cond) === 3) {
+                                    // ['col', 'op', value]
+                                    $left = $this->processColumnReference($cond[0]);
+                                    $operator = $cond[1];
+                                    $val = $cond[2];
+                                    if ($val === null) {
+                                        $nullOperator = ($operator === '!=' || $operator === '<>') ? 'IS NOT NULL' : 'IS NULL';
+                                        $whereParts[] = $left.' '.$nullOperator;
+                                        continue;
+                                    }
+                                    if (is_array($val)) {
+                                        if (empty($val)) {
+                                            $whereParts[] = $this->isNegatedListOperator($operator) ? '1 = 1' : '1 = 0';
+                                            continue;
+                                        }
+                                        $placeholders = [];
+                                        foreach ($val as $item) {
+                                            $paramName = $this->placeholderPrefix.$this->paramCounter++;
+                                            $p = is_string($paramName) && strpos($paramName, ':') === 0 ? substr($paramName, 1) : $paramName;
+                                            $this->embeddedBindings[$p] = $item;
+                                            $this->useNamedParameters = true;
+                                            $placeholders[] = $paramName;
+                                        }
+                                        $inOperator = $this->isNegatedListOperator($operator) ? 'NOT IN' : 'IN';
+                                        $whereParts[] = $left.' '.$inOperator.' ('.implode(', ', $placeholders).')';
+                                        continue;
+                                    }
+                                    if (is_string($val) && preg_match('/^[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*$/', $val)) {
+                                        $right = $this->processColumnReference($val);
+                                    } else {
+                                        $paramName = $this->placeholderPrefix.$this->paramCounter++;
+                                        $p = is_string($paramName) && strpos($paramName, ':') === 0 ? substr($paramName, 1) : $paramName;
+                                        $this->embeddedBindings[$p] = $val;
+                                        $this->useNamedParameters = true;
+                                        $right = $paramName;
+                                    }
+                                    $whereParts[] = $left.' '.$this->compareOperator($operator).' '.$right;
+                                }
+                            } elseif (is_string($cond)) {
+                                $whereParts[] = $cond;
+                            }
+                        }
+                        if (!empty($whereParts)) {
+                            $sub .= ' WHERE '.implode(' AND ', $whereParts);
+                        }
+                    }
+
+                    $expr = $not.'EXISTS ('.$sub.')';
+                    $parts[] = ['boolean' => empty($parts) ? '' : $where['boolean'], 'expr' => '('.$expr.')'];
+                    $first = false;
+                }
             } elseif ($where['type'] === 'nested') {
                 $nestedQueryObj = $where['query'];
+                // Every condition is kept, `= ''` included: an empty string is a
+                // value to compare against, not "no filter". Dropping it turned
+                // [['id', 1], ['language', '']] into WHERE id = 1, so a DELETE or
+                // UPDATE hit more rows than asked for and a lookup by an empty
+                // token matched any row. Optional filters are skipped by the
+                // caller (if ($value !== '') $where[] = ...), never here.
                 $nestedClone = clone $nestedQueryObj;
-                if (property_exists($nestedClone, 'wheres') && is_array($nestedClone->wheres)) {
-                    $filtered = [];
-                    foreach ($nestedClone->wheres as $w) {
-                        if ($w['type'] === 'basic' && ($w['operator'] === '=' || $w['operator'] === '==') && $w['value'] === '') {
-                            continue;
-                        }
-                        $filtered[] = $w;
-                    }
-                    $nestedClone->wheres = $filtered;
-                }
 
                 // Build nested SQL using same unified method (recursive)
                 $nestedSql = $nestedClone->buildWhereClauses();
+                if (trim($nestedSql) === '') {
+                    continue;
+                }
 
                 // Move named bindings from nested query into parent with new unique names
-                $nestedNamed = property_exists($nestedQueryObj, 'namedBindings') ? $nestedQueryObj->namedBindings : [];
+                // IMPORTANT: Read from $nestedClone (the clone that actually processed buildWhereClauses),
+                // not from $nestedQueryObj (the original which may not have the bindings yet)
+                $renameMap = [];
+
+                $nestedNamed = property_exists($nestedClone, 'namedBindings') ? $nestedClone->namedBindings : [];
                 if (!empty($nestedNamed)) {
                     foreach ($nestedNamed as $origName => $origVal) {
                         $newName = $this->placeholderPrefix.$this->paramCounter++;
-                        // token-aware replacement
-                        $nestedSql = preg_replace('/'.preg_quote($origName, '/').'(?![A-Za-z0-9_])/', $newName, $nestedSql);
+                        $origToken = (is_string($origName) && strpos($origName, ':') === 0) ? $origName : ':'.$origName;
+                        $renameMap[$origToken] = $newName;
                         $p = is_string($newName) && strpos($newName, ':') === 0 ? substr($newName, 1) : $newName;
                         $this->embeddedBindings[$p] = $origVal;
                     }
                     $this->useNamedParameters = true;
                 }
 
+                // Also handle embeddedBindings from the nested clone (from deeper nested WHEREs)
+                $nestedEmbedded = property_exists($nestedClone, 'embeddedBindings') ? $nestedClone->embeddedBindings : [];
+                if (!empty($nestedEmbedded)) {
+                    foreach ($nestedEmbedded as $origName => $origVal) {
+                        $newName = $this->placeholderPrefix.$this->paramCounter++;
+                        $origToken = (is_string($origName) && strpos($origName, ':') === 0) ? $origName : ':'.$origName;
+                        $renameMap[$origToken] = $newName;
+                        $p = is_string($newName) && strpos($newName, ':') === 0 ? substr($newName, 1) : $newName;
+                        $this->embeddedBindings[$p] = $origVal;
+                    }
+                    $this->useNamedParameters = true;
+                }
+
+                // Apply all renames at once using strtr (avoids prefix collision like :p1 matching :p10)
+                if (!empty($renameMap)) {
+                    $nestedSql = strtr($nestedSql, $renameMap);
+                }
+
                 // Handle positional bindings from nested (map ? -> named param)
-                if (method_exists($nestedQueryObj, 'getBindings')) {
-                    $posBindings = $nestedQueryObj->getBindings('where');
+                if (method_exists($nestedClone, 'getBindings')) {
+                    $posBindings = $nestedClone->getBindings('where');
                     if (!empty($posBindings)) {
                         foreach ($posBindings as $bindVal) {
                             $newName = $this->placeholderPrefix.$this->paramCounter++;
@@ -1945,6 +2480,17 @@ abstract class QueryBuilder implements QueryBuilderInterface
                 'boolean' => \PDO::PARAM_BOOL,
                 'NULL' => \PDO::PARAM_NULL
             ];
+
+            // Sort named bindings by key length descending to prevent prefix collision
+            // e.g. :p1 must not be replaced before :p10, :p11, :p12, etc.
+            uksort($debugBindings, function ($a, $b) {
+                return strlen((string) $b) - strlen((string) $a);
+            });
+
+            // Separate named and positional bindings
+            $namedReplacements = [];
+            $positionalValues = [];
+
             foreach ($debugBindings as $key => $value) {
                 $type = gettype($value);
                 $param = isset($bindTypes[$type]) ? $bindTypes[$type] : \PDO::PARAM_STR;
@@ -1965,14 +2511,19 @@ abstract class QueryBuilder implements QueryBuilderInterface
                         $token = ':'.$key;
                     }
 
-                    // If the token exists in SQL, replace it. Otherwise fall back to positional replacement.
-                    if (strpos($sql, $token) !== false) {
-                        $sql = str_replace($token, $value, $sql);
-                        continue;
-                    }
+                    $namedReplacements[$token] = $value;
+                } else {
+                    $positionalValues[] = $value;
                 }
+            }
 
-                // Positional replacement (or fallback)
+            // Replace all named parameters at once using strtr (longest match first, no overlap)
+            if (!empty($namedReplacements)) {
+                $sql = strtr($sql, $namedReplacements);
+            }
+
+            // Replace positional parameters (?)
+            foreach ($positionalValues as $value) {
                 $sql = preg_replace('/\?/', $value, $sql, 1);
             }
         }
@@ -1997,7 +2548,6 @@ abstract class QueryBuilder implements QueryBuilderInterface
     {
         $this->explain = true;
         return $this;
-
     }
 
     /**

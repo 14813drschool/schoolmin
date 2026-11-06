@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan;
 
 /**
@@ -56,6 +55,32 @@ class Province
     }
 
     /**
+     * Get a list of all provinces.
+     * It returns the names of provinces in the specified language (defaults to English).
+     *
+     * @param string $country (default: 'TH')
+     *
+     * @return array
+     */
+    public static function getOptions($country = 'TH')
+    {
+        $datas = self::init($country);
+        $result = [];
+        if (!empty($datas)) {
+            $language = Language::name();
+            $language = in_array($language, array_keys(reset($datas))) ? $language : 'en';
+            $result = [];
+            foreach ($datas as $iso => $values) {
+                $result[] = ['value' => $iso, 'text' => $values[$language]];
+            }
+            if ($language == 'en') {
+                usort($result, fn($a, $b) => strcmp($a['text'], $b['text']));
+            }
+        }
+        return $result;
+    }
+
+    /**
      * Get a list of countries with installed provinces.
      *
      * @return array
@@ -81,10 +106,14 @@ class Province
     public static function get($iso, $lang = '', $country = 'TH')
     {
         $datas = self::init($country);
+        if (empty($datas)) {
+            return '';
+        }
         if (empty($lang)) {
             $lang = Language::name();
         }
-        $lang = in_array($lang, array_keys(reset($datas))) ? $lang : 'en';
+        $first = reset($datas);
+        $lang = in_array($lang, array_keys($first)) ? $lang : 'en';
         return isset($datas[$iso]) ? $datas[$iso][$lang] : '';
     }
 
@@ -100,14 +129,18 @@ class Province
     public static function isoFromProvince($province, $lang = '', $country = 'TH')
     {
         $datas = self::init($country);
+        if (empty($datas)) {
+            return '';
+        }
         if (empty($lang)) {
             $lang = Language::name();
         }
-        $lang = in_array($lang, array_keys(reset($datas))) ? $lang : 'en';
+        $first = reset($datas);
+        $lang = in_array($lang, array_keys($first)) ? $lang : 'en';
         $result = '';
         foreach ($datas as $iso => $items) {
             if ($items[$lang] === $province) {
-                $result = $iso;
+                $result = (string) $iso;
                 break;
             }
         }

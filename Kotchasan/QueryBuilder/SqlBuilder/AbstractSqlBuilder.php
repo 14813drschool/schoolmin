@@ -20,6 +20,37 @@ abstract class AbstractSqlBuilder implements SqlBuilderInterface
     protected array $quoteChars = ['`', '`'];
 
     /**
+     * Whether this dialect REQUIRES an ORDER BY for its LIMIT/paging clause.
+     * SQL Server's OFFSET..FETCH errors without ORDER BY; MySQL/PG/SQLite do not.
+     * SelectBuilder injects a stable fallback ORDER BY when this is true.
+     *
+     * @return bool
+     */
+    public function requiresOrderByForLimit(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Apply a row LIMIT to an UPDATE/DELETE statement in the dialect's way.
+     * Default (MySQL / SQLite): append `LIMIT n`. SQL Server injects `TOP (n)`
+     * after the verb; PostgreSQL has no support and throws (so a ported query
+     * fails loudly instead of silently affecting every row).
+     *
+     * @param string   $query The full UPDATE/DELETE statement
+     * @param string   $verb  'UPDATE' or 'DELETE'
+     * @param int|null $limit
+     * @return string
+     */
+    public function applyUpdateDeleteLimit(string $query, string $verb, ?int $limit): string
+    {
+        if ($limit === null) {
+            return $query;
+        }
+        return $query.' LIMIT '.(int) $limit;
+    }
+
+    /**
      * The driver names this builder supports.
      *
      * @var array
@@ -37,6 +68,21 @@ abstract class AbstractSqlBuilder implements SqlBuilderInterface
         }
 
         [$quoteStart, $quoteEnd] = $this->quoteChars;
+
+        // Quote dotted identifiers before the expression guard so U.* becomes
+        // "U".* on PostgreSQL while plain * remains untouched above.
+        if (preg_match('/^[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+|\.\*)*$/', $identifier)) {
+            $parts = explode('.', $identifier);
+            foreach ($parts as &$p) {
+                $p = trim($p);
+                if ($p === '*') {
+                    continue;
+                }
+                $p = $quoteStart.$p.$quoteEnd;
+            }
+
+            return implode('.', $parts);
+        }
 
         // Handle AS alias within identifier (e.g. "table AS t") FIRST
         if (preg_match('/^(.+?)\s+(?:AS\s+)?([A-Za-z0-9_]+)$/i', $identifier, $m)) {
@@ -120,7 +166,9 @@ abstract class AbstractSqlBuilder implements SqlBuilderInterface
                     }
                 } else {
                     // Simple column
-                    if (preg_match('/[()\s\*\+\-\/]/', $column) || preg_match('/[`"\[\]]/', $column)) {
+                    if (preg_match('/^[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+|\.\*)*$/', $column)) {
+                        $quotedColumns[] = $this->quoteIdentifier($column);
+                    } elseif (preg_match('/[()\s\*\+\-\/]/', $column) || preg_match('/[`"\[\]]/', $column)) {
                         // Expression or function - don't quote
                         $quotedColumns[] = $column;
                     } else {
@@ -166,7 +214,12 @@ abstract class AbstractSqlBuilder implements SqlBuilderInterface
     {
         $quotedTable = $this->quoteIdentifier($table);
 
-        $join = strtoupper($type).' JOIN '.$quotedTable;
+        $join = strtoupper($type);
+        if (in_array($join, ['INNER', 'LEFT', 'RIGHT', 'FULL', 'CROSS'], true)) {
+            $join = $join.' JOIN '.$quotedTable;
+        } else {
+            $join = $join.' '.$quotedTable;
+        }
 
         if ($alias) {
             $join .= ' AS '.$this->quoteIdentifier($alias);
@@ -203,7 +256,7 @@ abstract class AbstractSqlBuilder implements SqlBuilderInterface
         }
 
         $column = $where['column'];
-        $operator = $where['operator'];
+        $operator = $this->compareOperator((string) $where['operator']);
         $value = $where['value'];
 
         // Quote column identifier if it's a simple string
@@ -346,8 +399,27 @@ abstract class AbstractSqlBuilder implements SqlBuilderInterface
 
         $setParts = [];
         foreach ($data as $column => $value) {
-            $setParts[] = $this->quoteIdentifier($column).' = ?';
-            $bindings[] = $value;
+            $quotedColumn = $this->quoteIdentifier($column);
+
+            // Check if value is a Sql object or SqlFunction (raw SQL expression)
+            if ($value instanceof \Kotchasan\Database\Sql) {
+                // Use raw SQL expression directly
+                $setParts[] = $quotedColumn.' = '.$value->toSql();
+                // Merge any bindings from the Sql object
+                foreach ($value->getValues([]) as $v) {
+                    $bindings[] = $v;
+                }
+            } elseif ($value instanceof \Kotchasan\QueryBuilder\SqlFunction) {
+                // Use SqlFunction's toSql method
+                $setParts[] = $quotedColumn.' = '.$value->toSql();
+            } elseif ($value instanceof \Kotchasan\QueryBuilder\RawExpression) {
+                // Use RawExpression's toSql method
+                $setParts[] = $quotedColumn.' = '.$value->toSql();
+            } else {
+                // Regular value - use placeholder
+                $setParts[] = $quotedColumn.' = ?';
+                $bindings[] = $value;
+            }
         }
 
         $query .= implode(', ', $setParts);
@@ -387,5 +459,13 @@ abstract class AbstractSqlBuilder implements SqlBuilderInterface
     public function supportsDriver(string $driverName): bool
     {
         return in_array(strtolower($driverName), $this->supportedDrivers, true);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function compareOperator(string $operator): string
+    {
+        return $operator;
     }
 }

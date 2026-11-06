@@ -1,5 +1,4 @@
 <?php
-
 namespace Kotchasan\Http;
 
 use Kotchasan\Http\Traits\RequestCookieTrait;
@@ -53,13 +52,6 @@ class Request extends AbstractRequest implements ServerRequestInterface
      * @var array Request attributes
      */
     protected $attributes = [];
-
-    /**
-     * Sanitize a single value or array recursively (internal use)
-     *
-     * @param mixed $value
-     * @return mixed
-     */
 
     /**
      * Create a new HTTP request from server variables.
@@ -117,9 +109,129 @@ class Request extends AbstractRequest implements ServerRequestInterface
 
         if ($withRequest) {
             $this->queryParams = $_GET;
-            $this->parsedBody = $_POST;
             $this->cookieParams = $_COOKIE;
             $this->uploadedFiles = $this->normalizeFiles($_FILES);
+
+            // Handle different content types for parsed body
+            $this->parsedBody = $this->parseRequestBody();
+        }
+    }
+
+    /**
+     * Parse request body based on Content-Type
+     *
+     * @return array|object|null
+     */
+    protected function parseRequestBody()
+    {
+        $contentType = $this->getHeaderLine('content-type');
+
+        // Handle JSON content type
+        if (strpos($contentType, 'application/json') !== false) {
+            try {
+                $rawBody = file_get_contents('php://input');
+                if (!empty($rawBody)) {
+                    $decoded = json_decode($rawBody, true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        return is_array($decoded) ? $this->normalizeBracketNotationKeys($decoded) : $decoded;
+                    }
+                }
+            } catch (\Exception $e) {
+                // Log error if needed, fallback to empty array
+            }
+            return [];
+        }
+
+        // Handle form data (multipart/form-data or application/x-www-form-urlencoded)
+        if (strpos($contentType, 'multipart/form-data') !== false ||
+            strpos($contentType, 'application/x-www-form-urlencoded') !== false ||
+            empty($contentType) ||
+            $_SERVER['REQUEST_METHOD'] === 'POST') {
+            return $_POST;
+        }
+
+        // Default fallback to $_POST
+        return $_POST;
+    }
+
+    /**
+     * Convert bracket-notation keys from JSON payloads (e.g. detail[row_1])
+     * into nested arrays to match native PHP form parsing behavior.
+     *
+     * @param array $data
+     * @return array
+     */
+    protected function normalizeBracketNotationKeys(array $data): array
+    {
+        $normalized = [];
+
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $value = $this->normalizeBracketNotationKeys($value);
+            }
+
+            if (is_string($key) && strpos($key, '[') !== false && preg_match('/^[^\[\]]+(\[[^\[\]]*\])+$/', $key)) {
+                $segments = [];
+                $base = strstr($key, '[', true);
+                if ($base !== false && $base !== '') {
+                    $segments[] = $base;
+                }
+                if (preg_match_all('/\[([^\]]*)\]/', $key, $matches)) {
+                    foreach ($matches[1] as $segment) {
+                        $segments[] = $segment;
+                    }
+                }
+
+                if (!empty($segments)) {
+                    $this->assignBracketNotationValue($normalized, $segments, $value);
+                    continue;
+                }
+            }
+
+            $normalized[$key] = $value;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Assign a value to an array path represented by bracket-notation segments.
+     *
+     * @param array $target
+     * @param array $segments
+     * @param mixed $value
+     */
+    protected function assignBracketNotationValue(array &$target, array $segments, $value): void
+    {
+        $ref = &$target;
+        $lastIndex = count($segments) - 1;
+
+        foreach ($segments as $index => $segment) {
+            $isLast = $index === $lastIndex;
+
+            if ($segment === '') {
+                if ($isLast) {
+                    $ref[] = $value;
+                    return;
+                }
+
+                $ref[] = [];
+                end($ref);
+                $lastKey = key($ref);
+                $ref = &$ref[$lastKey];
+                continue;
+            }
+
+            if ($isLast) {
+                $ref[$segment] = $value;
+                return;
+            }
+
+            if (!isset($ref[$segment]) || !is_array($ref[$segment])) {
+                $ref[$segment] = [];
+            }
+
+            $ref = &$ref[$segment];
         }
     }
 
@@ -252,7 +364,16 @@ class Request extends AbstractRequest implements ServerRequestInterface
             if ($value instanceof UploadedFileInterface) {
                 $normalized[$key] = $value;
             } elseif (is_array($value) && isset($value['tmp_name'])) {
-                $normalized[$key] = $this->createUploadedFile($value);
+                $result = $this->createUploadedFile($value);
+                // createUploadedFile may return array for multiple files (name[])
+                if (is_array($result)) {
+                    // Flatten with explicit index: images[0], images[1], etc.
+                    foreach ($result as $fileKey => $file) {
+                        $normalized[$key.'['.$fileKey.']'] = $file;
+                    }
+                } else {
+                    $normalized[$key] = $result;
+                }
             } elseif (is_array($value)) {
                 $normalized[$key] = $this->normalizeFiles($value);
             } else {
@@ -320,7 +441,7 @@ class Request extends AbstractRequest implements ServerRequestInterface
 
         // Start the session if it's not already active and headers haven't been sent
         if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
-            session_start();
+            self::startSecureSession();
         }
 
         // Start output buffering if it's not already started
@@ -421,36 +542,6 @@ class Request extends AbstractRequest implements ServerRequestInterface
     }
 
     /**
-     * Generates a CSRF token for form protection (backward compatibility)
-     *
-     * @return string The generated token
-     */
-    public function createToken(): string
-    {
-        return $this->generateCsrfToken();
-    }
-
-    /**
-     * Check if request is safe (backward compatibility)
-     *
-     * @return bool
-     */
-    public function isSafe(): bool
-    {
-        return $this->validateCsrfToken();
-    }
-
-    /**
-     * Remove CSRF token (backward compatibility)
-     *
-     * @return void
-     */
-    public function removeToken(): void
-    {
-        $this->clearCsrfToken();
-    }
-
-    /**
      * Check if request has valid referer (backward compatibility)
      *
      * @return bool
@@ -469,97 +560,6 @@ class Request extends AbstractRequest implements ServerRequestInterface
     public function setCsrfToken(string $token): self
     {
         return $this->setAttribute('csrf_token', $token);
-    }
-
-    // ===== Static Factory Methods =====
-
-    /**
-     * Create request for testing with custom data
-     *
-     * @param array $data Request data
-     * @return static
-     */
-    public static function createForTesting(array $data = []): self
-    {
-        $request = new static(false);
-
-        // Set default data
-        $defaults = [
-            'GET' => [],
-            'POST' => [],
-            'SERVER' => [
-                'REQUEST_METHOD' => 'GET',
-                'REQUEST_URI' => '/',
-                'HTTP_HOST' => 'localhost',
-                'REMOTE_ADDR' => '127.0.0.1'
-            ],
-            'COOKIE' => [],
-            'FILES' => []
-        ];
-
-        $data = array_merge($defaults, $data);
-
-        $request->queryParams = $data['GET'];
-        $request->parsedBody = $data['POST'];
-        $request->serverParams = $data['SERVER'];
-        $request->cookieParams = $data['COOKIE'];
-        $request->uploadedFiles = $request->normalizeFiles($data['FILES']);
-
-        return $request;
-    }
-
-    /**
-     * Create JSON request for API testing
-     *
-     * @param array $data JSON data
-     * @param string $method HTTP method
-     * @return static
-     */
-    public static function createJsonRequest(array $data = [], string $method = 'POST'): self
-    {
-        return self::createForTesting([
-            'POST' => $data,
-            'SERVER' => [
-                'REQUEST_METHOD' => strtoupper($method),
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_ACCEPT' => 'application/json',
-                'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest'
-            ]
-        ]);
-    }
-
-    /**
-     * Create AJAX request for testing
-     *
-     * @param array $data Request data
-     * @param string $method HTTP method
-     * @return static
-     */
-    public static function createAjaxRequest(array $data = [], string $method = 'POST'): self
-    {
-        return self::createForTesting([
-            'POST' => $data,
-            'SERVER' => [
-                'REQUEST_METHOD' => strtoupper($method),
-                'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest'
-            ]
-        ]);
-    }
-
-    /**
-     * Create secure HTTPS request
-     *
-     * @param array $data Request data
-     * @return static
-     */
-    public static function createSecureRequest(array $data = []): self
-    {
-        return self::createForTesting(array_merge($data, [
-            'SERVER' => array_merge($data['SERVER'] ?? [], [
-                'HTTPS' => 'on',
-                'SERVER_PORT' => 443
-            ])
-        ]));
     }
 
     // ===== Static Helper Methods =====
@@ -590,21 +590,114 @@ class Request extends AbstractRequest implements ServerRequestInterface
     }
 
     /**
+     * Start the PHP session with hardened cookie flags.
+     *
+     * Every session_start() in the framework must go through here — the API layer
+     * used to call session_start() directly for the CSRF token, and that request
+     * (the first one of a page load) minted PHPSESSID without HttpOnly/SameSite,
+     * so the CSRF token cookie was readable from JavaScript. Idempotent: does
+     * nothing when a session is already active or headers are out.
+     *
+     * Flags: use_strict_mode (reject attacker-supplied ids), HttpOnly, SameSite=Lax,
+     * Secure when the request is HTTPS (directly or behind a trusted proxy).
+     *
+     * @return bool true when a session is active afterwards
+     */
+    public static function startSecureSession(): bool
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            return true;
+        }
+        if (session_status() !== PHP_SESSION_NONE || headers_sent()) {
+            return false;
+        }
+        ini_set('session.use_strict_mode', '1');
+        $params = session_get_cookie_params();
+        session_set_cookie_params([
+            'lifetime' => $params['lifetime'],
+            'path' => $params['path'] ?: '/',
+            'domain' => $params['domain'],
+            'secure' => self::isCurrentHttps(),
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+        return session_start();
+    }
+
+    /**
+     * Whether the current request arrived over HTTPS (directly, or as reported by
+     * a TLS-terminating proxy through X-Forwarded-Proto).
+     *
+     * The header is believed from any peer on purpose: it only decides whether
+     * cookies get the Secure flag, and a client lying about HTTPS can at worst
+     * give itself a cookie its own browser will then refuse to send over HTTP.
+     * Client IP, by contrast, is trusted only from TRUSTED_PROXIES.
+     *
+     * @return bool
+     */
+    public static function isCurrentHttps(): bool
+    {
+        return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443)
+            || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+    }
+
+    /**
+     * Reverse proxies whose forwarding headers are believed.
+     *
+     * Configured with the TRUSTED_PROXIES constant (comma-separated IPs, usually
+     * in load.php). Empty = no proxy is trusted and REMOTE_ADDR is always the client.
+     *
+     * @return string[]
+     */
+    public static function trustedProxies(): array
+    {
+        if (defined('TRUSTED_PROXIES') && TRUSTED_PROXIES !== '') {
+            return array_values(array_filter(array_map('trim', explode(',', (string) TRUSTED_PROXIES))));
+        }
+        return [];
+    }
+
+    /**
+     * @param string $ip
+     *
+     * @return bool
+     */
+    public static function isTrustedProxy(string $ip): bool
+    {
+        return $ip !== '' && in_array($ip, self::trustedProxies(), true);
+    }
+
+    /**
      * Get current client IP
      *
      * @return string
      */
     public static function getCurrentClientIp(): string
     {
-        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-            return $_SERVER['HTTP_CLIENT_IP'];
+        $remote = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+
+        // `Client-IP` and `X-Forwarded-For` are attacker-supplied request
+        // headers. Trust them ONLY when the direct peer (REMOTE_ADDR) is a
+        // configured trusted reverse proxy; otherwise an attacker could spoof
+        // any IP to bypass IP allow-lists and per-IP rate limiting.
+        $trusted = self::trustedProxies();
+        if (empty($trusted) || !in_array($remote, $trusted, true)) {
+            return $remote;
         }
 
+        // Behind a trusted proxy: take the right-most XFF hop that is not itself
+        // a trusted proxy (that is the real client as seen by our edge).
         if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            return explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0];
+            $hops = array_filter(array_map('trim', explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])));
+            for ($i = count($hops) - 1; $i >= 0; $i--) {
+                if (filter_var($hops[$i], FILTER_VALIDATE_IP) && !in_array($hops[$i], $trusted, true)) {
+                    return $hops[$i];
+                }
+            }
         }
 
-        return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        return $remote;
     }
 
     /**

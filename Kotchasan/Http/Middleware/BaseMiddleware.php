@@ -50,14 +50,26 @@ abstract class BaseMiddleware implements MiddlewareInterface
             'message' => $message
         ];
 
-        $response = match ($statusCode) {
-            400 => Response::makeBadRequest($data),
-            401 => Response::makeUnauthorized($data),
-            403 => Response::makeForbidden($data),
-            404 => Response::makeNotFound($data),
-            500 => Response::makeServerError($data),
-            default => Response::makeJson($data, $statusCode)
-        };
+        switch ($statusCode) {
+            case 400:
+                $response = Response::makeBadRequest($data);
+                break;
+            case 401:
+                $response = Response::makeUnauthorized($data);
+                break;
+            case 403:
+                $response = Response::makeForbidden($data);
+                break;
+            case 404:
+                $response = Response::makeNotFound($data);
+                break;
+            case 500:
+                $response = Response::makeServerError($data);
+                break;
+            default:
+                $response = Response::makeJson($data, $statusCode);
+                break;
+        }
 
         foreach ($headers as $name => $value) {
             $response = $response->withHeader($name, $value);

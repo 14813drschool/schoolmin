@@ -38,7 +38,7 @@ class Response implements ResponseInterface
     private $protocolVersion = '1.1';
 
     /**
-     * HTTP status codes และ reason phrases
+     * HTTP status codes and reason phrases
      *
      * @var array
      */
@@ -58,7 +58,9 @@ class Response implements ResponseInterface
         404 => 'Not Found',
         405 => 'Method Not Allowed',
         409 => 'Conflict',
+        419 => 'Page Expired',
         422 => 'Unprocessable Entity',
+        429 => 'Too Many Requests',
         500 => 'Internal Server Error',
         502 => 'Bad Gateway',
         503 => 'Service Unavailable'
@@ -337,9 +339,47 @@ class Response implements ResponseInterface
      */
     public function send()
     {
-        ob_clean();
-        // Send status line
-        http_response_code($this->statusCode);
+        // Capture buffered output (errors/warnings) in debug mode
+        $bufferedOutput = '';
+        if (defined('DEBUG') && DEBUG >= 1 && ob_get_level() > 0) {
+            $bufferedOutput = ob_get_contents();
+        }
+
+        // Clean buffer if exists
+        if (ob_get_level() > 0) {
+            ob_clean();
+        }
+
+        // Determine if this is a JSON response
+        $contentType = $this->getHeaderLine('content-type');
+        $isJson = stripos($contentType, 'application/json') !== false;
+
+        // Get body content once and rewind for potential re-read
+        $this->body->rewind();
+        $bodyContent = $this->body->getContents();
+
+        // Handle debug output for JSON responses
+        if ($isJson && defined('DEBUG') && DEBUG >= 1) {
+            $debugInfo = $this->collectDebugInfo($bufferedOutput);
+            if (!empty($debugInfo)) {
+                // Decode current JSON body, add _debug, re-encode
+                $data = json_decode($bodyContent, true);
+                if (is_array($data)) {
+                    $data['_debug'] = $debugInfo;
+                    $bodyContent = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+                }
+            }
+        }
+
+        // Send status line. Emit an explicit "HTTP/1.1 <code> <phrase>" line so
+        // valid-but-non-standard codes (419 CSRF, 429 rate limit) are delivered
+        // as-is instead of being rewritten to 500 by the SAPI/Apache.
+        $phrase = $this->reasonPhrase !== '' ? $this->reasonPhrase : (self::$statusTexts[$this->statusCode] ?? '');
+        if ($phrase !== '') {
+            header(sprintf('HTTP/1.1 %d %s', $this->statusCode, $phrase), true, $this->statusCode);
+        } else {
+            http_response_code($this->statusCode);
+        }
 
         // Send headers
         foreach ($this->headers as $name => $values) {
@@ -349,13 +389,80 @@ class Response implements ResponseInterface
         }
 
         // Send body
-        echo $this->body->getContents();
+        echo $bodyContent;
+
+        // For HTML responses, append debug output after body
+        if (!$isJson && defined('DEBUG') && DEBUG >= 1) {
+            $this->outputHtmlDebug($bufferedOutput);
+        }
+    }
+
+    /**
+     * Collect debug information from various sources
+     *
+     * @param string $bufferedOutput
+     * @return array
+     */
+    private function collectDebugInfo($bufferedOutput)
+    {
+        $debug = [];
+
+        // Add buffered output (PHP errors/warnings)
+        if (!empty($bufferedOutput)) {
+            $debug['php_output'] = trim($bufferedOutput);
+        }
+
+        // Add debug() function calls
+        if (class_exists('Kotchasan', false) && !empty(\Kotchasan::$debugger)) {
+            $debug['console'] = \Kotchasan::$debugger;
+            // Clear debugger to prevent doShutdown from outputting script tags
+            \Kotchasan::$debugger = null;
+        }
+
+        return $debug;
+    }
+
+    /**
+     * Output debug information for HTML responses
+     *
+     * @param string $bufferedOutput
+     */
+    private function outputHtmlDebug($bufferedOutput)
+    {
+        // Check if there's anything to output
+        $hasBufferedOutput = !empty($bufferedOutput);
+        $hasDebugger = class_exists('Kotchasan', false) && !empty(\Kotchasan::$debugger);
+
+        if (!$hasBufferedOutput && !$hasDebugger) {
+            return;
+        }
+
+        // Output PHP errors/warnings in a visible div
+        if ($hasBufferedOutput) {
+            // DEBUG >= 2: Show raw output, DEBUG == 1: Show escaped output
+            if (defined('DEBUG') && DEBUG >= 2) {
+                echo $bufferedOutput;
+            } else {
+                echo '<!-- PHP Debug Output: '.htmlspecialchars($bufferedOutput).' -->';
+            }
+        }
+
+        // Output debug() calls to console
+        if ($hasDebugger) {
+            echo '<script>';
+            foreach (\Kotchasan::$debugger as $item) {
+                echo 'console.log('.$item.');';
+            }
+            echo '</script>';
+            // Clear debugger to prevent doShutdown from outputting again
+            \Kotchasan::$debugger = null;
+        }
     }
 
     // ===== Static Factory Methods =====
 
     /**
-     * สร้าง Response instance ใหม่
+     * Create a new Response instance
      *
      * @param string|null $content
      * @param int $status
@@ -382,7 +489,7 @@ class Response implements ResponseInterface
     }
 
     /**
-     * สร้าง JSON response
+     * Create a JSON response
      *
      * @param mixed $data
      * @param int $status
@@ -396,7 +503,7 @@ class Response implements ResponseInterface
     }
 
     /**
-     * สร้าง Bad Request response (400)
+     * Create a Bad Request response (400)
      *
      * @param mixed $data
      * @param array $headers
@@ -408,7 +515,7 @@ class Response implements ResponseInterface
     }
 
     /**
-     * สร้าง Unauthorized response (401)
+     * Create an Unauthorized response (401)
      *
      * @param mixed $data
      * @param array $headers
@@ -420,7 +527,7 @@ class Response implements ResponseInterface
     }
 
     /**
-     * สร้าง Forbidden response (403)
+     * Create a Forbidden response (403)
      *
      * @param mixed $data
      * @param array $headers
@@ -432,7 +539,7 @@ class Response implements ResponseInterface
     }
 
     /**
-     * สร้าง Not Found response (404)
+     * Create a Not Found response (404)
      *
      * @param mixed $data
      * @param array $headers
@@ -444,7 +551,7 @@ class Response implements ResponseInterface
     }
 
     /**
-     * สร้าง Server Error response (500)
+     * Create a Server Error response (500)
      *
      * @param mixed $data
      * @param array $headers
@@ -484,9 +591,18 @@ class Response implements ResponseInterface
     }
 
     /**
-     * Set CORS headers
+     * Set CORS headers.
      *
-     * @param array $options CORS options
+     * This method is a pure utility that applies the given CORS header values.
+     * Origin resolution (deciding whether to echo the request Origin or use a
+     * configured allowlist) must be done by the caller before invoking this
+     * method — pass the resolved origin via $options['Access-Control-Allow-Origin'].
+     *
+     * Example (controller layer):
+     *   $origin = \Kotchasan\Cors::resolveOrigin($request, $cfg->api_cors ?? '*');
+     *   $response->setCorsHeaders(['Access-Control-Allow-Origin' => $origin]);
+     *
+     * @param array $options Override any default CORS header value.
      * @return self
      */
     public function setCorsHeaders(array $options = []): self

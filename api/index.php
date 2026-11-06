@@ -47,5 +47,17 @@ $_SERVER['SCRIPT_NAME'] = $script;
 $_SERVER['PHP_SELF'] = $script;
 unset($_SERVER['CONTEXT_DOCUMENT_ROOT']);
 
+// Vercel รัน PHP หลัง proxy ที่พอร์ตภายใน (เช่น 3000) ให้ใช้พอร์ตจริงที่ผู้ใช้เข้ามาแทน ลิงก์จะได้ไม่ติด :3000
+if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+    if (!empty($_SERVER['HTTP_X_FORWARDED_PORT'])) {
+        $_SERVER['SERVER_PORT'] = (int) $_SERVER['HTTP_X_FORWARDED_PORT'];
+    } else {
+        $_SERVER['SERVER_PORT'] = $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https' ? 443 : 80;
+    }
+    if ($_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+        $_SERVER['HTTPS'] = 'on';
+    }
+}
+
 chdir(dirname($path));
 require $path;

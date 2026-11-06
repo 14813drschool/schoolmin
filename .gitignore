@@ -1,0 +1,15 @@
+# Kotchasan
+
+.vscode
+.git
+.github
+.phpdoc
+robots.txt
+datas/
+settings/*
+projects/test/
+nbproject/*
+phpdoc.xml
+phpdocumenter
+docs/
+CLAUDE.md

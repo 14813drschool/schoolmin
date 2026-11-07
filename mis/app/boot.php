@@ -15,4 +15,5 @@ require MIS_APP.'helpers.php';
 require MIS_APP.'data.php';
 require MIS_APP.'data2.php';
 require MIS_APP.'admin.php';
+require MIS_APP.'affairs.php';
 require MIS_APP.'pages.php';

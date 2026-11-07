@@ -25,10 +25,7 @@ function admin_modules(): array
             'หลักสูตร' => ['course' => 'รายวิชา', 'course_copy' => 'คัดลอกรายวิชาจากภาคเรียนก่อน', 'enroll' => 'ลงทะเบียนเรียน', 'sara' => 'กลุ่มสาระการเรียนรู้'],
             'ตารางสอนและการวัดผล' => ['timetable' => 'จัดตารางสอน', 'calendar' => 'ปฏิทินการเรียนการสอน', 'approve' => 'อนุมัติผลการเรียน', 'grade_report' => 'ผลการเรียนรายห้อง'],
         ]],
-        'affairs' => ['บริหารงานกิจการนักเรียน', 'affairs', [
-            'การมาเรียน' => ['school_att' => 'สรุปการมาโรงเรียน', 'absent' => 'นักเรียนขาดเรียนบ่อย', 'under80' => 'นักเรียนเวลาเรียนไม่ถึง 80%'],
-            'พฤติกรรมและกิจกรรม' => ['behavior' => 'บันทึกพฤติกรรม/คะแนนความประพฤติ', 'activity' => 'อนุมัติการเข้าร่วมกิจกรรม', 'parent' => 'ข้อมูลผู้ปกครอง'],
-        ]],
+        'affairs' => ['บริหารงานกิจการนักเรียน', 'affairs', affairs_menu()],
         'personnel' => ['บริหารงานบุคลากร', 'personnel', [
             'ทะเบียนบุคลากร' => ['personnel' => 'บุคลากร', 'permission' => 'สิทธิ์การใช้งาน', 'position' => 'ตำแหน่ง', 'department' => 'กลุ่มงาน/กลุ่มสาระ'],
             'การปฏิบัติงาน' => ['leave' => 'บันทึกการลา', 'leave_report' => 'สรุปวันลา'],
@@ -48,7 +45,7 @@ function admin_option_info(string $option): array
     foreach (admin_modules() as $mk => [$mname, $icon, $sections]) {
         foreach ($sections as $sec => $items) {
             if (isset($items[$option])) {
-                return [$mk, $mname, $sec, $items[$option]];
+                return [$mk, $mname, $sec, is_array($items[$option]) ? $items[$option][0] : $items[$option]];
             }
         }
     }
@@ -72,7 +69,8 @@ function admin_top(): string
         foreach ($sections as $sec => $items) {
             $links = '';
             foreach ($items as $op => $label) {
-                $links .= '<a class="waiting_link" href="?module=admin&option='.$op.'">'.h($label).'</a>';
+                [$text, $ic, $col] = is_array($label) ? $label + ['', 'fa-caret-right', '#0883DC'] : [$label, 'fa-caret-right', '#0883DC'];
+                $links .= '<a class="waiting_link" href="?module=admin&option='.$op.'"><i class="fa '.$ic.'" style="width:18px;text-align:center;color:'.$col.'"></i> '.h($text).'</a>';
             }
             $cols .= '<div class="adm-col"><h3>'.h($sec).'</h3>'.$links.'</div>';
         }
@@ -88,8 +86,9 @@ function admin_css(): string
 #nav li a.adm-nav{padding:6px 0;width:190px;text-align:center;font-family:thaisansbold;font-size:21px;color:#fff}
 #nav li.selected{background-color:#00F0FF}#nav li.selected a.adm-nav{color:#000}
 .adm-panel{width:978px;border:3px solid #A9F4F9;border-radius:8px;background:#fff;margin:4px 0 10px;padding:10px 0;text-align:left;position:absolute;z-index:21}
-.adm-col{float:left;width:300px;padding:0 0 0 24px}.adm-col h3{font-family:thaisansbold;font-weight:normal;font-size:22px;color:#0883DC;margin:4px 0 6px;border-bottom:dashed 1px #ccc}
-.adm-col a{display:block;font-size:12px;padding:5px 0;border-bottom:dashed 1px #eee}
+.adm-panel{background:linear-gradient(#fff 70%,#E9FBFF)}.adm-col{float:left;width:276px;margin:0 0 14px 24px;padding-right:20px;border-right:1px solid #eef5f8;min-height:120px}.adm-col:nth-child(3n){border-right:none}.adm-col:nth-child(3n+1){clear:left}
+.adm-col h3{font-family:thaisansbold;font-weight:normal;font-size:30px;color:#0F5A9C;margin:4px 0 6px}
+.adm-col a{display:block;font-size:12px;padding:4px 0;border-bottom:dashed 1px #ccc;color:#333}
 .adm-tiles{width:984px;margin:30px auto;text-align:center}.adm-tile{display:inline-block;width:235px;margin:10px 0 30px;vertical-align:top}
 .adm-tile h2{font-family:thaisansbold;font-size:24px;color:#019DF1;margin:0 0 8px}.adm-tile a{display:inline-block;width:150px;height:140px;border:1px solid #C9EFFB;border-radius:8px;background:#fff}
 .adm-tile a:hover{box-shadow:0 0 10px #C9EFFB}.adm-tile img{width:116px;height:116px;margin-top:12px}
@@ -372,6 +371,10 @@ function md_page(string $kind, string $option, string $label, array $fields, arr
         $d = json_decode((string) $r['value'], true) ?: [];
         $cells = [$i + 1];
         foreach ($listCols as $c => $lab) {
+            if (is_array($lab)) {
+                $cells[] = $lab[1]($d);
+                continue;
+            }
             $v = $d[$c] ?? '';
             $t = $fields[$c][1] ?? 'text';
             $opts = $fields[$c][2] ?? null;
@@ -389,11 +392,15 @@ function md_page(string $kind, string $option, string $label, array $fields, arr
         $cells[] = [edit_link(a_url($option, '&func=Edit&id='.rawurlencode((string) $r['r1']))).' '.del_link(a_url($option, '&del='.rawurlencode((string) $r['r1']))), ' align="center" width="60"'];
         $rows .= zrow($cells, $i);
     }
-    return list_table('รายการ'.h($label), array_merge(['#'], array_values($listCols), [['', ' style="width:60px"']]), $rows, count($items).' รายการ', btn('เพิ่ม'.$label, a_url($option, '&func=Edit'), 'add'));
+    return list_table('รายการ'.h($label), array_merge(['#'], array_map(fn($l) => is_array($l) ? $l[0] : $l, array_values($listCols)), [['', ' style="width:60px"']]), $rows, count($items).' รายการ', btn('เพิ่ม'.$label, a_url($option, '&func=Edit'), 'add'));
 }
 
 function personnel_options(): array
 {
+    static $o = null;
+    if ($o !== null) {
+        return $o;
+    }
     $o = [];
     foreach (personnel_rows() as $p) {
         $o[$p['id']] = $p['name'];
@@ -403,6 +410,10 @@ function personnel_options(): array
 
 function student_options(): array
 {
+    static $o = null;
+    if ($o !== null) {
+        return $o;
+    }
     $o = [];
     foreach (q('SELECT S.`id`, S.`student_id`, S.`class`, S.`room`, U.`name` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE U.`active`=1 ORDER BY S.`class`, S.`room`, S.`number`') as $s) {
         $o[$s['id']] = $s['student_id'].' '.$s['name'].' ('.class_room_short($s['class'], $s['room']).')';

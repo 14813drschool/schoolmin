@@ -192,7 +192,7 @@ function term(): array
     }
     $y = (int) cfg('academic_year', date('Y') + 543);
     $s = (int) cfg('term', 1);
-    if (preg_match('/^(\d{4})\|([12])$/', (string) ($_COOKIE['mis_term'] ?? ''), $m)) {
+    if (preg_match('/^(\d{4})\|([123])$/', (string) ($_COOKIE['mis_term'] ?? ''), $m)) {
         $y = (int) $m[1];
         $s = (int) $m[2];
     }
@@ -203,12 +203,21 @@ function term(): array
 function year_options(): string
 {
     [$y, $s] = term();
-    $cur = (int) cfg('academic_year', date('Y') + 543);
-    $o = '';
-    for ($i = $cur - 13; $i <= $cur; $i++) {
-        foreach ([1, 2] as $t) {
-            $o .= "\n            <option value=\"$i|$t\"".($i === $y && $t === $s ? 'selected' : '').">&nbsp;&nbsp;$i/$t</option>";
+    $keys = function_exists('all_terms') ? array_reverse(array_keys(all_terms())) : [];
+    if (!$keys) {
+        $cur = (int) cfg('academic_year', date('Y') + 543);
+        for ($i = $cur - 13; $i <= $cur; $i++) {
+            $keys[] = $i.'/1';
+            $keys[] = $i.'/2';
         }
+    }
+    if (!in_array($y.'/'.$s, $keys, true)) {
+        $keys[] = $y.'/'.$s;
+    }
+    $o = '';
+    foreach ($keys as $k) {
+        [$i, $t] = explode('/', $k);
+        $o .= "\n            <option value=\"$i|$t\"".((int) $i === $y && (int) $t === $s ? 'selected' : '').">&nbsp;&nbsp;$i/$t</option>";
     }
     return $o."\n          ";
 }

@@ -12,12 +12,12 @@ function main_menu(): array
 {
     return [
         'ข้อมูลหลัก' => ['admins' => 'กำหนดผู้ดูแลระบบ', 'year' => 'กำหนดปีการศึกษา', 'term' => 'กำหนดภาคเรียน', 'edu_level' => 'กำหนดระดับการศึกษา',
-            'class' => 'กำหนดระดับชั้น', 'room' => 'กำหนดห้องเรียน', 'program' => 'กำหนดแผนการเรียน', 'csv_import' => 'นำเข้าข้อมูลจากไฟล์ CSV'],
+            'class' => 'กำหนดระดับชั้น', 'room' => 'กำหนดห้องเรียน', 'program' => 'กำหนดแผนการเรียน', 'usage' => 'ข้อมูลการใช้งาน', 'csv_import' => 'นำเข้าข้อมูลจากไฟล์ CSV'],
         'ทะเบียนบุคลากร' => ['ptype' => 'กำหนดคุณสมบัติบุคลากร', 'personnel' => 'กำหนดข้อมูลบุคลากร', 'executive' => 'กำหนดผู้บริหารโรงเรียน',
             'pstatus' => 'กำหนดสถานภาพบุคลากร', 'permission' => 'กำหนดสิทธิ์บุคลากร', 'pcard' => 'พิมพ์บัตรประจำตัวบุคลากร'],
         'ทะเบียนนักเรียน' => ['dwelling' => 'กำหนดที่พักอาศัยของนักเรียน', 'travel' => 'วิธีการเดินทางมาโรงเรียน', 'entry_type' => 'ประเภทการเข้าเรียน',
             'no_room' => 'นักเรียนยังไม่กำหนดห้องเรียน', 'student' => 'ทะเบียนนักเรียนปัจจุบัน', 'student_import' => 'นำเข้ารายชื่อนักเรียนจากไฟล์ Excel (CSV)',
-            'student_class' => 'จัดการชั้นเรียน', 'promote' => 'เลื่อนชั้นเรียน / ย้ายห้อง', 'sstatus' => 'กำหนดสถานะนักเรียน', 'new_student' => 'นักเรียนเข้าใหม่',
+            'student_class' => 'จัดการชั้นเรียน / กำหนดครูที่ปรึกษา', 'promote' => 'เลื่อนชั้นทั้งโรงเรียน', 'sstatus' => 'กำหนดสถานภาพนักเรียน', 'new_student' => 'นักเรียนเข้าใหม่',
             'graduate' => 'นักเรียนจบการศึกษา', 'dropout' => 'นักเรียนออกกลางคัน', 'stat' => 'สถิตินักเรียน', 'parent' => 'ข้อมูลผู้ปกครอง', 'scard' => 'พิมพ์บัตรประจำตัวนักเรียน'],
     ];
 }
@@ -210,46 +210,8 @@ function adm_admins(bool $post)
         .'<form id="admform" method="post" action="'.h(a_url('admins')).'">'.list_table('ผู้ดูแลระบบและสิทธิ์โมดูล', $ths, $rows, count($people).' คน', $save).'</form>'];
 }
 
-function adm_year(bool $post)
-{
-    if ($post) {
-        save_cfg(['academic_year' => max(2500, min(2700, (int) ($_POST['academic_year'] ?? 0)))]);
-        admin_done('year');
-    }
-    return admin_form('กำหนดปีการศึกษาปัจจุบัน', a_url('year'), [['ปีการศึกษา (พ.ศ.)', inp('academic_year', cfg('academic_year', date('Y') + 543), 80), true]], 'index.php');
-}
 
-function adm_term(bool $post)
-{
-    if ($post) {
-        $t = (int) ($_POST['term'] ?? 1) === 2 ? 2 : 1;
-        save_cfg(['term' => $t]);
-        $key = cfg('academic_year', date('Y') + 543).'/'.$t;
-        $cal = json_decode((string) md_get('calendar', $key), true) ?: [];
-        if (!empty($_POST['start'])) {
-            $cal['start'] = be_date_to_iso((string) $_POST['start']);
-        }
-        if (!empty($_POST['end'])) {
-            $cal['end'] = be_date_to_iso((string) $_POST['end']);
-        }
-        foreach (['grade_date', 'fail_date'] as $k) {
-            $cal[$k] = !empty($_POST[$k]) ? be_date_to_iso((string) $_POST[$k]) : '';
-        }
-        md_set('calendar', $key, '', '', json_encode($cal, JSON_UNESCAPED_UNICODE));
-        admin_done('term');
-    }
-    [$s, $e] = term_range();
-    $cal = json_decode((string) md_get('calendar', yt()), true) ?: [];
-    return admin_form('กำหนดภาคเรียนปัจจุบัน', a_url('term'), [['ภาคเรียน', sel('term', [1 => 'ภาคเรียนที่ 1', 2 => 'ภาคเรียนที่ 2'], cfg('term', 1)), true],
-        ['วันเปิดภาคเรียน', d_in('start', $s, 120), false], ['วันปิดภาคเรียน', d_in('end', $e, 120), false],
-        ['วันประกาศผลการเรียน (แสดงในหน้านักเรียน)', d_in('grade_date', $cal['grade_date'] ?? '', 120), false], ['วันประกาศผลสอบไม่ผ่าน', d_in('fail_date', $cal['fail_date'] ?? '', 120), false]], 'index.php');
-}
 
-function adm_edu_level(bool $post)
-{
-    return cat_md('edu_level', 'edu_level', 'ระดับการศึกษา', ['name' => f_text('ระดับการศึกษา', true), 'classes' => f_text('ระดับชั้นที่เปิดสอน')], ['name' => 'ระดับการศึกษา', 'classes' => 'ระดับชั้น'], $post,
-        seed_rows(['name', 'classes'], [['ปฐมวัย', 'อ.1-อ.3'], ['ประถมศึกษา', 'ป.1-ป.6'], ['มัธยมศึกษาตอนต้น', 'ม.1-ม.3'], ['มัธยมศึกษาตอนปลาย', 'ม.4-ม.6']]));
-}
 
 function adm_ptype(bool $post)
 {
@@ -290,74 +252,11 @@ function adm_entry_type(bool $post)
         seed_rows(['name'], [['สอบคัดเลือก'], ['โควตา/นักเรียนเดิม'], ['ความสามารถพิเศษ'], ['ย้ายเข้าระหว่างปี'], ['อื่น ๆ']]));
 }
 
-function adm_no_room(bool $post)
-{
-    $rooms = cats('room');
-    $rows = '';
-    $i = 0;
-    foreach (students_q() as $s) {
-        if ((int) $s['room'] && isset($rooms[$s['room']])) {
-            continue;
-        }
-        $rows .= zrow([++$i, h($s['student_id']), name_nbsp($s['name']), h($s['class'] ? cat('class', $s['class']) : '-'), [edit_link(a_url('student', '&func=Edit&id='.(int) $s['id'])), ' align="center"']], $i);
-    }
-    return list_table('นักเรียนที่ยังไม่กำหนดห้องเรียน', ['#', 'รหัสนร.', 'ชื่อ-นามสกุล', 'ระดับชั้น', ''], $rows, $i.' คน', btn('จัดการชั้นเรียน', a_url('student_class'), 'edit'));
-}
 
-const SSTATUS = ['เข้าใหม่' => 'นักเรียนเข้าใหม่', 'กำลังศึกษา' => 'กำลังศึกษา', 'จบการศึกษา' => 'จบการศึกษา', 'ย้ายออก' => 'ย้ายออก', 'ลาออก' => 'ลาออก', 'จำหน่าย' => 'จำหน่ายออก', 'พักการเรียน' => 'พักการเรียน'];
-const DROPOUT = ['ย้ายออก', 'ลาออก', 'จำหน่าย', 'พักการเรียน'];
 
-function adm_sstatus(bool $post)
-{
-    return md_page('sstatus', 'sstatus', 'สถานะนักเรียน', ['student' => f_student(), 'status' => f_sel('สถานะ', SSTATUS), 'date' => f_date('ตั้งแต่วันที่'),
-        'entry' => f_sel('ประเภทการเข้าเรียน (นักเรียนเข้าใหม่)', fn() => md_options('entry_type', 'name'), false), 'note' => f_text('หมายเหตุ/เหตุผล')],
-        ['student' => 'นักเรียน', 'status' => 'สถานะ', 'date' => 'ตั้งแต่', 'note' => 'หมายเหตุ'], $post);
-}
 
-/** สถานะล่าสุดของนักเรียนแต่ละคน */
-function student_status(): array
-{
-    static $out = null;
-    if ($out !== null) {
-        return $out;
-    }
-    $out = [];
-    foreach (md_rows('sstatus') as $r) {
-        $d = json_of($r);
-        $sid = (int) ($d['student'] ?? 0);
-        if ($sid && (!isset($out[$sid]) || ($d['date'] ?? '') >= ($out[$sid]['date'] ?? ''))) {
-            $out[$sid] = $d;
-        }
-    }
-    return $out;
-}
 
-function status_list(array $statuses, string $title): string
-{
-    $sids = array_keys(array_filter(student_status(), fn($d) => in_array($d['status'] ?? '', $statuses, true)));
-    $info = [];
-    if ($sids) {
-        foreach (q('SELECT S.*, U.`name` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`id` IN ('.implode(',', $sids).')') as $s) {
-            $info[(int) $s['id']] = $s;
-        }
-    }
-    $entry = md_options('entry_type', 'name');
-    $rows = '';
-    $i = 0;
-    foreach (student_status() as $sid => $d) {
-        if (!isset($info[$sid]) || !in_array($d['status'] ?? '', $statuses, true)) {
-            continue;
-        }
-        $s = $info[$sid];
-        $rows .= zrow([++$i, h($s['student_id']), name_nbsp($s['name']), h(class_room_short($s['class'], $s['room'])), h(SSTATUS[$d['status']] ?? $d['status']),
-            !empty($d['date']) ? th_date($d['date'], ' ') : '', h(trim(($entry[$d['entry'] ?? ''] ?? '').' '.($d['note'] ?? '')))], $i);
-    }
-    return list_table($title, ['#', 'รหัสนร.', 'ชื่อ-นามสกุล', 'ชั้น', 'สถานะ', 'วันที่', 'หมายเหตุ'], $rows, $i.' คน', btn('กำหนดสถานะนักเรียน', a_url('sstatus'), 'edit').' '.print_btn());
-}
 
-function adm_new_student(bool $post) { return status_list(['เข้าใหม่'], 'นักเรียนเข้าใหม่'); }
-function adm_graduate(bool $post) { return status_list(['จบการศึกษา'], 'นักเรียนจบการศึกษา'); }
-function adm_dropout(bool $post) { return status_list(DROPOUT, 'นักเรียนออกกลางคัน (ย้าย/ลาออก/จำหน่าย/พักการเรียน)'); }
 
 /** บัตรประจำตัว */
 function id_cards(array $cards, string $title): void
@@ -745,7 +644,7 @@ function adm_pp2(bool $post)
 
 function adm_pp3(bool $post)
 {
-    $sids = array_keys(array_filter(student_status(), fn($d) => ($d['status'] ?? '') === 'จบการศึกษา'));
+    $sids = array_keys(array_filter(student_status(), fn($d) => in_array($d['status'] ?? '', GRAD_STATUS, true)));
     $rows = '';
     $html = '';
     if ($sids) {
@@ -760,16 +659,16 @@ function adm_pp3(bool $post)
         print_page('ปพ.3', doc_head('รายงานผู้สำเร็จการศึกษา', 'ปพ.3').'<table><tr><th>ที่</th><th>เลขประจำตัว</th><th>ชื่อ-นามสกุล</th><th>ชั้น</th><th>GPAX</th></tr>'.($html ?: '<tr><td colspan="5" class="c">-</td></tr>').'</table>'.signs(['นายทะเบียน', 'ผู้อำนวยการโรงเรียน']));
         return null;
     }
-    return list_table('รายงานผู้สำเร็จการศึกษา (นักเรียนที่มีสถานะ "จบการศึกษา")', ['#', 'รหัสนร.', 'ชื่อ-นามสกุล', 'ชั้น', ['GPAX', ' style="text-align:center"']], $rows, count($sids).' คน', btn('กำหนดสถานะนักเรียน', a_url('sstatus'), 'edit').' '.print_btn(a_url('pp3', '&print=1')));
+    return list_table('รายงานผู้สำเร็จการศึกษา (นักเรียนที่มีสถานภาพจบการศึกษา)', ['#', 'รหัสนร.', 'ชื่อ-นามสกุล', 'ชั้น', ['GPAX', ' style="text-align:center"']], $rows, count($sids).' คน', btn('กำหนดสถานะนักเรียน', a_url('sstatus'), 'edit').' '.print_btn(a_url('pp3', '&print=1')));
 }
 
 function adm_pp7(bool $post)
 {
     if (isset($_GET['print']) && ($s = student_head((int) ($_GET['student'] ?? 0)))) {
         $gpa = gpa_of(student_grades((int) $s['id']));
-        $st = student_status()[(int) $s['id']]['status'] ?? 'กำลังศึกษา';
+        $st = student_status()[(int) $s['id']]['status'] ?? 'ศึกษาอยู่';
         print_page('ปพ.7', doc_head('ใบรับรองผลการศึกษา', 'ปพ.7').student_info_table($s)
-            .'<p style="text-indent:50px;margin-top:20px;font-size:15px">'.h(cfg('school_name', 'โรงเรียนดรุณราษฎร์วิทยา')).' ขอรับรองว่า '.h($s['name']).' '.($st === 'จบการศึกษา' ? 'ได้สำเร็จการศึกษา' : 'กำลังศึกษาอยู่').'ในระดับชั้น '.h(cat('class', $s['class']))
+            .'<p style="text-indent:50px;margin-top:20px;font-size:15px">'.h(cfg('school_name', 'โรงเรียนดรุณราษฎร์วิทยา')).' ขอรับรองว่า '.h($s['name']).' '.(in_array($st, GRAD_STATUS, true) ? 'ได้สำเร็จการศึกษา' : 'กำลังศึกษาอยู่').'ในระดับชั้น '.h(cat('class', $s['class']))
             .' ภาคเรียนที่ '.h(explode('/', yt())[1]).' ปีการศึกษา '.h(explode('/', yt())[0]).' มีผลการเรียนเฉลี่ยสะสม '.($gpa === null ? '-' : number_format($gpa, 2)).'</p><p style="text-indent:50px">ให้ไว้ ณ วันที่ '.th_date('', ' ').'</p>'.signs(['ผู้อำนวยการโรงเรียน']));
         return null;
     }

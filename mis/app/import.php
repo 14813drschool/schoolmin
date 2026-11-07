@@ -13,13 +13,16 @@ function import_sets(): array
     return [
         'rooms' => ['ระดับชั้นและห้องเรียน', 'main', ['ระดับชั้น' => 'ม.1', 'ห้องเรียน' => '1/1'], 'สร้างระดับชั้น/ห้องที่ยังไม่มี (ตั้งชื่อห้องเป็น เลขชั้น/เลขห้อง)'],
         'students' => ['ทะเบียนนักเรียน', 'main', ['รหัสนักเรียน' => '12345', 'คำนำหน้า' => 'เด็กชาย', 'ชื่อ' => 'สมชาย', 'นามสกุล' => 'ใจดี', 'เพศ (ช/ญ)' => 'ช', 'ระดับชั้น' => 'ม.1',
-            'ห้อง' => '1/1', 'เลขที่' => '1', 'เลขประจำตัวประชาชน' => '1234567890123', 'วันเกิด (วว/ดด/ปปปป)' => '01/05/2556', 'ชื่อผู้ปกครอง' => 'นายสมศักดิ์ ใจดี', 'โทรศัพท์ผู้ปกครอง' => '0812345678', 'ที่อยู่' => '1 ม.1 ต.ท่าศาลา'],
-            'นักเรียนใหม่ใช้รหัสนักเรียนเป็นชื่อผู้ใช้และรหัสผ่านเริ่มต้น / รหัสที่มีอยู่แล้วจะปรับปรุงข้อมูล (ห้อง เลขที่ ผู้ปกครอง ฯลฯ)'],
+            'ห้อง' => '1/1', 'เลขที่' => '1', 'เลขประจำตัวประชาชน' => '1234567890123', 'วันเกิด (วว/ดด/ปปปป)' => '01/05/2556', 'ชื่อผู้ปกครอง' => 'นายสมศักดิ์ ใจดี', 'โทรศัพท์ผู้ปกครอง' => '0812345678', 'ที่อยู่' => '1 ม.1 ต.ท่าศาลา',
+            'ชื่อเล่น' => 'ชาย', 'วิธีการเข้าเรียน' => 'สอบคัดเลือก', 'ปีที่เข้าเรียน' => '2569'],
+            'นักเรียนใหม่ใช้รหัสนักเรียนเป็นชื่อผู้ใช้และรหัสผ่านเริ่มต้น / รหัสที่มีอยู่แล้วจะปรับปรุงข้อมูล และถ้าห้องเปลี่ยนจะถูกย้ายไปห้องใหม่ (ใช้ย้ายห้องหลายคนพร้อมกันได้)'],
+        'phones' => ['อัพเดตเบอร์โทรผู้ปกครอง', 'main', ['รหัสนักเรียน' => '12345', 'ผู้ปกครอง: เบอร์มือถือ' => '0812345678', 'ผู้ปกครอง: เบอร์บ้าน' => '', 'บิดา: เบอร์มือถือ' => '', 'บิดา: เบอร์บ้าน' => '',
+            'มารดา: เบอร์มือถือ' => '', 'มารดา: เบอร์บ้าน' => ''], 'ไม่จำเป็นต้องใส่ครบทุกช่อง ช่องที่เว้นว่างจะไม่เปลี่ยนข้อมูลเดิม'],
         'personnel' => ['ข้อมูลบุคลากร', 'main', ['ชื่อผู้ใช้' => 'teacher01', 'คำนำหน้า' => 'นาง', 'ชื่อ' => 'สมศรี', 'นามสกุล' => 'รักเรียน', 'เพศ (ช/ญ)' => 'ญ', 'ตำแหน่ง' => 'ครู',
             'กลุ่มสาระ/กลุ่มงาน' => 'คณิตศาสตร์', 'โทรศัพท์' => '0891234567', 'รหัสผ่าน' => 'teacher01'], 'ตำแหน่ง/กลุ่มสาระที่ยังไม่มีจะถูกสร้างให้ / รหัสผ่านเว้นว่าง = ใช้ชื่อผู้ใช้ (บัญชีเดิมไม่เปลี่ยนรหัสผ่านถ้าเว้นว่าง)'],
-        'advisors' => ['ครูที่ปรึกษาประจำห้อง', 'main', ['ห้อง' => '1/1', 'ชื่อผู้ใช้ครูที่ปรึกษา' => 'teacher01'], 'ห้องละ 1 คน (คนใหม่แทนคนเดิม)'],
-        'sstatus' => ['สถานะนักเรียน (เข้าใหม่/จบ/ย้าย/ลาออก)', 'main', ['รหัสนักเรียน' => '12345', 'สถานะ' => 'จบการศึกษา', 'วันที่' => '31/03/2570', 'หมายเหตุ' => ''],
-            'สถานะ: '.implode(', ', array_keys(SSTATUS))],
+        'advisors' => ['ครูที่ปรึกษาประจำห้อง', 'main', ['ห้อง' => '1/1', 'ชื่อผู้ใช้ครูที่ปรึกษาคนที่ 1' => 'teacher01', 'ชื่อผู้ใช้ครูที่ปรึกษาคนที่ 2' => ''], 'ห้องละไม่เกิน 2 คน (แทนที่ครูที่ปรึกษาเดิมของห้อง)'],
+        'sstatus' => ['สถานะนักเรียน (เข้าใหม่/จบ/ย้าย/ลาออก)', 'main', ['รหัสนักเรียน' => '12345', 'สถานภาพ' => 'จบการศึกษาภาคบังคับ', 'วันที่' => '31/03/2570', 'หมายเหตุ' => ''],
+            'สถานภาพ: '.implode(', ', STUDENT_STATUS).' (สถานภาพอื่นที่ไม่ใช่ "ศึกษาอยู่" จะพ้นจากทะเบียนปัจจุบัน)'],
         'courses' => ['รายวิชา (ได้ทุกปีการศึกษา)', 'academic', ['ปีการศึกษา' => '2568', 'ภาคเรียน' => '1', 'รหัสวิชา' => 'ค21101', 'ชื่อวิชา' => 'คณิตศาสตร์ 1', 'ระดับชั้น' => 'ม.1', 'หน่วยกิต' => '1.5', 'คาบ/สัปดาห์' => '3',
             'ประเภท (พื้นฐาน/เพิ่มเติม/กิจกรรม)' => 'พื้นฐาน', 'ชื่อผู้ใช้ครูผู้สอน' => 'teacher01'], 'ใส่ปีการศึกษา/ภาคเรียนของแต่ละแถว ไฟล์เดียวมีหลายปีได้ (เว้นว่าง = ภาคเรียนปัจจุบัน '.yt().') / ปี+ภาค+รหัสวิชา+ชั้นเดิม = ปรับปรุง'],
         'enroll' => ['ลงทะเบียนเรียน (ได้ทุกปีการศึกษา)', 'academic', ['ปีการศึกษา' => '2568', 'ภาคเรียน' => '1', 'รหัสวิชา' => 'ค21101', 'ห้อง หรือ รหัสนักเรียน' => '1/1'],
@@ -195,7 +198,8 @@ function imp_row(string $set, array $c): string
             return $new ? 'add' : 'update';
 
         case 'students':
-            [$code, $title, $fn, $ln, $sex, $cls, $room, $num, $card, $birth, $parent, $pphone, $addr] = $c;
+            [$code, $title, $fn, $ln, $sex, $cls, $room, $num, $card, $birth, $parent, $pphone, $addr, $nick, $entry, $eyear] = $c;
+            $extra = array_filter(['nickname' => trim($nick), 'entry' => trim($entry) !== '' ? imp_md('entry_type', $entry) : '', 'entry_year' => preg_match('/^\d{4}$/', trim($eyear)) ? trim($eyear) : ''], fn($v) => $v !== '');
             $need($code, 'รหัสนักเรียน');
             $s = imp_student($code);
             $cid = imp_class($cls);
@@ -207,6 +211,12 @@ function imp_row(string $set, array $c): string
             $u = array_filter(['name' => trim($fn) !== '' ? trim($title.$fn.' '.$ln) : null, 'sex' => imp_sex($sex), 'birthday' => imp_date($birth) ?: null, 'id_card' => strlen($card) === 13 ? $card : null], fn($v) => $v !== null);
             if ($s) {
                 save_user((int) $s['id'], $u);
+                if ($extra) {
+                    stinfo_save((int) $s['id'], $extra);
+                }
+                if ($rid && $rid !== (int) $s['room']) {
+                    keep_room_history($s);
+                }
                 $set = [];
                 $p = [];
                 foreach (['class' => $cid ?: null, 'room' => $rid ?: null, 'number' => $num !== '' ? (int) $num : null, 'id_card' => $u['id_card'] ?? null, 'parent' => $parent !== '' ? mb_substr($parent, 0, 100) : null,
@@ -228,7 +238,20 @@ function imp_row(string $set, array $c): string
             $uid = save_user(0, $u + ['username' => trim($code), 'status' => 0, 'active' => 1], trim($code));
             q('INSERT INTO {student} (`id`,`student_id`,`class`,`room`,`number`,`id_card`,`department`,`parent`,`parent_phone`,`address`) VALUES (?,?,?,?,?,?,0,?,?,?)',
                 [$uid, trim($code), $cid, $rid, $num === '' ? null : (int) $num, $u['id_card'] ?? null, mb_substr($parent, 0, 100), mb_substr($pphone, 0, 32), mb_substr($addr, 0, 100)]);
+            stinfo_save($uid, $extra + ['status' => 'ศึกษาอยู่', 'entry_year' => (string) cur_term()[0]]);
             return 'add';
+
+        case 'phones':
+            [$code, $gm, $gh, $fm, $fh, $mm, $mh] = $c;
+            $s = imp_student($code) ?? throw new \RuntimeException('ไม่พบนักเรียน '.$code);
+            if (trim($gm) !== '') {
+                q('UPDATE {student} SET `parent_phone`=? WHERE `id`=?', [mb_substr(trim($gm), 0, 32), (int) $s['id']]);
+            }
+            $d = array_filter(['guardian_home' => trim($gh), 'father_mobile' => trim($fm), 'father_home' => trim($fh), 'mother_mobile' => trim($mm), 'mother_home' => trim($mh)], fn($v) => $v !== '');
+            if ($d) {
+                stinfo_save((int) $s['id'], $d);
+            }
+            return 'update';
 
         case 'personnel':
             [$un, $title, $fn, $ln, $sex, $pos, $dep, $phone, $pw] = $c;
@@ -254,33 +277,26 @@ function imp_row(string $set, array $c): string
             return $id ? 'update' : 'add';
 
         case 'advisors':
-            [$room, $un] = $c;
-            $rid = imp_room($room);
-            $uid = imp_user($un);
-            if (!$rid) {
-                throw new \RuntimeException('ไม่พบห้อง '.$room);
-            }
-            if (!$uid || !q1('SELECT 1 x FROM {personnel} WHERE `id`=?', [$uid])) {
-                throw new \RuntimeException('ไม่พบบุคลากร '.$un);
-            }
-            $cid = 0;
-            foreach (rooms_by_class() as $cl => $rs) {
-                if (isset($rs[$rid])) {
-                    $cid = (int) $cl;
+            [$room, $un, $un2] = $c;
+            $rid = imp_room($room) ?: throw new \RuntimeException('ไม่พบห้อง '.$room);
+            $ids = [];
+            foreach ([$un, $un2] as $u) {
+                if (trim($u) === '') {
+                    continue;
                 }
+                $uid = imp_user($u);
+                if (!$uid || q1('SELECT 1 x FROM {student} WHERE `id`=?', [$uid])) {
+                    throw new \RuntimeException('ไม่พบบุคลากร '.$u);
+                }
+                $ids[] = $uid;
             }
-            q('UPDATE {personnel} SET `class`=0, `room`=0 WHERE `room`=? AND `id`<>?', [$rid, $uid]);
-            q('UPDATE {personnel} SET `class`=?, `room`=? WHERE `id`=?', [$cid, $rid, $uid]);
+            set_room_advisors($rid, $ids);
             return 'update';
 
         case 'sstatus':
             [$code, $st, $date, $note] = $c;
             $s = imp_student($code) ?? throw new \RuntimeException('ไม่พบนักเรียน '.$code);
-            $key = array_search(trim($st), SSTATUS, true) ?: (isset(SSTATUS[trim($st)]) ? trim($st) : '');
-            if ($key === '') {
-                throw new \RuntimeException('สถานะไม่ถูกต้อง: '.$st);
-            }
-            md_set('sstatus', 'i'.(int) $s['id'], '', '', json_encode(['student' => (string) $s['id'], 'status' => $key, 'date' => imp_date($date) ?: date('Y-m-d'), 'entry' => '', 'note' => trim($note)], JSON_UNESCAPED_UNICODE));
+            set_student_status((int) $s['id'], trim($st), imp_date($date), trim($note));
             return 'update';
 
         case 'courses':
@@ -469,7 +485,7 @@ function adm_csv_import(bool $post)
     $rows = '';
     $i = 0;
     foreach ($sets as $k => [$label, $mod, $cols, $note]) {
-        $rows .= zrow([++$i, '<b>'.h($label).'</b><br><span class="gray_12">'.h($mods[$mod][3] ?? $mods[$mod][0]).'</span>', '<span style="font-size:11px">'.h(implode(', ', array_keys($cols))).'</span><br><span class="gray_12" style="font-size:11px">'.h($note).'</span>',
+        $rows .= zrow([++$i, '<a id="'.$k.'"></a><b>'.h($label).'</b><br><span class="gray_12">'.h($mods[$mod][3] ?? $mods[$mod][0]).'</span>', '<span style="font-size:11px">'.h(implode(', ', array_keys($cols))).'</span><br><span class="gray_12" style="font-size:11px">'.h($note).'</span>',
             ['<a href="'.a_url('csv_import', '&tpl='.$k).'"><i class="fa fa-download"></i> ไฟล์ตัวอย่าง</a>', ' align="center" style="white-space:nowrap"'],
             ['<form method="post" enctype="multipart/form-data" action="'.h(a_url('csv_import', '&set='.$k)).'" style="margin:0;white-space:nowrap"><input type="hidden" name="set" value="'.$k.'"/>'
                 .'<input type="file" name="csv" accept=".csv,.txt" required style="width:190px;font-size:11px"/> <input type="submit" value="นำเข้า" class="general radius" style="height:24px"/></form>', ' align="center"']], $i);

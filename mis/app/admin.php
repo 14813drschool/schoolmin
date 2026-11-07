@@ -213,8 +213,10 @@ function admin_head(string $crumb1, string $crumb2, string $title, string $sub, 
 
 function head_btn(string $label, string $href, string $icon): string
 {
+    $fa = ['reload' => ['fa-refresh', '#27AE60'], 'download' => ['fa-download', '#E67E22'], 'upload' => ['fa-upload', '#27AE60'], 'x' => ['fa-arrow-circle-left', '#2980B9']][$icon] ?? null;
+    $img = $fa ? '<i class="fa '.$fa[0].'" style="font-size:24px;color:'.$fa[1].';margin-top:4px;display:inline-block"></i>' : '<img src="../icon_tools/vec_'.$icon.'_dark.png" height="24" style="margin-top:4px"/>';
     return '<div style="float:left;margin:0px 2px"><a href="'.$href.'" title="'.h($label).'" style="display:inline-block;width:58px;height:56px;border:1px solid #ddd;border-radius:6px;background:#fafafa;text-align:center;font-size:11px;color:#555;padding-top:4px">'
-        .'<img src="../icon_tools/vec_'.$icon.'_dark.png" height="24" style="margin-top:4px"/><br>'.h($label).'</a></div>';
+        .$img.'<br>'.h($label).'</a></div>';
 }
 
 /** ฟอร์มแบบเดียวกับหน้าแก้ไขข้อมูลส่วนตัว: $rows = [[label, html, required], ...] */
@@ -429,7 +431,6 @@ function cat_page(string $type, string $option, string $label, bool $post, calla
     return $form.list_table('รายการ'.h($label), array_merge(['#', $label], $extraHead, [['', ' style="width:60px"']]), $rows);
 }
 
-function adm_class(bool $post) { return cat_page('class', 'class', 'ระดับชั้น', $post, fn($id) => [h(class_short($id)), count(rooms_by_class()[$id] ?? []).' ห้อง'], ['ชื่อย่อ', 'จำนวนห้องเรียน']); }
 function adm_room(bool $post) { return cat_page('room', 'room', 'ห้องเรียน', $post, fn($id) => ['รหัส '.h($id)], ['รหัสห้อง']) . '<p style="width:983px;margin:0 auto;text-align:left" class="gray_12">ตั้งชื่อห้องเป็น "เลขชั้น/เลขห้อง" เช่น 1/1, 1/2 ระบบจะจัดห้องเข้าระดับชั้นลำดับที่ 1 ให้อัตโนมัติ</p>'; }
 function adm_position(bool $post) { return cat_page('position', 'position', 'ตำแหน่ง', $post); }
 function adm_department(bool $post) { return cat_page('department', 'department', 'กลุ่มงาน/กลุ่มสาระ', $post); }
@@ -607,67 +608,12 @@ function adm_document(bool $post)
 
 /* ================================================================ นักเรียน */
 
-function adm_student(bool $post)
-{
-    $c = (string) ($_GET['c'] ?? '');
-    $r = (string) ($_GET['r'] ?? '');
-    $qtext = trim((string) ($_GET['q'] ?? ''));
-    $sql = 'SELECT S.*, U.`name`, U.`username`, U.`active`, U.`sex`, U.`phone` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE 1';
-    $p = [];
-    if ($c !== '') {
-        $sql .= ' AND S.`class`=?';
-        $p[] = (int) $c;
-    }
-    if ($r !== '') {
-        $sql .= ' AND S.`room`=?';
-        $p[] = (int) $r;
-    }
-    if ($qtext !== '') {
-        $sql .= ' AND (U.`name` LIKE ? OR S.`student_id` LIKE ?)';
-        array_push($p, "%$qtext%", "%$qtext%");
-    }
-    $rows = '';
-    foreach (q($sql.' ORDER BY S.`class`, S.`room`, S.`number`, S.`student_id` LIMIT 500', $p) as $i => $s) {
-        $rows .= zrow([$i + 1, h($s['student_id']), name_nbsp($s['name']), $s['sex'] === 'f' ? 'หญิง' : ($s['sex'] === 'm' ? 'ชาย' : '-'), h(class_room_short($s['class'], $s['room'])), [h($s['number']), ' align="center"'],
-            (int) $s['active'] ? 'ปกติ' : '<span style="color:#f00">พ้นสภาพ</span>', [edit_link(a_url('student', '&func=Edit&id='.(int) $s['id'])).' '.del_link(a_url('student', '&func=Delete&id='.(int) $s['id'])), ' align="center" width="60"']], $i);
-    }
-    $classes = ['' => 'ทุกระดับชั้น'] + array_map(fn($x) => $x, cats('class'));
-    $rooms = ['' => 'ทุกห้อง'] + cats('room');
-    $f = '<form method="get" style="width:983px;margin:0 auto 10px;text-align:left"><input type="hidden" name="module" value="admin"/><input type="hidden" name="option" value="student"/><span class="search">'
-        .sel('c', $classes, $c, 'onchange="this.form.submit()"').' '.sel('r', $rooms, $r, 'onchange="this.form.submit()"').' '.inp('q', $qtext, 200, 'text', 'placeholder="ค้นหาชื่อ/รหัสนักเรียน"')
-        .' <input type="submit" value="ค้นหา" class="general radius" style="height:25px"/></span><div style="clear:both"></div></form>';
-    return ['ทะเบียนนักเรียนปัจจุบัน', $f.list_table('รายการทะเบียนนักเรียน', ['#', 'รหัสนร.', 'ชื่อ-นามสกุล', 'เพศ', 'ชั้น', 'เลขที่', 'สถานะ', ['', ' style="width:60px"']], $rows, '',
-        btn('เพิ่มนักเรียน', a_url('student', '&func=Edit'), 'add').btn('นำเข้ารายชื่อ', a_url('student_import'), 'add')), head_btn('เพิ่ม', a_url('student', '&func=Edit'), 'add')];
-}
 
 function title_options(): array
 {
     return ['' => '-', 'เด็กชาย' => 'เด็กชาย', 'เด็กหญิง' => 'เด็กหญิง', 'นาย' => 'นาย', 'นางสาว' => 'นางสาว', 'นาง' => 'นาง'];
 }
 
-function adm_student_Edit(bool $post)
-{
-    $id = (int) ($_GET['id'] ?? 0);
-    $s = $id ? q1('SELECT S.*, U.`name`, U.`username`, U.`active`, U.`sex`, U.`phone`, U.`birthday`, U.`id_card` uid FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`id`=?', [$id]) : null;
-    [$pre, $first, $last] = split_name((string) ($s['name'] ?? ''));
-    $rows = [
-        ['รหัสนักเรียน', inp('student_id', $s['student_id'] ?? '', 150), true],
-        ['คำนำหน้าชื่อ', sel('title', title_options(), $pre), false],
-        ['ชื่อ', inp('first', $first), true], ['นามสกุล', inp('last', $last), true],
-        ['เพศ', sel('sex', ['' => '-', 'm' => 'ชาย', 'f' => 'หญิง'], $s['sex'] ?? ''), false],
-        ['เลขประจำตัวประชาชน', inp('id_card', $s['id_card'] ?? ($s['uid'] ?? ''), 200), false],
-        ['วันเกิด', inp('birthday', !empty($s['birthday']) ? iso_to_be($s['birthday']) : '', 120, 'text', 'placeholder="วว/ดด/ปปปป"'), false],
-        ['ระดับชั้น', sel('class', ['' => '- เลือก -'] + cats('class'), $s['class'] ?? ''), true],
-        ['ห้องเรียน', sel('room', ['0' => '- เลือก -'] + cats('room'), $s['room'] ?? 0), true],
-        ['เลขที่', inp('number', $s['number'] ?? '', 80), false],
-        ['เบอร์โทรศัพท์', inp('phone', $s['phone'] ?? '', 200), false],
-        ['ที่อยู่', txt('address', $s['address'] ?? ''), false],
-        ['ชื่อผู้ปกครอง', inp('parent', $s['parent'] ?? ''), false], ['โทรศัพท์ผู้ปกครอง', inp('parent_phone', $s['parent_phone'] ?? '', 200), false],
-        ['สถานะ', sel('active', ['1' => 'ปกติ', '0' => 'พ้นสภาพ'], $s['active'] ?? 1), false],
-        ['รหัสผ่านเข้าระบบ', inp('password', '', 200, 'password', 'autocomplete="new-password" placeholder="'.($s ? 'เว้นว่างถ้าไม่เปลี่ยน' : 'ค่าเริ่มต้น = รหัสนักเรียน').'"'), false],
-    ];
-    return [$s ? 'แก้ไขข้อมูลนักเรียน' : 'เพิ่มนักเรียน', admin_form($s ? 'แก้ไขข้อมูลนักเรียน' : 'เพิ่มนักเรียน', a_url('student', '&func=Save&id='.$id), $rows, a_url('student'))];
-}
 
 /** สร้าง/แก้บัญชีผู้ใช้ คืน id */
 function save_user(int $id, array $u, string $password = ''): int
@@ -701,41 +647,7 @@ function username_taken(string $username, int $except): bool
     return $username !== '' && (bool) q1('SELECT 1 x FROM {user} WHERE `username`=? AND `id`<>? LIMIT 1', [$username, $except]);
 }
 
-function adm_student_Save(bool $post)
-{
-    $id = (int) ($_GET['id'] ?? 0);
-    $code = trim((string) ($_POST['student_id'] ?? ''));
-    $first = trim((string) ($_POST['first'] ?? ''));
-    $last = trim((string) ($_POST['last'] ?? ''));
-    if (!$post || $code === '' || $first === '' || username_taken($code, $id)) {
-        redirect(a_url('student', '&func=Edit&id='.$id));
-    }
-    $card = preg_replace('/\D/', '', (string) ($_POST['id_card'] ?? ''));
-    $bd = trim((string) ($_POST['birthday'] ?? ''));
-    $uid = save_user($id, ['username' => $code, 'name' => trim(($_POST['title'] ?? '').$first.' '.$last), 'sex' => in_array($_POST['sex'] ?? '', ['m', 'f'], true) ? $_POST['sex'] : null,
-        'phone' => trim((string) ($_POST['phone'] ?? '')), 'birthday' => $bd !== '' ? be_date_to_iso($bd) : null, 'active' => (int) ($_POST['active'] ?? 1), 'status' => 0],
-        (string) ($_POST['password'] ?? '') !== '' ? (string) $_POST['password'] : ($id ? '' : $code));
-    $st = [(string) $code, mb_substr((string) ($_POST['address'] ?? ''), 0, 100), mb_substr((string) ($_POST['parent'] ?? ''), 0, 100), mb_substr((string) ($_POST['parent_phone'] ?? ''), 0, 32),
-        (int) ($_POST['class'] ?? 0), (int) ($_POST['room'] ?? 0), ($_POST['number'] ?? '') === '' ? null : (int) $_POST['number'], strlen($card) === 13 ? $card : null];
-    if (q1('SELECT 1 x FROM {student} WHERE `id`=?', [$uid])) {
-        q('UPDATE {student} SET `student_id`=?, `address`=?, `parent`=?, `parent_phone`=?, `class`=?, `room`=?, `number`=?, `id_card`=? WHERE `id`=?', array_merge($st, [$uid]));
-    } else {
-        q('INSERT INTO {student} (`student_id`,`address`,`parent`,`parent_phone`,`class`,`room`,`number`,`id_card`,`department`,`id`) VALUES (?,?,?,?,?,?,?,?,0,?)', array_merge($st, [$uid]));
-    }
-    admin_done('student');
-}
 
-function adm_student_Delete(bool $post)
-{
-    $id = (int) ($_GET['id'] ?? 0);
-    if ($id && q1('SELECT 1 x FROM {student} WHERE `id`=?', [$id])) {
-        q('DELETE FROM {grade} WHERE `student_id`=?', [$id]);
-        q('DELETE FROM {student} WHERE `id`=?', [$id]);
-        q('DELETE FROM {user_session} WHERE `member_id`=?', [$id]);
-        q('DELETE FROM {user} WHERE `id`=? AND `status`<>1', [$id]);
-    }
-    admin_done('student');
-}
 
 function adm_parent(bool $post)
 {
@@ -750,75 +662,7 @@ function adm_parent(bool $post)
 /** นำเข้า CSV: รหัสนักเรียน,คำนำหน้า,ชื่อ,นามสกุล,เพศ(ช/ญ),ระดับชั้น(ลำดับ),ห้อง(เช่น 1/1),เลขที่,เลขบัตรประชาชน */
 function adm_student_import(bool $post)
 {
-    $msg = '';
-    if ($post && !empty($_FILES['csv']['tmp_name'])) {
-        $rooms = array_flip(cats('room'));
-        $classIds = array_keys(cats('class'));
-        $n = $skip = 0;
-        $fh = fopen($_FILES['csv']['tmp_name'], 'r');
-        $first = true;
-        while (($row = fgetcsv($fh)) !== false) {
-            $row = array_map(fn($v) => trim(preg_replace('/^\xEF\xBB\xBF/', '', (string) $v)), $row);
-            if ($first && !preg_match('/^\d+$/', $row[0] ?? '')) {
-                $first = false;
-                continue;
-            }
-            $first = false;
-            [$code, $title, $fn, $ln, $sex, $cls, $room, $num, $card] = array_pad($row, 9, '');
-            if ($code === '' || $fn === '' || username_taken($code, 0)) {
-                $skip++;
-                continue;
-            }
-            $cid = ctype_digit($cls) ? ($classIds[(int) $cls - 1] ?? 0) : (int) array_search($cls, cats('class'));
-            $uid = save_user(0, ['username' => $code, 'name' => trim($title.$fn.' '.$ln), 'sex' => in_array($sex, ['ช', 'ชาย', 'm'], true) ? 'm' : (in_array($sex, ['ญ', 'หญิง', 'f'], true) ? 'f' : null), 'status' => 0, 'active' => 1], $code);
-            q('INSERT INTO {student} (`id`,`student_id`,`class`,`room`,`number`,`id_card`,`department`) VALUES (?,?,?,?,?,?,0)', [$uid, $code, (int) $cid, (int) ($rooms[$room] ?? 0), $num === '' ? null : (int) $num, strlen($card) === 13 ? $card : null]);
-            $n++;
-        }
-        $msg = msg_box("นำเข้าแล้ว $n คน".($skip ? " ข้าม $skip แถว (ข้อมูลไม่ครบหรือรหัสซ้ำ)" : ''));
-    }
-    $help = 'ไฟล์ CSV (UTF-8) คอลัมน์: รหัสนักเรียน, คำนำหน้า, ชื่อ, นามสกุล, เพศ (ช/ญ), ระดับชั้น (ลำดับ เช่น 1 หรือชื่อเต็ม), ห้อง (เช่น 1/1), เลขที่, เลขบัตรประชาชน — รหัสผ่านเริ่มต้นคือรหัสนักเรียน';
-    return $msg.admin_form('นำเข้ารายชื่อนักเรียน', a_url('student_import'), [['ไฟล์ CSV', '<input type="file" name="csv" accept=".csv"/><br><span class="blue_11_fade">'.h($help).'</span>', true]], a_url('student'));
-}
-
-function adm_student_class(bool $post)
-{
-    if ($post) {
-        foreach ((array) ($_POST['adv'] ?? []) as $room => $pid) {
-            $room = (int) $room;
-            q('UPDATE {personnel} SET `class`=0, `room`=0 WHERE `room`=?', [$room]);
-            if ((int) $pid) {
-                $cid = 0;
-                foreach (rooms_by_class() as $c => $rs) {
-                    if (isset($rs[$room])) {
-                        $cid = (int) $c;
-                    }
-                }
-                if (!q1('SELECT 1 x FROM {personnel} WHERE `id`=?', [(int) $pid])) {
-                    q('INSERT INTO {personnel} (`id`,`position`,`department`,`order`) VALUES (?,0,0,0)', [(int) $pid]);
-                }
-                q('UPDATE {personnel} SET `class`=?, `room`=? WHERE `id`=?', [$cid, $room, (int) $pid]);
-            }
-        }
-        admin_done('student_class');
-    }
-    $adv = [];
-    foreach (q('SELECT `id`,`room` FROM {personnel} WHERE `room`>0') as $p) {
-        $adv[(int) $p['room']] = (int) $p['id'];
-    }
-    $opts = [0 => '- ไม่กำหนด -'] + personnel_options();
-    $cnt = [];
-    foreach (q('SELECT `room`, COUNT(*) n FROM {student} GROUP BY `room`') as $r) {
-        $cnt[(int) $r['room']] = (int) $r['n'];
-    }
-    $rows = '';
-    $i = 0;
-    foreach (rooms_by_class() as $cid => $rooms) {
-        foreach ($rooms as $rid => $rname) {
-            $rows .= zrow([h($cid ? class_room_short($cid, $rid) : $rname), [$cnt[$rid] ?? 0, ' align="center"'], sel("adv[$rid]", $opts, $adv[$rid] ?? 0, 'style="width:300px;height:25px"')], $i++);
-        }
-    }
-    return '<form name="sc" method="post">'.list_table('จัดการชั้นเรียน ประจำปีการศึกษา '.yt(), ['ห้อง', ['จำนวนนักเรียน', ' style="text-align:center"'], 'ครูที่ปรึกษา'], $rows, '',
-        '<a href="javascript:void(0);" onclick="document.forms.sc.submit();" id="pinkgreenbtns"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึก</a>').'</form>';
+    redirect(a_url('csv_import').'#students');
 }
 
 function adm_promote(bool $post)
@@ -830,17 +674,21 @@ function adm_promote(bool $post)
         $byName = array_flip($rooms);
         // จากชั้นสูงสุดลงมา: ชั้นสุดท้ายจบการศึกษา (พ้นสภาพ) ชั้นอื่นเลื่อนขึ้น 1 ชั้น ห้อง "n/x" เป็น "n+1/x"
         $last = end($ids);
-        q('UPDATE {user} U JOIN {student} S ON S.`id`=U.`id` SET U.`active`=0 WHERE S.`class`=?', [(int) $last]);
+        $gs = preg_match('/6|หก/', (string) cat('class', (int) $last)) ? 'จบการศึกษาระดับมัธยมศึกษาตอนปลาย' : 'จบการศึกษาภาคบังคับ';
+        foreach (q('SELECT S.`id` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`class`=? AND U.`active`=1', [(int) $last]) as $g) {
+            set_student_status((int) $g['id'], $gs, date('Y-m-d'));
+        }
         for ($k = count($ids) - 2; $k >= 0; $k--) {
             foreach (q('SELECT `id`, `room` FROM {student} WHERE `class`=?', [(int) $ids[$k]]) as $s) {
                 $rn = $rooms[$s['room']] ?? '';
                 $new = preg_match('/^(\d+)\/(.+)$/', $rn, $m) ? ($byName[((int) $m[1] + 1).'/'.$m[2]] ?? $s['room']) : $s['room'];
+                keep_room_history(q1('SELECT * FROM {student} WHERE `id`=?', [(int) $s['id']]));
                 q('UPDATE {student} SET `class`=?, `room`=? WHERE `id`=?', [(int) $ids[$k + 1], (int) $new, (int) $s['id']]);
             }
         }
         admin_done('promote');
     }
-    $body = '<p>เลื่อนนักเรียนทุกคนขึ้นหนึ่งระดับชั้น (ห้อง 1/1 → 2/1) นักเรียนชั้นสุดท้าย ('.h(end($classes) ?: '-').') จะถูกตั้งเป็นพ้นสภาพ (จบการศึกษา)</p>'
+    $body = '<p>เลื่อนนักเรียนทุกคนขึ้นหนึ่งระดับชั้น (ห้อง 1/1 → 2/1) นักเรียนชั้นสุดท้าย ('.h(end($classes) ?: '-').') จะได้สถานภาพจบการศึกษา</p><p>ถ้าต้องการเลือกห้องปลายทางรายคน ใช้ปุ่มเลื่อนชั้นในหน้า <a href="'.a_url('student_class').'">จัดการชั้นเรียน</a></p>'
         .'<p style="color:#f00">ทำเมื่อขึ้นปีการศึกษาใหม่เท่านั้น ย้อนกลับไม่ได้</p><label><input type="checkbox" name="confirm" value="yes"/> ยืนยันการเลื่อนชั้น</label>';
     return admin_form('เลื่อนชั้นนักเรียน', a_url('promote'), [['การเลื่อนชั้น', $body, true]], a_url('student'));
 }
@@ -925,7 +773,11 @@ function adm_personnel_Save(bool $post)
         }
     }
     if ($room) {
-        q('UPDATE {personnel} SET `class`=0, `room`=0 WHERE `room`=? AND `id`<>?', [$room, $uid]);
+        // ห้องละไม่เกิน 2 คน: เกินให้ยกเลิกคนที่กำหนดไว้ก่อน
+        $others = array_map(fn($r) => (int) $r['id'], q('SELECT `id` FROM {personnel} WHERE `room`=? AND `id`<>? ORDER BY `id`', [$room, $uid]));
+        foreach (array_slice($others, 0, max(0, count($others) - 1)) as $oid) {
+            q('UPDATE {personnel} SET `class`=0, `room`=0 WHERE `id`=?', [$oid]);
+        }
     }
     $vals = [(int) ($_POST['position'] ?? 0), (int) ($_POST['department'] ?? 0), min(127, max(0, (int) ($_POST['order'] ?? 0))), $cid, $room];
     if (q1('SELECT 1 x FROM {personnel} WHERE `id`=?', [$uid])) {

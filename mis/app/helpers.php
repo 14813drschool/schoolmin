@@ -314,3 +314,24 @@ function mis_headers(): void
     header('Content-Type: text/html; charset=utf-8');
     header('Cache-Control: no-store');
 }
+
+/* ---------------------------------------------------------------- เข้าสู่ระบบ (ใช้ร่วมกันหลายหน้า) */
+
+/** ออก token ของ SMS ให้ผู้ใช้ แล้วตั้งคุกกี้ */
+function mis_login_user(int $uid): void
+{
+    $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+    $ua = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+    $t = \Index\Auth\Model::generateTokens($uid, ['ip' => $ip, 'user_agent' => $ua, 'fingerprint' => hash('sha256', $ip.'|'.$ua)]);
+    \Index\Auth\Model::updateUserToken($uid, $t['access_token'], $t['expires_at']);
+    \Index\Auth\Model::logLoginActivity($uid, 'Login successful', $ip);
+    mis_auth_cookie('auth_token', $t['access_token'], \Index\Auth\Model::TOKEN_EXPIRY);
+    mis_auth_cookie('refresh_token', $t['refresh_token'], \Index\Auth\Model::REFRESH_TOKEN_EXPIRY);
+}
+
+/** ผู้ใช้เป็นนักเรียนหรือไม่ */
+function is_student(?array $u = null): bool
+{
+    $u = $u ?? me();
+    return $u && (bool) q1('SELECT `id` FROM {student} WHERE `id`=?', [(int) $u['id']]);
+}

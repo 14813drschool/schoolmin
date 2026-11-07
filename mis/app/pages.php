@@ -40,6 +40,10 @@ function run_page(): void
     if (!me()) {
         redirect('../');
     }
+    // นักเรียนใช้ได้เฉพาะระบบสารสนเทศสำหรับนักเรียน
+    if (is_student()) {
+        redirect('/student/');
+    }
     $module = preg_replace('/[^A-Za-z_]/', '', (string) ($_GET['module'] ?? ''));
     $option = preg_replace('/[^A-Za-z0-9_]/', '', (string) ($_GET['option'] ?? ''));
     $func = preg_replace('/[^A-Za-z0-9_]/', '', (string) ($_GET['func'] ?? ''));

@@ -27,7 +27,7 @@ function academic_menu(): array
     return [
         'หลักสูตร' => ['desired' => 'คุณลักษณะอันพึงประสงค์', 'rtw' => 'การอ่าน คิดวิเคราะห์และเขียน', 'course' => 'รายวิชา', 'dev_act' => 'กิจกรรมพัฒนาผู้เรียน',
             'curriculum' => 'กำหนดหลักสูตรแผนการเรียน', 'sara' => 'กลุ่มสาระการเรียนรู้', 'sara_head' => 'หัวหน้ากลุ่มสาระการเรียนรู้', 'score_import' => 'โอนคะแนนจากโปรแกรม bookmark',
-            'approve' => 'ระบบขออนุมัติผลการเรียน', 'course_copy' => 'คัดลอกรายวิชาจากภาคเรียนก่อน', 'enroll' => 'ลงทะเบียนเรียน'],
+            'approve' => 'ระบบขออนุมัติผลการเรียน', 'club' => 'กิจกรรมชุมนุม (เปิดรับสมัคร)', 'club_reg' => 'นักเรียนลงทะเบียนชุมนุม', 'course_copy' => 'คัดลอกรายวิชาจากภาคเรียนก่อน', 'enroll' => 'ลงทะเบียนเรียน'],
         'ตารางสอน' => ['venue' => 'ห้องเรียน/ประชุม/กิจกรรม', 'school_days' => 'กำหนดวันเรียน', 'periods' => 'กำหนดคาบเรียน', 'timetable' => 'จัดตารางเรียน',
             'tt_print' => 'พิมพ์ตารางสอน', 'room_tt' => 'พิมพ์ตารางการใช้ห้องเรียน', 'calendar' => 'ปฏิทินการเรียนการสอน'],
         'เกณฑ์ประเมินผล' => ['att_type' => 'ประเภทการเข้าชั้นเรียน', 'grade_scale' => 'กำหนดระดับผลการเรียน', 'rtw_crit' => 'เกณฑ์ประเมินการอ่าน คิดวิเคราะห์ฯ', 'char_crit' => 'เกณฑ์ประเมินคุณลักษณะฯ'],
@@ -232,12 +232,17 @@ function adm_term(bool $post)
         if (!empty($_POST['end'])) {
             $cal['end'] = be_date_to_iso((string) $_POST['end']);
         }
+        foreach (['grade_date', 'fail_date'] as $k) {
+            $cal[$k] = !empty($_POST[$k]) ? be_date_to_iso((string) $_POST[$k]) : '';
+        }
         md_set('calendar', $key, '', '', json_encode($cal, JSON_UNESCAPED_UNICODE));
         admin_done('term');
     }
     [$s, $e] = term_range();
+    $cal = json_decode((string) md_get('calendar', yt()), true) ?: [];
     return admin_form('กำหนดภาคเรียนปัจจุบัน', a_url('term'), [['ภาคเรียน', sel('term', [1 => 'ภาคเรียนที่ 1', 2 => 'ภาคเรียนที่ 2'], cfg('term', 1)), true],
-        ['วันเปิดภาคเรียน', d_in('start', $s, 120), false], ['วันปิดภาคเรียน', d_in('end', $e, 120), false]], 'index.php');
+        ['วันเปิดภาคเรียน', d_in('start', $s, 120), false], ['วันปิดภาคเรียน', d_in('end', $e, 120), false],
+        ['วันประกาศผลการเรียน (แสดงในหน้านักเรียน)', d_in('grade_date', $cal['grade_date'] ?? '', 120), false], ['วันประกาศผลสอบไม่ผ่าน', d_in('fail_date', $cal['fail_date'] ?? '', 120), false]], 'index.php');
 }
 
 function adm_edu_level(bool $post)
@@ -1337,4 +1342,54 @@ function adm_sar(bool $post)
         .'<h2 style="text-align:left">บทที่ 5 ผลการประเมินคุณภาพตามมาตรฐานการศึกษา</h2><table><tr><th>#</th><th>มาตรฐาน</th><th>ตัวบ่งชี้</th><th>ค่าเฉลี่ย</th><th>ระดับคุณภาพ</th></tr>'.($qa ?: '<tr><td colspan="5" class="c">-</td></tr>').'</table>'
         .signs(['ผู้รับผิดชอบงานประกันคุณภาพ', 'ผู้อำนวยการโรงเรียน']));
     return null;
+}
+
+/* ---------------------------------------------------------------- กิจกรรมชุมนุม (นักเรียนลงทะเบียนเองที่ /student) */
+
+function adm_club(bool $post)
+{
+    if (isset($_GET['open'])) {
+        md_set('cfg', 'club_open', '', '', $_GET['open'] === '1' ? '1' : '0');
+        admin_done('club');
+    }
+    $open = md_get('cfg', 'club_open') !== '0';
+    $body = md_page('club', 'club', 'ชุมนุม', ['name' => f_text('ชื่อชุมนุม', true), 'teacher' => f_sel('ครูที่ปรึกษาชุมนุม', 'personnel_options'), 'place' => f_text('สถานที่'),
+        'seats' => f_num('จำนวนรับ (เว้นว่าง = ไม่จำกัด)', false), 'class' => f_sel('รับระดับชั้น', fn() => ['0' => 'ทุกระดับชั้น'] + cats('class'), false), 'detail' => f_area('รายละเอียด')],
+        ['name' => 'ชุมนุม', 'teacher' => 'ครูที่ปรึกษา', 'place' => 'สถานที่'], $post, yt());
+    if (is_string($body)) {
+        $cnt = [];
+        foreach (md_rows('club_reg', null, yt()) as $r) {
+            $cnt[(string) $r['value']] = ($cnt[(string) $r['value']] ?? 0) + 1;
+        }
+        $rows = '';
+        $i = 0;
+        foreach (md_rows('club', null, yt()) as $r) {
+            $d = json_of($r);
+            $rows .= zrow([++$i, h($d['name'] ?? ''), [(int) ($cnt[(string) $r['r1']] ?? 0).(!empty($d['seats']) ? ' / '.(int) $d['seats'] : ''), ' align="center"']], $i);
+        }
+        $body = msg_box('สถานะการรับสมัครชุมนุม: <b>'.($open ? 'เปิดรับสมัคร' : 'ปิดรับสมัคร').'</b> — <a href="'.a_url('club', '&open='.($open ? '0' : '1')).'">'.($open ? 'ปิดรับสมัคร' : 'เปิดรับสมัคร').'</a> (นักเรียนลงทะเบียนเองที่หน้า /student)', $open)
+            .$body.'<div style="height:10px"></div>'.list_table('จำนวนผู้สมัครแต่ละชุมนุม', ['#', 'ชุมนุม', ['สมัคร / รับ', ' style="text-align:center"']], $rows);
+    }
+    return $body;
+}
+
+function adm_club_reg(bool $post)
+{
+    $clubs = md_options('club', 'name', yt());
+    $cid = (string) ($_GET['club'] ?? '');
+    $f = pick_form('club_reg', ['club' => ['ชุมนุม', ['' => '- ทุกชุมนุม -'] + $clubs, $cid]]);
+    $reg = [];
+    foreach (md_rows('club_reg', null, yt()) as $r) {
+        if ($cid === '' || (string) $r['value'] === $cid) {
+            $reg[(int) $r['r1']] = (string) $r['value'];
+        }
+    }
+    $rows = '';
+    $i = 0;
+    if ($reg) {
+        foreach (q('SELECT S.*, U.`name` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`id` IN ('.implode(',', array_keys($reg)).') ORDER BY S.`class`, S.`room`, S.`number`') as $s) {
+            $rows .= zrow([++$i, h($s['student_id']), name_nbsp($s['name']), h(class_room_short($s['class'], $s['room'])), h($clubs[$reg[(int) $s['id']]] ?? '')], $i);
+        }
+    }
+    return $f.list_table('นักเรียนลงทะเบียนชุมนุม ภาคเรียน '.yt(), ['#', 'รหัสนร.', 'ชื่อ-นามสกุล', 'ชั้น', 'ชุมนุม'], $rows, $i.' คน', print_btn());
 }

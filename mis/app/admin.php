@@ -361,7 +361,7 @@ function admin_home(): string
     $tiles .= '<div class="adm-tile"><h2>ออกจากระบบ</h2><a href="../logout.php"><img src="../images/admin/logout.svg" alt=""/></a></div>';
     $js = '<script>function homeBox(m){var b=document.querySelectorAll(".adm-box"),t=document.querySelectorAll(".adm-tile");for(var i=0;i<b.length;i++){b[i].style.display=b[i].id==="hb_"+m?"block":"none";}'
         .'for(var j=0;j<t.length;j++){t[j].classList.toggle("on",t[j].id==="ht_"+m);}try{sessionStorage.setItem("misHome",m);}catch(e){}if(m){window.scrollTo(0,0);}}'
-        .'(function(){var m="";try{m=sessionStorage.getItem("misHome")||"";}catch(e){}if(m&&document.getElementById("hb_"+m)){homeBox(m);}})();</script>';
+        .'(function(){var m="'.preg_replace('/[^a-z]/', '', (string) ($_GET['home'] ?? '')).'";if(!m){try{m=sessionStorage.getItem("misHome")||"";}catch(e){}}if(m&&document.getElementById("hb_"+m)){homeBox(m);}})();</script>';
     return '<div style="padding-top:5px">'.$boxes.$news.'<div class="adm-tiles">'.$tiles.'</div></div>'.$js;
 }
 

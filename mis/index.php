@@ -5,7 +5,7 @@
  */
 require __DIR__.'/app/boot.php';
 if (me()) {
-    redirect('edumain/index.php');
+    redirect(is_student() ? '/student/' : 'edumain/index.php');
 }
 mis_headers();
 ?><!DOCTYPE html>
@@ -69,7 +69,7 @@ input:-webkit-autofill:focus {
 } 
 </style>
 </head>
-<body onLoad="MM_preloadImages('images/home_manager_icon_f2.png','images/home_schoolweb_icon_f2.png','images/home_sara_header_icon_f2.png','images/home_academic_icon_f2.png','images/home_admin_icon_f2.png','images/home_teacher_icon_f2.png')">
+<body onLoad="MM_preloadImages('images/home_manager_icon_f2.png','images/home_schoolweb_icon_f2.png','images/home_sara_header_icon_f2.png','images/home_academic_icon_f2.png','images/home_admin_icon_f2.png','images/home_teacher_icon_f2.png','images/home_parents_icon_f2.png')">
 <center>
 <table width="911" border="0" align="center" cellpadding="0" cellspacing="0" class="maintable">
 <tr>
@@ -116,7 +116,7 @@ input:-webkit-autofill:focus {
 </tr>
 <tr>
   <td valign="top">&nbsp;</td>
-  <td align="center">&nbsp;</td>
+  <td align="center"><a href="../student" onMouseOut="MM_swapImgRestore()" onMouseOver="MM_swapImage('home_parents_icon','','images/home_parents_icon_f2.png',1);"><img name="home_parents_icon" src="images/home_parents_icon.png" height="116" border="0" id="home_parents_icon" alt="นักเรียน/ผู้ปกครอง"/></a></td>
   <td valign="top">&nbsp;</td>
   <td align="center"><a href="javascript:void(0);" onClick="GetLink('login_form.php?role=mintra')" onMouseOut="MM_swapImgRestore()" onMouseOver="MM_swapImage('home_admin_icon1','','images/home_admin_icon_f2.png',1)"><img name="home_admin_icon1" src="images/home_admin_icon.png" width="94" height="116" border="0" id="home_admin_icon1" alt="" /></a></td>
   <td valign="top"><p style="margin:0px"></p></td>

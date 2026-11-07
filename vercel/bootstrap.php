@@ -533,6 +533,11 @@ final class VercelSms
         }
 
         $file = $this->root.$path;
+        // ไม่ใช้หน้าเว็บของ SMS แล้ว: หน้าแรกไปที่ระบบ /mis/
+        if ($path === '/' || $path === '/index.php') {
+            header('Location: /mis/', true, 302);
+            exit;
+        }
         // ไฟล์ข้อมูลที่ระบบสร้าง (รูป เอกสาร) และคำแปล: ส่งจากโฟลเดอร์ที่ซิงก์แล้ว
         if (preg_match('#^/(datas|language)/#', $path)) {
             if (is_file($file) && substr($file, -4) !== '.php') {
@@ -575,8 +580,9 @@ final class VercelSms
         if (preg_match('#\.[a-z0-9]{1,5}$#i', $path)) {
             $this->deny(404);
         }
-        // หน้าเว็บแบบ SPA: ทุก URL ที่เหลือใช้ index.php
-        $this->run('index.php');
+        // URL ของหน้าเว็บ SMS เดิม (SPA) ไปที่ระบบ /mis/
+        header('Location: /mis/', true, 302);
+        exit;
     }
 
     private function checkSetupKey(): void

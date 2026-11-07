@@ -268,7 +268,7 @@ function render_page(string $title, string $content, string $module = ''): void
         '{{SEL01}}' => $sel === '01' ? "class='selected' " : '',
         '{{SEL02}}' => $sel === '02' ? "class='selected' " : '',
     ];
-    $html = strtr(tpl('layout_head.html'), $rep).strtr(tpl('layout_top.html'), $rep).$content;
+    $html = strtr(tpl('layout_head.html'), $rep).strtr($GLOBALS['mis_top_override'] ?? tpl('layout_top.html'), $rep).$content;
     $foot = strtr(tpl('layout_foot.html'), ['{{EXEC}}' => (string) (microtime(true) - MIS_START)]);
     mis_headers();
     echo $html.$foot;

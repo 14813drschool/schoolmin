@@ -43,6 +43,15 @@ function run_page(): void
     $module = preg_replace('/[^A-Za-z_]/', '', (string) ($_GET['module'] ?? ''));
     $option = preg_replace('/[^A-Za-z0-9_]/', '', (string) ($_GET['option'] ?? ''));
     $func = preg_replace('/[^A-Za-z0-9_]/', '', (string) ($_GET['func'] ?? ''));
+    // หน้าผู้ดูแลระบบ
+    if ($module === 'admin' || ($module === '' && is_admin() && empty($_COOKIE['mis_teacher_view']))) {
+        run_admin($option, $func);
+        return;
+    }
+    if ($module === '' && isset($_GET['admin']) && is_admin()) {
+        setcookie('mis_teacher_view', '', ['expires' => time() - 3600, 'path' => '/mis/']);
+        redirect('index.php');
+    }
     $key = page_key($module, $option, $func);
 
     // การบันทึก (POST) ของแต่ละหน้า

@@ -551,6 +551,16 @@ final class VercelSms
                 $this->run(ltrim($path, '/').'index.php');
                 return;
             }
+            // โฟลเดอร์ที่มีแต่ index.html (เช่น /mis/)
+            // (ไม่ใช้ sendFile เพราะ sendFile ใส่ CSP sandbox ให้ไฟล์ html ที่ผู้ใช้อัปโหลด)
+            if (is_file($file.'index.html')) {
+                header('Content-Type: text/html; charset=utf-8');
+                header('X-Content-Type-Options: nosniff');
+                header('X-Frame-Options: SAMEORIGIN');
+                header('Cache-Control: no-cache');
+                readfile($file.'index.html');
+                exit;
+            }
         }
         // ไฟล์ PHP ที่มีอยู่จริง (รองรับ PATH_INFO เช่น export.php/...)
         if (preg_match('#^/(.+?\.php)(/.*)?$#', $path, $m) && is_file($this->root.'/'.$m[1])) {

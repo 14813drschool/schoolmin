@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DRW-MIS ระบบสารสนเทศโรงเรียน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* เลย์เอาต์: หัวเว็บไล่ฟ้าอ่อน + ปุ่มหมวด 3 ปุ่ม + แผงเมนูใหญ่ใต้ปุ่ม + เนื้อหากว้าง 980px ตามต้นฉบับ (ธีมสว่างอย่างเดียวตามระบบเดิม) */
+:root {
+  --sky-top: #d9f3ff;      /* ฟ้าอ่อนบนหัวเว็บ */
+  --sky-bottom: #ffffff;
+  --cyan: #2fd3f6;         /* ปุ่มหมวด */
+  --cyan-deep: #12b4e6;
+  --title: #019df1;        /* ชื่อระบบ */
+  --ink: #333a40;          /* ตัวอักษรหลัก */
+  --ink-soft: #6b7780;
+  --line: #cfeefa;         /* เส้นกรอบแผงเมนู */
+  --panel: #f3fcff;
+  --rule: #c9d3d8;         /* เส้นประใต้รายการ */
+  --head-bar: #3ec6ee;     /* แถบนำทาง */
+  --ok: #2e9e5b;
+  --note-bg: #fff8e1;
+  --note-line: #f1c75b;
+  --font-display: "Kanit", "Thonburi", "Leelawadee UI", sans-serif;
+  --font-body: "Sarabun", Tahoma, "Leelawadee UI", sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: #fff; color: var(--ink); font: 14px/1.6 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.band { margin-left: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); margin-right: calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 984px; margin: 0 auto; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; }
+:focus-visible { outline: 2px solid var(--title); outline-offset: 2px; border-radius: 4px; }
+
+/* ---------- หัวเว็บ ---------- */
+.top { background: linear-gradient(180deg, var(--sky-top) 0%, #eefaff 65%, var(--sky-bottom) 100%); border-top: 3px solid var(--title); padding-block: 8px 12px; }
+.head { display: flex; gap: 14px; align-items: flex-start; position: relative; }
+.logo { width: 98px; height: 98px; flex: none; }
+.names { flex: 1; min-width: 0; padding-top: 6px; }
+.names h1 { margin: 0; font: 400 clamp(20px, 3.4vw, 30px)/1.15 var(--font-display); color: var(--title); }
+.names .school { margin: 4px 0 0; font: 400 clamp(17px, 2.8vw, 24px)/1.2 var(--font-display); color: var(--ink); }
+.names .en { margin: 2px 0 0; font: 300 13px/1.4 var(--font-display); letter-spacing: .06em; color: #555; text-transform: uppercase; }
+.side { text-align: right; font-size: 12px; color: var(--ink-soft); display: grid; gap: 4px; justify-items: end; }
+.online { color: var(--ok); font-family: Tahoma, sans-serif; display: grid; grid-template-columns: auto auto; column-gap: 18px; text-align: left; }
+.btn-out { background: #1a8de0; color: #fff; border: 0; border-radius: 3px; padding: 2px 8px; font: 400 13px var(--font-display); cursor: pointer; }
+.uid { font: 700 13px Georgia, serif; color: #1f2f7a; margin-top: 10px; }
+.who { color: #1f2f7a; }
+.term { color: #444; }
+.term b { color: #000; }
+.year-tab { position: absolute; right: 250px; top: -11px; background: var(--title); color: #fff; border: 0; border-radius: 0 0 14px 14px; padding: 2px 22px 4px; font: 400 13px var(--font-display); cursor: pointer; }
+.year-pop { position: absolute; right: 250px; top: 18px; background: var(--title); border-radius: 8px; padding: 8px 10px; display: grid; gap: 4px; z-index: 30; box-shadow: 0 6px 18px rgba(1, 120, 190, .25); }
+.year-pop select { font: 13px var(--font-body); }
+.year-pop button { background: none; border: 0; color: #fff; font-size: 12px; cursor: pointer; justify-self: end; }
+
+/* ---------- ปุ่มหมวด ---------- */
+.cats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 18px; }
+.cat { border: 0; cursor: pointer; color: #fff; padding: 9px 6px; font: 400 clamp(14px, 2vw, 17px)/1.3 var(--font-display);
+  background: linear-gradient(180deg, #49dcfa 0%, var(--cyan) 55%, var(--cyan-deep) 100%); border-radius: 4px 4px 0 0;
+  text-shadow: 0 1px 0 rgba(0, 90, 140, .35); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55); }
+.cat:hover, .cat[aria-expanded="true"], .cat.current { background: linear-gradient(180deg, #7ff0ff 0%, #3be4fb 60%, #22c9ef 100%); }
+
+/* ---------- แผงเมนูใหญ่ ---------- */
+.mega { border: 3px solid var(--line); border-radius: 0 0 8px 8px; background:
+  radial-gradient(120% 60% at 50% 115%, #bff0fb 0%, rgba(191, 240, 251, 0) 60%), linear-gradient(180deg, #fff, var(--panel));
+  padding: 14px clamp(12px, 3vw, 40px) 26px; box-shadow: 0 10px 24px rgba(19, 150, 200, .12); }
+.cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 28px; }
+.sec h2 { margin: 10px 0 8px; font: 400 clamp(20px, 2.6vw, 26px)/1.2 var(--font-display); color: var(--title); }
+.sec ul { list-style: none; margin: 0; padding: 0; }
+.sec li a { display: flex; align-items: center; gap: 9px; padding: 3px 0; border-bottom: 1px dashed var(--rule); font: 13px/1.5 Tahoma, var(--font-body); color: var(--ink); }
+.sec li a:hover { color: #0a6fc2; }
+.ico { width: 17px; height: 17px; flex: none; border-radius: 4px; display: grid; place-items: center; }
+.ico svg { width: 13px; height: 13px; }
+
+/* ---------- หน้าแรก ---------- */
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; margin: 70px auto 120px; max-width: 900px; }
+.tile { text-align: center; color: var(--title); font: 400 18px/1.3 var(--font-display); }
+.tile a, .tile button { display: grid; gap: 8px; justify-items: center; width: 100%; background: none; border: 0; color: inherit; font: inherit; cursor: pointer; }
+.tile .box { width: 152px; max-width: 100%; aspect-ratio: 1; border: 1px solid #d7eff8; border-radius: 10px; display: grid; place-items: center; background: #fff; transition: transform .15s; }
+.tile a:hover .box, .tile button:hover .box { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(1, 157, 241, .15); }
+.tile svg { width: 76%; height: auto; }
+
+/* ---------- หน้าทำงาน ---------- */
+.crumb { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--head-bar); color: #fff; margin-top: 8px; padding: 5px 10px; border-radius: 6px 6px 0 0; font: 400 15px var(--font-display); }
+.crumb .pill { background: #1c9fd9; border-radius: 3px; padding: 1px 8px; font-size: 12px; }
+.card-head { display: flex; align-items: center; gap: 12px; border: 1px solid #dfe7eb; border-top: 0; padding: 10px 14px; background: linear-gradient(180deg, #fff, #f7f9fa); }
+.card-head .t { flex: 1; min-width: 0; }
+.card-head h2 { margin: 0; font: 400 21px/1.2 var(--font-display); color: #1d79c9; }
+.card-head p { margin: 0; color: #4fb4e6; font: 300 16px/1.3 var(--font-display); }
+.tool { display: grid; justify-items: center; gap: 2px; border: 1px solid #cfd8dd; border-radius: 6px; background: #f6f8f9; padding: 5px 8px; font-size: 11px; color: #555; cursor: pointer; }
+.tool svg { width: 22px; height: 22px; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin: 14px 0; }
+.filters .grp { display: flex; flex-wrap: wrap; gap: 6px; border: 1px solid #b9e3a5; padding: 4px; border-radius: 3px; }
+select, input[type="search"], input[type="text"] { font: 13px var(--font-body); border: 1px solid #b7c4cb; border-radius: 2px; padding: 3px 6px; background: #fff; color: var(--ink); min-width: 0; }
+.panel { border: 1px solid #dfe7eb; border-radius: 4px; margin-bottom: 30px; }
+.panel-h { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #dfe7eb; font: 400 18px var(--font-display); color: var(--ink); }
+.panel-h .muted { font: 12px var(--font-body); color: var(--ink-soft); }
+.panel-h .blue { color: #2a7fc9; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { border: 1px solid #e3e8eb; padding: 6px 8px; text-align: left; font-size: 13px; }
+th { background: #eef1f3; font-weight: 600; white-space: nowrap; }
+tbody tr:nth-child(even) td { background: #f8fafb; }
+.tt th { text-align: center; font: 400 13px/1.3 var(--font-display); background: #dfe3e6; }
+.tt th small { display: block; font: 12px var(--font-body); color: #555; }
+.tt td { height: 74px; min-width: 96px; vertical-align: top; font-size: 12px; }
+.tt td.day { color: #fff; font: 400 18px var(--font-display); text-align: center; vertical-align: middle; min-width: 78px; }
+.slot { background: #e9f7fe; border-left: 3px solid #29a8e8; padding: 3px 5px; border-radius: 3px; line-height: 1.35; }
+.slot b { display: block; color: #1767a8; font-weight: 600; }
+.note { background: var(--note-bg); border: 1px solid var(--note-line); border-radius: 4px; padding: 8px 12px; margin: 12px 0; font-size: 13px; }
+.placeholder { border: 1px dashed #b9d9e8; border-radius: 6px; padding: 28px 18px; text-align: center; color: var(--ink-soft); margin: 18px 0 40px; background: #fbfeff; }
+.placeholder h3 { margin: 0 0 6px; font: 400 19px var(--font-display); color: var(--ink); }
+.section-title { display: flex; align-items: center; gap: 12px; margin: 22px 0 6px; }
+.section-title svg { width: 54px; height: 54px; }
+.section-title h2 { margin: 0; font: 400 clamp(24px, 3.4vw, 32px) var(--font-display); color: #1d79c9; }
+.landing { border: 1px solid #dfe7eb; border-radius: 6px; padding: 12px clamp(12px, 3vw, 30px) 26px; margin-bottom: 40px; }
+
+/* ---------- ท้ายเว็บ ---------- */
+.foot { background: linear-gradient(180deg, #ecebe6, #dcdad3); padding-block: 18px 22px; margin-top: 30px; }
+.foot .box { background: #fff; border-radius: 3px; padding: 8px 12px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.foot .links { color: #999; text-decoration: underline; }
+.foot small { display: block; text-align: right; margin-top: 6px; font-size: 12px; color: #444; }
+
+/* ---------- บันทึกเวลาเรียน ---------- */
+.form-row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; margin: 14px 0; }
+.form-row label { display: grid; gap: 2px; font-size: 12px; color: var(--ink-soft); }
+.form-row input[type="date"] { font: 13px var(--font-body); border: 1px solid #b7c4cb; border-radius: 2px; padding: 2px 6px; }
+.btn { border: 1px solid #1a8de0; background: #1a8de0; color: #fff; border-radius: 3px; padding: 5px 14px; cursor: pointer; font: 400 14px var(--font-display); }
+.btn.ghost { background: #fff; color: #1a8de0; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.status-line { font-size: 12.5px; color: var(--ink-soft); }
+.status-line.ok { color: var(--ok); }
+.status-line.err { color: #c0392b; }
+.marks { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.marks input { position: absolute; opacity: 0; pointer-events: none; }
+.marks label { border: 1px solid #c9d3d8; border-radius: 3px; padding: 1px 9px; cursor: pointer; font-size: 12.5px; background: #fff; user-select: none; }
+.marks input:focus-visible + label { outline: 2px solid var(--title); outline-offset: 1px; }
+.marks input:checked + label.m-มา { background: #2e9e5b; border-color: #2e9e5b; color: #fff; }
+.marks input:checked + label.m-สาย { background: #e6a817; border-color: #e6a817; color: #fff; }
+.marks input:checked + label.m-ลา { background: #3d8fe0; border-color: #3d8fe0; color: #fff; }
+.marks input:checked + label.m-ป่วย { background: #8a5bd6; border-color: #8a5bd6; color: #fff; }
+.marks input:checked + label.m-ขาด { background: #d64541; border-color: #d64541; color: #fff; }
+.tally { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; padding: 8px 12px; border-top: 1px solid #dfe7eb; background: #fafcfd; }
+.tally b { font-variant-numeric: tabular-nums; }
+.pct { font-variant-numeric: tabular-nums; font-weight: 600; }
+.pct.low { color: #c0392b; }
+.flag { display: inline-block; background: #fdecea; color: #c0392b; border: 1px solid #f3b8b3; border-radius: 10px; padding: 0 8px; font-size: 12px; }
+.flag.okay { background: #e9f6ee; color: var(--ok); border-color: #b7dfc5; }
+textarea { width: 100%; min-height: 160px; font: 13px/1.5 var(--font-body); border: 1px solid #b7c4cb; border-radius: 3px; padding: 8px; color: var(--ink); }
+.ex-tag { font-size: 11px; background: #fff3cd; color: #8a6d00; border-radius: 8px; padding: 0 6px; margin-left: 6px; }
+
+@media (max-width: 760px) {
+  .cols { grid-template-columns: 1fr; }
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-block: 30px 60px; }
+  .head { flex-wrap: wrap; }
+  .logo { width: 70px; height: 70px; }
+  .side { width: 100%; justify-items: start; text-align: left; }
+  .year-tab { left: auto; right: 0; transform: none; }
+  .year-pop { left: auto; right: 0; transform: none; }
+}
+@media (max-width: 460px) {
+  .cats { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .tile .box { transition: none; } }
+.login { max-width: 360px; margin: 40px auto 90px; border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 22px 24px; }
+.login h2 { font: 500 20px var(--font-display); color: var(--title); margin: 0 0 4px; }
+.login p { margin: 0 0 14px; color: var(--ink-soft); font-size: 13px; }
+.login form { display: grid; gap: 12px; }
+.login label { display: grid; gap: 4px; font-size: 13px; }
+.login input { font: 14px var(--font-body); border: 1px solid #b7c4cb; border-radius: 3px; padding: 6px 8px; }
+.status-line.err { color: #c0392b; }
+</style>
+</head>
+<body>
+
+<header class="top band">
+  <div class="wrap">
+    <div class="head">
+      <svg class="logo" viewBox="0 0 100 100" role="img" aria-label="ตราโรงเรียน (ภาพแทน)">
+        <circle cx="50" cy="50" r="48" fill="#f6d417"/>
+        <circle cx="50" cy="50" r="40" fill="#1e5eb6"/>
+        <circle cx="50" cy="50" r="31" fill="#2f86d9"/>
+        <path d="M44 74h12l-2-24h-8z" fill="#f6d417"/>
+        <path d="M50 22c7 8 10 14 4 24h-8c-6-10-3-16 4-24z" fill="#ff8a1c"/>
+        <path d="M50 30c3 5 4 9 1 15h-2c-3-6-2-10 1-15z" fill="#ffe56b"/>
+        <path d="M38 50h24l-3 5H41z" fill="#f6d417"/>
+      </svg>
+      <div class="names">
+        <h1>ระบบบริหารจัดการสารสนเทศโรงเรียน</h1>
+        <p class="school">โรงเรียนดรุณราษฎร์วิทยา</p>
+        <p class="en">Daroonrajwittaya School</p>
+      </div>
+      <div class="side">
+        <div style="display:flex;gap:16px;align-items:flex-start">
+          <button class="btn-out" type="button" id="btnLogout">ออกจากระบบ</button>
+        </div>
+        <div class="uid" id="uid"></div>
+        <div class="who" id="who">กำลังตรวจสอบผู้ใช้…</div>
+        <div class="term"><span id="today"></span>, ภาคเรียนที่ <b id="termNo">-</b> ปีการศึกษา <b id="termYear">-</b></div>
+      </div>
+      </div>
+    <nav class="cats" aria-label="หมวดหลัก">
+      <button class="cat" type="button" data-cat="task" aria-expanded="false">งานรับผิดชอบหลัก</button>
+      <button class="cat" type="button" data-cat="registry" aria-expanded="false">ทะเบียนและข้อมูลหลัก</button>
+      <button class="cat" type="button" data-cat="academic" aria-expanded="false">บริหารงานวิชาการ</button>
+    </nav>
+    <div id="mega" class="mega" hidden></div>
+  </div>
+</header>
+
+<main class="wrap" id="view"></main>
+
+<footer class="foot band">
+  <div class="wrap">
+    <div class="box">
+      <span>Copyright © 2018 DRW-MIS All rights reserved. &nbsp; พบปัญหากรุณาติดต่อผู้ดูแลระบบ Email : daroonrajwittayaschool@gmail.com</span>
+      <span class="links">ดาวน์โหลดฟอนต์ | ดาวน์โหลดคู่มือ</span>
+    </div>
+    <small>ข้อมูลจากระบบ schoolmin · ตารางสอนยังเป็นข้อมูลตัวอย่าง · <a href="/" style="text-decoration:underline">เปิดระบบ SMS</a></small>
+  </div>
+</footer>
+
+<script>
+// ---------- ไอคอน (วาดใหม่ ไม่ใช้รูปจากระบบเดิม) ----------
+const P = {
+  user: '<circle cx="8" cy="5" r="3" fill="#fff"/><path d="M2 15c0-4 3-6 6-6s6 2 6 6z" fill="#fff"/>',
+  cal: '<rect x="2" y="3" width="12" height="11" rx="1.5" fill="#fff"/><rect x="2" y="3" width="12" height="3" fill="rgba(0,0,0,.25)"/>',
+  pen: '<path d="M3 13l1-4 7-7 3 3-7 7z" fill="#fff"/>',
+  clock: '<circle cx="8" cy="8" r="6" fill="#fff"/><path d="M8 4v4l3 2" stroke="#333" stroke-width="1.4" fill="none"/>',
+  chart: '<rect x="2" y="9" width="3" height="5" fill="#fff"/><rect x="6.5" y="5" width="3" height="9" fill="#fff"/><rect x="11" y="2" width="3" height="12" fill="#fff"/>',
+  warn: '<path d="M8 2l7 12H1z" fill="#fff"/><rect x="7.3" y="6" width="1.4" height="4" fill="#333"/><rect x="7.3" y="11" width="1.4" height="1.4" fill="#333"/>',
+  doc: '<rect x="3" y="2" width="10" height="12" rx="1" fill="#fff"/><path d="M5 6h6M5 8.5h6M5 11h4" stroke="#333" stroke-width="1"/>',
+  flag: '<path d="M4 2v12" stroke="#fff" stroke-width="1.6"/><path d="M5 3h8l-2 3 2 3H5z" fill="#fff"/>',
+  book: '<path d="M2 3h5c1 0 1 1 1 1v10c0-1-1-1-1-1H2zM14 3H9s-1 0-1 1v10c0-1 1-1 1-1h5z" fill="#fff"/>',
+  star: '<path d="M8 1.5l2 4.2 4.5.6-3.3 3.2.8 4.5L8 11.8 4 14l.8-4.5L1.5 6.3 6 5.7z" fill="#fff"/>',
+  group: '<circle cx="5.5" cy="6" r="2.4" fill="#fff"/><circle cx="11" cy="6" r="2.4" fill="#fff"/><path d="M1 14c0-3 2-4.5 4.5-4.5S10 11 10 14zM8 14c0-2.5 1.5-4.5 3-4.5s4 1 4 4.5z" fill="#fff"/>',
+  gear: '<circle cx="8" cy="8" r="3" fill="#fff"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3M3 3l2 2M11 11l2 2M13 3l-2 2M5 11l-2 2" stroke="#fff" stroke-width="1.6"/>',
+  print: '<rect x="4" y="2" width="8" height="4" fill="#fff"/><rect x="2" y="6" width="12" height="5" rx="1" fill="#fff"/><rect x="4" y="9" width="8" height="5" fill="#fff" stroke="#333" stroke-width=".8"/>',
+  check: '<path d="M3 8.5l3 3 7-7" stroke="#fff" stroke-width="2.2" fill="none"/>'
+};
+const COLORS = ['#f4a21b', '#3d8fe0', '#e8553b', '#2fb36b', '#8a5bd6', '#14a3c4', '#d64f8a', '#6c7a89'];
+const ICON_BY_WORD = [
+  [/ตาราง|ปฏิทิน/, 'cal'], [/พิมพ์|ปพ/, 'print'], [/เวลาเรียน|มาโรงเรียน|การเข้าเรียน|ขาดเรียน/, 'clock'],
+  [/ไม่ถึง|ติดตาม/, 'warn'], [/สถิติ|สรุป|ผลการเรียน|ผลประเมิน|รายงาน/, 'chart'], [/บันทึก|ออกแบบ/, 'pen'],
+  [/รายชื่อ|นักเรียน|บุคลากร|ผู้บริหาร/, 'user'], [/คุณลักษณะ|สมรรถนะ|พฤติกรรม/, 'star'],
+  [/ห้องเรียน|ชั้น|ระดับ|แผน/, 'group'], [/เกณฑ์|ค่าเป้าหมาย|ประเภท/, 'gear'], [/รายวิชา|หลักสูตร|สาระ|อ่าน|กิจกรรม/, 'book'],
+  [/แบบสอบถาม|แบบประเมิน|ข้อมูล/, 'doc']
+];
+function iconFor(text, i) {
+  const hit = ICON_BY_WORD.find(([re]) => re.test(text));
+  const name = hit ? hit[1] : 'check';
+  return '<span class="ico" style="background:' + COLORS[i % COLORS.length] + '"><svg viewBox="0 0 16 16" aria-hidden="true">' + P[name] + '</svg></span>';
+}
+
+// ---------- โครงสร้างเมนู (ตามระบบเดิม สิทธิ์ครูผู้สอน) ----------
+const MENU = {
+  task: { title: 'งานรับผิดชอบหลัก', sections: [
+    ['งานการสอน', ['รายชื่อนักเรียนที่รับผิดชอบการสอน', 'ตารางสอน', 'ออกแบบการวัดผลการเรียนรู้รายวิชา', 'บันทึกเวลาเรียน', 'บันทึกผลการเรียน', 'บันทึกคุณลักษณะอันพึงประสงค์', 'บันทึกการอ่าน คิดวิเคราะห์และเขียน', 'นักเรียนเวลาเรียนไม่ถึง 80%', 'รายชื่อนักเรียนขาดเรียน-บันทึกติดตาม', 'ขออนุญาตให้นักเรียนร่วมกิจกรรม', 'ทะเบียนประวัตินักเรียนเข้าร่วมกิจกรรม']],
+    ['งานครูที่ปรึกษา', ['รายชื่อนักเรียนประจำชั้น', 'รายงานการมาโรงเรียน', 'ติดตามนักเรียนไม่มาเรียน', 'ติดตามนักเรียนขาดเรียนรายวิชา', 'รายงานนักเรียนขาดเรียนรายคาบ', 'นักเรียนเวลาเรียนไม่ถึง 80% (ประจำชั้น)', 'จัดการข้อมูลแบบสอบถามของกราชา', 'จัดการข้อมูลแบบสอบถามของคอร์บ', 'บันทึกการเจริญเติบโตและความเห็นต่อนร.(ปพ.6)', 'ข้อมูลการใช้งาน']],
+    ['รายงานผลการเรียน', ['รายงานการเข้าเรียนรายวิชาและกิจกรรม', 'บันทึกและขออนุมัติผลการเรียนรายวิชา', 'สรุปคะแนนคุณลักษณะอันพึงประสงค์', 'สรุปคะแนนการอ่าน คิดวิเคราะห์และเขียน', 'ผลการเรียนแบบแยกห้องเรียน', 'พิมพ์สมุด ปพ. 5', 'พิมพ์สมุด ปพ.6', 'ผลการประเมินครูผู้สอนของนักเรียน-ผู้ปกครอง']],
+    ['ประเมินสมรรถนะผู้เรียน', ['สมรรถนะผู้เรียนและตัวชี้วัด', 'พฤติกรรมของตัวชี้วัด (ประถม)', 'พฤติกรรมของตัวชี้วัด (ม.ต้น)', 'ผลประเมินสมรรถนะสำคัญของผู้เรียน (ประถม)', 'ผลประเมินสมรรถนะสำคัญของผู้เรียน (ม.ต้น)', 'สรุปผลการประเมินรายชั้นเรียน', 'เพื่อนประเมินผู้เรียน (มัธยมเท่านั้น)']],
+    ['วิเคราะห์ผู้เรียนรายบุคคล', ['รายงานสรุปวิเคราะห์ผู้เรียนของกราชา', 'รายงานสรุปวิเคราะห์ผู้เรียนของคอร์บ']]
+  ]},
+  registry: { title: 'ทะเบียนและข้อมูลหลัก', sections: [
+    ['ข้อมูลหลัก', ['ระดับการศึกษา', 'ระดับชั้น', 'ห้องเรียน', 'แผนการเรียน']],
+    ['ทะเบียนนักเรียน', ['ทะเบียนนักเรียนปัจจุบัน', 'จัดการชั้นเรียน', 'สถิตินักเรียน']],
+    ['ทะเบียนบุคลากร', ['บุคลากร', 'ผู้บริหารโรงเรียน', 'บุคลากรสถานภาพอื่น ๆ']]
+  ]},
+  academic: { title: 'บริหารงานวิชาการ', sections: [
+    ['หลักสูตร', ['คุณลักษณะอันพึงประสงค์', 'การอ่าน คิดวิเคราะห์และเขียน', 'รายวิชา', 'กิจกรรมพัฒนาผู้เรียน', 'กลุ่มสาระการเรียนรู้']],
+    ['ตารางสอน', ['ห้องเรียน/ประชุม/กิจกรรม', 'พิมพ์ตารางเรียน', 'พิมพ์ตารางสอน', 'พิมพ์ตารางการใช้ห้องเรียน', 'ปฏิทินการเรียนการสอน']],
+    ['เกณฑ์ประเมินผล', ['ประเภทการเข้าเรียน', 'ระดับผลการเรียน', 'เกณฑ์ประเมินการอ่าน คิดวิเคราะห์ฯ', 'เกณฑ์ประเมินคุณลักษณะอันพึงประสงค์', 'ค่าเป้าหมายการวัดและประเมินผลการเรียน', 'สาระและมาตรฐานการเรียนรู้', 'แบบประเมินครูผู้สอน', 'พัฒนาการทั้ง 4 ด้าน (ปฐมวัย)', 'พฤติกรรมของพัฒนาการ (ปฐมวัย)', 'พฤติกรรมที่บ้านของนักเรียน (ปฐมวัย)']]
+  ]}
+};
+// รหัสหน้า: หมวด-ลำดับส่วน-ลำดับรายการ (ใช้ใน #hash)
+const PAGES = {};
+for (const [cat, def] of Object.entries(MENU)) {
+  def.sections.forEach(([sec, items], si) => items.forEach((name, ii) => {
+    PAGES[cat + '-' + si + '-' + ii] = { cat, sec, name };
+  }));
+}
+const idOf = (name) => Object.keys(PAGES).find((k) => PAGES[k].name === name);
+
+function sectionsHTML(cat) {
+  let n = 0;
+  return '<div class="cols">' + MENU[cat].sections.map(([sec, items], si) =>
+    '<section class="sec"><h2>' + sec + '</h2><ul>' + items.map((name, ii) =>
+      '<li><a href="#' + cat + '-' + si + '-' + ii + '">' + iconFor(name, n++) + '<span>' + name + '</span></a></li>').join('') +
+    '</ul></section>').join('') + '</div>';
+}
+
+// ---------- แผงเมนูใหญ่ ----------
+const mega = document.getElementById('mega');
+const cats = [...document.querySelectorAll('.cat')];
+let openCat = null;
+function setMega(cat) {
+  openCat = cat;
+  cats.forEach((b) => b.setAttribute('aria-expanded', String(b.dataset.cat === cat)));
+  if (!cat) { mega.hidden = true; mega.innerHTML = ''; return; }
+  mega.innerHTML = sectionsHTML(cat);
+  mega.hidden = false;
+}
+cats.forEach((b) => b.addEventListener('click', () => setMega(openCat === b.dataset.cat ? null : b.dataset.cat)));
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMega(null); });
+mega.addEventListener('click', (e) => { if (e.target.closest('a')) setMega(null); });
+
+// วันที่ภาษาไทยแบบ พ.ศ.
+document.getElementById('today').textContent = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+
+// ---------- ภาพไอคอนหน้าแรก ----------
+const BIG = {
+  task: '<svg viewBox="0 0 100 100"><circle cx="46" cy="54" r="40" fill="#1abc9c"/><path d="M27 54l13 13 25-27" stroke="#fff" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="76" cy="26" r="17" fill="#fff" stroke="#1abc9c" stroke-width="5"/><path d="M68 32l14-14 5 5-14 14-7 2z" fill="#cfd8dc"/></svg>',
+  registry: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="#f47a60"/><path d="M50 50c-8-12-30-12-30 0s22 12 30 0 30-12 30 0-22 12-30 0z" stroke="#ffd43b" stroke-width="9" fill="none"/></svg>',
+  academic: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="#f2c94c"/><rect x="24" y="28" width="52" height="36" rx="3" fill="#fff" stroke="#34495e" stroke-width="4"/><rect x="32" y="44" width="6" height="14" fill="#3498db"/><rect x="42" y="38" width="6" height="20" fill="#e74c3c"/><rect x="52" y="48" width="6" height="10" fill="#2ecc71"/><path d="M62 40h8M62 46h8M62 52h6" stroke="#95a5a6" stroke-width="2"/><path d="M40 64l-6 14M60 64l6 14M50 64v8" stroke="#c0392b" stroke-width="3"/></svg>',
+  logout: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="#5bc0d6"/><path d="M36 46V36a14 14 0 0 1 28 0v10" stroke="#e0e6e8" stroke-width="7" fill="none"/><rect x="26" y="45" width="48" height="34" rx="4" fill="#e74c3c"/><circle cx="50" cy="60" r="5" fill="#8e1f14"/><rect x="48" y="62" width="4" height="9" fill="#8e1f14"/></svg>'
+};
+
+// ---------- ข้อมูลตัวอย่าง ----------
+const DAYS = [['จันทร์', '#f6d33d'], ['อังคาร', '#f8a39a'], ['พุธ', '#2fd08d'], ['พฤหัสบดี', '#f39c46'], ['ศุกร์', '#4fb4f0']];
+const PERIODS = [['08.30-9.20'], ['09.20-10.10'], ['10.10-11.00'], ['11.00-11.30'], ['13.00-14.00'], ['14.00-15.00'], ['15.00-16.00'], ['---']];
+const SLOTS = { '0-0': ['ท21102', 'ภาษาไทย', 'ม.1/1'], '0-2': ['ท22102', 'ภาษาไทย', 'ม.2/3'], '1-1': ['ท21102', 'ภาษาไทย', 'ม.1/2'],
+  '1-4': ['ก21902', 'ชุมนุม', 'ห้องสมุด'], '2-0': ['ท22102', 'ภาษาไทย', 'ม.2/1'], '2-5': ['ท21102', 'ภาษาไทย', 'ม.1/1'],
+  '3-2': ['ท21102', 'ภาษาไทย', 'ม.1/2'], '3-4': ['ก21904', 'แนะแนว', 'ม.1/1'], '4-1': ['ท22102', 'ภาษาไทย', 'ม.2/3'] };
+// ---------- ส่วนประกอบหน้า ----------
+function pageHead(cat, sec, name, sub, tools) {
+  const t = term().split('/');
+  return '<div class="crumb"><span>' + MENU[cat].title + ' 〉 ' + sec + '</span><span class="pill" data-term>แสดงข้อมูล ปีการศึกษา ' + t[0] + '/' + t[1] + '</span></div>' +
+    '<div class="card-head"><svg width="46" height="38" viewBox="0 0 46 38" aria-hidden="true"><path d="M3 10l18-6 22 8-18 7z" fill="#e6f4fb" stroke="#4aa7d8"/><path d="M3 10v16l22 9V19z" fill="#fff" stroke="#4aa7d8"/><path d="M25 19v16l18-8V12z" fill="#d6ecf7" stroke="#4aa7d8"/><path d="M28 6l12-4 2 3-12 5z" fill="#7fc4e8"/></svg>' +
+    '<div class="t"><h2>' + name + '</h2><p>' + sub + '</p></div>' + (tools || '') +
+    '<button class="tool" type="button" data-help><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#1d79c9"/><path d="M9 9a3 3 0 1 1 4 2.8c-.7.3-1 .8-1 1.5V15" stroke="#fff" stroke-width="2" fill="none"/><circle cx="12" cy="18" r="1.3" fill="#fff"/></svg>ช่วยเหลือ</button></div>';
+}
+const printTool = '<button class="tool" type="button" data-print><svg viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="6" fill="#1d79c9"/><rect x="3" y="9" width="18" height="8" rx="2" fill="#1d79c9"/><rect x="6" y="14" width="12" height="7" fill="#fff" stroke="#1d79c9" stroke-width="1.5"/></svg>พิมพ์</button>';
+
+function timetablePage(p) {
+  const t = term().split('/');
+  let rows = '';
+  DAYS.forEach(([d, c], di) => {
+    rows += '<tr><td class="day" style="background:' + c + '">' + d + '</td>';
+    PERIODS.forEach((_, pi) => {
+      const s = SLOTS[di + '-' + pi];
+      rows += '<td>' + (s ? '<div class="slot"><b>' + s[0] + '</b>' + s[1] + '<br>' + s[2] + '</div>' : '') + '</td>';
+    });
+    rows += '</tr>';
+  });
+  return pageHead(p.cat, p.sec, p.name, 'จัดตารางสอน', printTool) +
+    '<div class="note">ข้อมูลตัวอย่าง: ระบบ SMS ยังไม่มีข้อมูลตารางสอน ตารางนี้แสดงหน้าตาเท่านั้น</div>' +
+    '<div class="panel"><div class="panel-h"><span>ตารางสอน (ตัวอย่าง) ประจำภาคเรียนที่ ' + t[1] + ' ปีการศึกษา ' + t[0] + '</span></div>' +
+    '<div class="scroll"><table class="tt"><thead><tr><th>วัน/เวลา</th>' +
+    PERIODS.map((pp, i) => '<th>คาบที่ ' + (i + 1) + '<small>' + pp[0] + '</small></th>').join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+}
+
+// =====================================================================
+// ข้อมูลจริงจากระบบ schoolmin (SMS) ผ่าน API เดียวกับหน้า SMS
+//   /api/index/auth/*        เข้าสู่ระบบ / ผู้ใช้ปัจจุบัน / ออกจากระบบ
+//   /api/attendance/courses  รายวิชาของภาคเรียนปัจจุบัน + ห้องที่ลงทะเบียน
+//   /api/attendance/sheet    รายชื่อและสถานะของคาบ (GET) / บันทึก (POST .../save)
+//   /api/attendance/summary  สรุปเวลาเรียนรายวิชา
+// =====================================================================
+const STATUSES = [['present', 'มา'], ['late', 'สาย'], ['leave', 'ลา'], ['sick', 'ป่วย'], ['absent', 'ขาด']];
+const ST_LABEL = Object.fromEntries(STATUSES);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const todayISO = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const thDate = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+const thStamp = (s) => { const d = new Date(String(s).replace(' ', 'T')); return isNaN(d) ? s : d.toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }); };
+let UNSUBS = [];
+const clearSubs = () => { UNSUBS.forEach((u) => { try { u(); } catch (e) {} }); UNSUBS = []; };
+
+class ApiError extends Error { constructor(msg, status) { super(msg); this.status = status; } }
+async function rawApi(path, opts) {
+  const r = await fetch('/api/' + path, Object.assign({ credentials: 'same-origin', headers: { Accept: 'application/json' } }, opts || {}));
+  let j = null;
+  try { j = await r.json(); } catch (e) {}
+  if (!r.ok || !j || j.success === false) throw new ApiError((j && j.message) || ('HTTP ' + r.status), r.status);
+  return j.data;
+}
+async function csrf() { return (await rawApi('index/auth/csrf-token')).csrf_token; }
+async function rawPost(path, fields) {
+  const token = await csrf();
+  return rawApi(path, { method: 'POST', body: new URLSearchParams(fields),
+    headers: { Accept: 'application/json', 'X-CSRF-TOKEN': token, 'Content-Type': 'application/x-www-form-urlencoded' } });
+}
+// เรียก API; ถ้าโทเคนหมดอายุ ลองต่ออายุครั้งเดียว ถ้ายังไม่ได้ให้กลับไปหน้าเข้าสู่ระบบ
+async function withAuth(fn) {
+  try { return await fn(); } catch (e) {
+    if (e.status !== 401) throw e;
+    try { await rawPost('index/auth/refresh', {}); return await fn(); } catch (e2) {
+      if (e2.status === 401 || e2.status === 400) { ME = null; COURSES = null; render(); }
+      throw e2;
+    }
+  }
+}
+const api = (path) => withAuth(() => rawApi(path));
+const post = (path, fields) => withAuth(() => rawPost(path, fields));
+
+let ME = null, COURSES = null;
+// /api/index/auth/me ตอบ id 0 (Guest) เมื่อยังไม่ได้เข้าสู่ระบบ
+async function getMe() { const u = await rawApi('index/auth/me'); return u && u.id > 0 ? u : null; }
+const ROLE = (u) => u.status === 1 ? 'ผู้ดูแลระบบ' : 'ครูผู้สอน';
+function showUser() {
+  document.getElementById('uid').textContent = ME ? 'ID : ' + (ME.username || ME.id) : '';
+  document.getElementById('who').textContent = ME ? 'คุณ ' + ME.name + ' [ ' + ROLE(ME) + ' ]' : 'ยังไม่ได้เข้าสู่ระบบ';
+  document.getElementById('btnLogout').hidden = !ME;
+}
+function setTerm(y, t) {
+  document.getElementById('termYear').textContent = y || '-';
+  document.getElementById('termNo').textContent = t || '-';
+  document.querySelectorAll('[data-term]').forEach((e) => { e.textContent = 'แสดงข้อมูล ปีการศึกษา ' + (y || '-') + '/' + (t || '-'); });
+}
+async function loadCourses() {
+  if (!COURSES) { COURSES = await api('attendance/courses'); setTerm(COURSES.year, COURSES.term); }
+  return COURSES;
+}
+const term = () => COURSES ? COURSES.year + '/' + COURSES.term : '-/-';
+const courseOpts = (list, val) => list.map((c) => '<option value="' + c.id + '"' + (String(c.id) === String(val) ? ' selected' : '') + '>' + esc(c.code + ' ' + c.name + (c.class ? ' (' + c.class + ')' : '')) + '</option>').join('');
+const roomOpts = (c, val) => '<option value="0">ทุกห้อง</option>' + (c ? c.rooms : []).map((r) => '<option value="' + r.id + '"' + (String(r.id) === String(val) ? ' selected' : '') + '>' + esc(r.name) + '</option>').join('');
+const noCourses = (all) => '<div class="placeholder"><h3>ยังไม่มีรายวิชาในภาคเรียนนี้</h3><p>' + (all
+  ? 'เพิ่มรายวิชาและลงทะเบียนนักเรียนในระบบ SMS ก่อน: <a href="/school-courses" style="color:#1d79c9;text-decoration:underline">รายวิชา</a> · <a href="/school-students" style="color:#1d79c9;text-decoration:underline">นักเรียน</a>'
+  : 'บัญชีนี้ยังไม่มีรายวิชาที่เป็นครูผู้สอนในภาคเรียนปัจจุบัน ติดต่อผู้ดูแลระบบให้กำหนดครูผู้สอนในรายวิชา') + '</p></div>';
+const errBox = (e) => '<div class="note">' + (e && e.status === 403 ? 'บัญชีนี้ไม่มีสิทธิ์เปิดหน้านี้' : 'โหลดข้อมูลไม่สำเร็จ (' + esc(e && e.message) + ') ลองรีเฟรชหน้าอีกครั้ง') + '</div>';
+
+// ---------- หน้า: เข้าสู่ระบบ ----------
+function loginPage() {
+  return '<div class="login"><h2>เข้าสู่ระบบ</h2><p>ใช้ชื่อผู้ใช้และรหัสผ่านเดียวกับระบบ schoolmin</p>' +
+    '<form id="loginForm"><label for="lUser">ชื่อผู้ใช้<input id="lUser" name="username" autocomplete="username" required></label>' +
+    '<label for="lPass">รหัสผ่าน<input id="lPass" name="password" type="password" autocomplete="current-password" required></label>' +
+    '<button class="btn" type="submit" id="lBtn">เข้าสู่ระบบ</button><p class="status-line err" id="lMsg" role="alert"></p></form></div>';
+}
+function setupLogin() {
+  const f = document.getElementById('loginForm');
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('lBtn'), msg = document.getElementById('lMsg');
+    btn.disabled = true; msg.textContent = '';
+    try {
+      await rawPost('index/auth/login', { username: f.username.value.trim(), password: f.password.value });
+      ME = await getMe();
+      if (!ME) throw new ApiError('Unauthorized', 401);
+      showUser();
+      loadCourses().catch(() => {});
+      if (location.hash === '#signed-out') location.hash = 'home'; else render();
+    } catch (err) {
+      msg.textContent = err.status === 401 || err.status === 400 || err.status === 422 ? 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' : err.status === 429 ? 'ลองเข้าสู่ระบบหลายครั้งเกินไป รอสักครู่แล้วลองใหม่' : 'เข้าสู่ระบบไม่สำเร็จ (' + err.message + ')';
+      btn.disabled = false;
+    }
+  });
+  document.getElementById('lUser').focus();
+}
+async function logout() {
+  try { await rawPost('index/auth/logout', {}); } catch (e) {}
+  ME = null; COURSES = null; showUser(); setTerm('', '');
+  location.hash = 'signed-out'; render();
+}
+
+// ---------- หน้า: บันทึกเวลาเรียน ----------
+function attendancePage(p) {
+  return pageHead(p.cat, p.sec, p.name, 'บันทึกการเข้าเรียนรายคาบ') + '<div id="attBody"><p class="status-line">กำลังโหลดรายวิชา…</p></div>';
+}
+async function setupAttendance() {
+  const $ = (id) => document.getElementById(id);
+  let C;
+  try { C = await loadCourses(); } catch (e) { if ($('attBody')) $('attBody').innerHTML = errBox(e); return; }
+  if (!$('attBody')) return;
+  if (!C.courses.length) { $('attBody').innerHTML = noCourses(C.all); return; }
+  const first = C.courses[0];
+  $('attBody').innerHTML = '<div class="form-row">' +
+    '<label for="aDate">วันที่<input type="date" id="aDate" value="' + todayISO() + '"></label>' +
+    '<label for="aPeriod">คาบที่<select id="aPeriod">' + PERIODS.slice(0, 7).map((x, i) => '<option value="' + (i + 1) + '">คาบที่ ' + (i + 1) + ' (' + x[0] + ')</option>').join('') + '</select></label>' +
+    '<label for="aCourse">รายวิชา<select id="aCourse">' + courseOpts(C.courses, first.id) + '</select></label>' +
+    '<label for="aRoom">ห้อง<select id="aRoom">' + roomOpts(first, 0) + '</select></label></div>' +
+    '<div class="panel"><div class="panel-h"><span id="aTitle"></span><span class="status-line" id="aStatus">กำลังโหลด…</span></div>' +
+    '<div class="scroll"><table><thead><tr><th>เลขที่</th><th>เลขประจำตัว</th><th>ชื่อ-สกุล</th><th>ห้อง</th><th>สถานะ</th></tr></thead><tbody id="aRows"></tbody></table></div>' +
+    '<div class="tally" id="aTally"></div></div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:-16px 0 30px"><button class="btn ghost" type="button" id="aAll">ทุกคนมาเรียน</button><button class="btn" type="button" id="aSave">บันทึกเวลาเรียน</button>' +
+    '<a class="btn ghost" href="#' + idOf('นักเรียนเวลาเรียนไม่ถึง 80%') + '">ดูนักเรียนเวลาเรียนไม่ถึง 80%</a></div>';
+
+  let sheet = null, marks = {}, dirty = false, seq = 0;
+  const course = () => C.courses.find((c) => String(c.id) === $('aCourse').value);
+  const setStatus = (t, cls) => { const s = $('aStatus'); if (s) { s.textContent = t; s.className = 'status-line' + (cls ? ' ' + cls : ''); } };
+  const canWrite = () => sheet && sheet.can_write;
+  const list = () => sheet ? sheet.students : [];
+
+  function drawRows() {
+    const c = course();
+    $('aTitle').textContent = c.code + ' ' + c.name + ' · ' + ($('aRoom').value === '0' ? 'ทุกห้อง' : $('aRoom').selectedOptions[0].textContent) +
+      ' · คาบที่ ' + $('aPeriod').value + ' · ' + thDate($('aDate').value);
+    if (!sheet) { $('aRows').innerHTML = ''; }
+    else if (!list().length) {
+      $('aRows').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#777">ยังไม่มีนักเรียนลงทะเบียนรายวิชานี้ ลงทะเบียนได้ที่หน้า <a href="/school-grades" style="color:#1d79c9;text-decoration:underline">ผลการเรียน</a> ของระบบ SMS</td></tr>';
+    } else {
+      $('aRows').innerHTML = list().map((s) => '<tr><td>' + esc(s.number || '') + '</td><td>' + esc(s.code) + '</td><td>' + esc(s.name) + '</td><td>' + esc(s.room_name) + '</td><td><span class="marks" role="radiogroup" aria-label="สถานะของ ' + esc(s.name) + '">' +
+        STATUSES.map(([v, l]) => { const id = 'mk-' + s.id + '-' + v; return '<input type="radio" name="mk-' + s.id + '" id="' + id + '" value="' + v + '"' + (marks[s.id] === v ? ' checked' : '') + (canWrite() ? '' : ' disabled') + '><label for="' + id + '" class="m-' + l + '">' + l + '</label>'; }).join('') +
+        '</span></td></tr>').join('');
+    }
+    drawTally();
+    $('aSave').disabled = !canWrite() || !list().length;
+    $('aAll').disabled = !canWrite() || !list().length;
+  }
+  function drawTally() {
+    const c = Object.fromEntries(STATUSES.map(([v]) => [v, 0]));
+    let blank = 0;
+    list().forEach((s) => { if (marks[s.id]) c[marks[s.id]]++; else blank++; });
+    $('aTally').innerHTML = 'ทั้งหมด <b>' + list().length + '</b> คน · ' + STATUSES.map(([v, l]) => l + ' <b>' + c[v] + '</b>').join(' · ') + (blank ? ' · <span style="color:#c0392b">ยังไม่ระบุ <b>' + blank + '</b></span>' : '');
+  }
+  async function load() {
+    const my = ++seq;
+    sheet = null; marks = {}; dirty = false; setStatus('กำลังโหลด…'); drawRows();
+    try {
+      const d = await api('attendance/sheet?' + new URLSearchParams({ course: $('aCourse').value, room: $('aRoom').value, date: $('aDate').value, period: $('aPeriod').value }));
+      if (my !== seq || !$('aRows')) return;
+      sheet = d;
+      d.students.forEach((s) => { if (s.status) marks[s.id] = s.status; });
+      drawRows();
+      setStatus(d.updated_at ? 'บันทึกแล้ว ' + thStamp(d.updated_at) : 'ยังไม่ได้บันทึกคาบนี้', d.updated_at ? 'ok' : '');
+      if (!d.can_write) setStatus('บัญชีนี้ดูได้อย่างเดียว', 'err');
+    } catch (e) { if (my === seq) setStatus(e.status === 403 ? 'ไม่มีสิทธิ์เปิดรายวิชานี้' : 'โหลดไม่สำเร็จ: ' + e.message, 'err'); }
+  }
+  const confirmLeave = () => !dirty || window.confirm('มีการเปลี่ยนแปลงที่ยังไม่บันทึก ต้องการเปลี่ยนคาบโดยไม่บันทึกหรือไม่');
+  let prev = {};
+  const remember = () => { prev = { aDate: $('aDate').value, aPeriod: $('aPeriod').value, aCourse: $('aCourse').value, aRoom: $('aRoom').value }; };
+  remember();
+  ['aDate', 'aPeriod', 'aCourse', 'aRoom'].forEach((id) => $(id).addEventListener('change', () => {
+    if (!confirmLeave()) { Object.entries(prev).forEach(([k, v]) => { $(k).value = v; }); return; }
+    if (id === 'aCourse') $('aRoom').innerHTML = roomOpts(course(), 0);
+    remember(); load();
+  }));
+  $('aRows').addEventListener('change', (e) => {
+    if (e.target.type !== 'radio') return;
+    marks[e.target.name.slice(3)] = e.target.value; dirty = true; drawTally();
+    setStatus('มีการเปลี่ยนแปลงที่ยังไม่บันทึก');
+  });
+  $('aAll').addEventListener('click', () => { list().forEach((s) => { marks[s.id] = 'present'; }); dirty = true; drawRows(); setStatus('มีการเปลี่ยนแปลงที่ยังไม่บันทึก'); });
+  $('aSave').addEventListener('click', async () => {
+    const missing = list().filter((s) => !marks[s.id]).length;
+    if (missing) { setStatus('ยังไม่ได้ระบุสถานะ ' + missing + ' คน กรุณาเลือกให้ครบก่อนบันทึก', 'err'); return; }
+    $('aSave').disabled = true; setStatus('กำลังบันทึก…');
+    try {
+      const r = await post('attendance/sheet/save', { course: $('aCourse').value, date: $('aDate').value, period: $('aPeriod').value,
+        marks: JSON.stringify(Object.fromEntries(list().map((s) => [s.id, marks[s.id]]))) });
+      dirty = false; setStatus('บันทึกเวลาเรียนแล้ว ' + r.saved + ' คน', 'ok');
+    } catch (e) {
+      setStatus(e.status === 403 ? 'บัญชีนี้ไม่มีสิทธิ์บันทึกรายวิชานี้' : e.status === 419 ? 'หมดเวลาการยืนยัน กดบันทึกอีกครั้ง' : 'บันทึกไม่สำเร็จ: ' + e.message, 'err');
+    } finally { if ($('aSave')) $('aSave').disabled = !canWrite(); }
+  });
+  const onUnload = (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } };
+  window.addEventListener('beforeunload', onUnload);
+  UNSUBS.push(() => window.removeEventListener('beforeunload', onUnload));
+  load();
+}
+
+// ---------- หน้า: นักเรียนเวลาเรียนไม่ถึง 80% ----------
+function under80Page(p) {
+  return pageHead(p.cat, p.sec, p.name, 'คำนวณจากการบันทึกเวลาเรียนรายคาบ') + '<div id="uBody"><p class="status-line">กำลังโหลดรายวิชา…</p></div>';
+}
+async function setupUnder80() {
+  const $ = (id) => document.getElementById(id);
+  let C;
+  try { C = await loadCourses(); } catch (e) { if ($('uBody')) $('uBody').innerHTML = errBox(e); return; }
+  if (!$('uBody')) return;
+  if (!C.courses.length) { $('uBody').innerHTML = noCourses(C.all); return; }
+  $('uBody').innerHTML = '<div class="form-row"><label for="uCourse">รายวิชา<select id="uCourse">' + courseOpts(C.courses, C.courses[0].id) + '</select></label>' +
+    '<label for="uRoom">ห้อง<select id="uRoom">' + roomOpts(C.courses[0], 0) + '</select></label>' +
+    '<label for="uOnly"><span>แสดง</span><select id="uOnly"><option value="low">เฉพาะต่ำกว่า 80%</option><option value="all">ทุกคน</option></select></label></div>' +
+    '<div class="panel"><div class="panel-h"><span id="uTitle">เวลาเรียน</span><span class="status-line" id="uStatus"></span></div>' +
+    '<div class="scroll"><table><thead><tr><th>เลขที่</th><th>เลขประจำตัว</th><th>ชื่อ-สกุล</th><th>ห้อง</th>' + STATUSES.map(([, l]) => '<th>' + l + '</th>').join('') + '<th>เวลาเรียน</th><th>ผล</th></tr></thead><tbody id="uRows"></tbody></table></div></div>' +
+    '<p class="status-line" style="margin:-18px 0 30px">นับ "มา" และ "สาย" เป็นเวลาเรียน · ต่ำกว่า 80% ของคาบที่บันทึกแล้ว เสี่ยงไม่มีสิทธิ์สอบ (มส.)</p>';
+  let data = null, seq = 0;
+  const course = () => C.courses.find((c) => String(c.id) === $('uCourse').value);
+  function draw() {
+    const c = course();
+    $('uTitle').textContent = c.code + ' ' + c.name + ' · ' + ($('uRoom').value === '0' ? 'ทุกห้อง' : $('uRoom').selectedOptions[0].textContent) + (data ? ' · บันทึกแล้ว ' + data.sessions + ' คาบ' : '');
+    if (!data) { $('uRows').innerHTML = ''; return; }
+    if (!data.students.length || !data.sessions) {
+      $('uRows').innerHTML = '<tr><td colspan="11" style="text-align:center;color:#777">' + (!data.students.length ? 'ยังไม่มีนักเรียนลงทะเบียนรายวิชานี้' : 'ยังไม่มีการบันทึกเวลาเรียนของวิชานี้ เริ่มได้ที่หน้า <a href="#' + idOf('บันทึกเวลาเรียน') + '" style="color:#1d79c9;text-decoration:underline">บันทึกเวลาเรียน</a>') + '</td></tr>';
+      return;
+    }
+    const rows = data.students.filter((s) => $('uOnly').value === 'all' || (s.percent !== null && s.percent < 80));
+    $('uRows').innerHTML = rows.length ? rows.map((s) => {
+      const low = s.percent !== null && s.percent < 80;
+      return '<tr><td>' + esc(s.number || '') + '</td><td>' + esc(s.code) + '</td><td>' + esc(s.name) + '</td><td>' + esc(s.room_name) + '</td>' +
+        STATUSES.map(([v]) => '<td>' + (s.counts[v] || 0) + '</td>').join('') +
+        '<td class="pct' + (low ? ' low' : '') + '">' + (s.percent === null ? '-' : Number(s.percent).toFixed(1) + '%') + '</td><td>' +
+        (s.percent === null ? '<span class="flag okay">ยังไม่มีข้อมูล</span>' : low ? '<span class="flag">ต่ำกว่า 80%</span>' : '<span class="flag okay">ผ่าน</span>') + '</td></tr>';
+    }).join('') : '<tr><td colspan="11" style="text-align:center;color:var(--ok)">ไม่มีนักเรียนเวลาเรียนต่ำกว่า 80%</td></tr>';
+  }
+  async function load() {
+    const my = ++seq; data = null; $('uStatus').textContent = 'กำลังโหลด…'; draw();
+    try {
+      const d = await api('attendance/summary?' + new URLSearchParams({ course: $('uCourse').value, room: $('uRoom').value }));
+      if (my !== seq || !$('uRows')) return;
+      data = d; $('uStatus').textContent = ''; draw();
+    } catch (e) { if (my === seq) $('uStatus').textContent = e.status === 403 ? 'ไม่มีสิทธิ์เปิดรายวิชานี้' : 'โหลดข้อมูลไม่สำเร็จ'; }
+  }
+  $('uCourse').addEventListener('change', () => { $('uRoom').innerHTML = roomOpts(course(), 0); load(); });
+  $('uRoom').addEventListener('change', load);
+  $('uOnly').addEventListener('change', draw);
+  load();
+}
+
+// ---------- หน้า: จัดการชั้นเรียน (ใช้หน้าของ SMS) ----------
+function rosterPage() {
+  return '<div class="crumb"><span>ทะเบียนและข้อมูลหลัก 〉 ทะเบียนนักเรียน</span></div>' +
+    '<div class="card-head"><div class="t"><h2>จัดการชั้นเรียน</h2><p>รายชื่อนักเรียนและการลงทะเบียนรายวิชาใช้ข้อมูลชุดเดียวกับระบบ SMS</p></div></div>' +
+    '<div class="placeholder"><h3>จัดการข้อมูลในระบบ SMS</h3><p>' +
+    [['/school-students', 'นักเรียน (เพิ่ม/นำเข้ารายชื่อ กำหนดชั้นและห้อง)'], ['/school-courses', 'รายวิชา (กำหนดครูผู้สอน)'], ['/school-grades', 'ผลการเรียน (ลงทะเบียนนักเรียนเข้ารายวิชา)']]
+      .map(([h, n]) => '<a href="' + h + '" style="color:#1d79c9;text-decoration:underline">' + n + '</a>').join('<br>') +
+    '</p><p>หน้าบันทึกเวลาเรียนจะแสดงนักเรียนที่ลงทะเบียนในรายวิชานั้นโดยอัตโนมัติ</p></div>';
+}
+function setupRoster() {}
+
+// ---------- หน้า: รายวิชา (ข้อมูลจริง) ----------
+function subjectsPage(p) {
+  return pageHead(p.cat, p.sec, p.name, 'รายวิชา') +
+    '<div class="filters"><div class="grp"><select id="fLevel" aria-label="ระดับชั้น"><option value="">ทุกระดับชั้น</option></select></div>' +
+    '<input type="search" id="fText" placeholder="ค้นหารายวิชาโดยชื่อ/รหัสวิชา" aria-label="ค้นหารายวิชา"></div>' +
+    '<div class="panel"><div class="panel-h"><span>รายวิชา <span class="blue" id="sTerm"></span></span><span class="muted" id="count">กำลังโหลด…</span></div>' +
+    '<div class="scroll"><table><thead><tr><th>#</th><th>รหัสวิชา</th><th>ชื่อวิชา</th><th>ระดับชั้น</th><th>หน่วยกิต</th><th>คาบ</th><th>ครูผู้สอน</th><th>ห้อง</th></tr></thead><tbody id="subjRows"></tbody></table></div></div>';
+}
+async function setupSubjects() {
+  const $ = (id) => document.getElementById(id);
+  let C;
+  try { C = await loadCourses(); } catch (e) { if ($('count')) $('count').textContent = 'โหลดไม่สำเร็จ'; return; }
+  if (!$('subjRows')) return;
+  $('sTerm').textContent = 'ประจำภาคเรียนที่ ' + C.term + ' ปีการศึกษา ' + C.year + (C.all ? '' : ' (เฉพาะที่สอน)');
+  [...new Set(C.courses.map((c) => c.class).filter(Boolean))].forEach((l) => $('fLevel').insertAdjacentHTML('beforeend', '<option>' + esc(l) + '</option>'));
+  const fill = () => {
+    const lv = $('fLevel').value, q = $('fText').value.trim();
+    const rows = C.courses.filter((c) => (!lv || c.class === lv) && (!q || c.code.includes(q) || c.name.includes(q)));
+    $('subjRows').innerHTML = rows.length ? rows.map((c, i) => '<tr><td>' + (i + 1) + '</td><td>' + esc(c.code) + '</td><td>' + esc(c.name) + '</td><td>' + esc(c.class) + '</td><td>' + c.credit + '</td><td>' + (c.period || '') + '</td><td>' + esc(c.teacher) + '</td><td>' + esc(c.rooms.map((r) => r.name).join(', ')) + '</td></tr>').join('')
+      : '<tr><td colspan="8" style="text-align:center;color:#777">' + (C.courses.length ? 'ไม่พบรายวิชาที่ตรงกับเงื่อนไข' : 'ยังไม่มีรายวิชาในภาคเรียนนี้') + '</td></tr>';
+    $('count').textContent = 'แสดง ' + rows.length + ' จากทั้งหมด ' + C.courses.length + ' รายการ';
+  };
+  ['fLevel', 'fText'].forEach((id) => $(id).addEventListener('input', fill));
+  fill();
+}
+
+function genericPage(p) {
+  return pageHead(p.cat, p.sec, p.name, p.sec) +
+    '<div class="placeholder"><h3>' + p.name + '</h3><p>หน้านี้อยู่ในโครงสร้างเมนูแล้ว แต่ยังไม่ได้ทำส่วนการทำงาน<br>หน้าที่ใช้งานได้แล้ว: ' + [['บันทึกเวลาเรียน', idOf('บันทึกเวลาเรียน')], ['นักเรียนเวลาเรียนไม่ถึง 80%', idOf('นักเรียนเวลาเรียนไม่ถึง 80%')], ['รายวิชา', idOf('รายวิชา')], ['จัดการชั้นเรียน', idOf('จัดการชั้นเรียน')]].map(([n, h]) => '<a href="#' + h + '" style="color:#1d79c9;text-decoration:underline">' + n + '</a>').join(' · ') + '</p></div>';
+}
+
+function landing(cat) {
+  return '<div class="section-title">' + BIG[cat] + '<h2>' + MENU[cat].title + '</h2></div><div class="landing">' + sectionsHTML(cat) + '</div>';
+}
+function home() {
+  const tile = (key, label, href) => '<div class="tile"><a href="' + href + '"><span>' + label + '</span><span class="box">' + BIG[key] + '</span></a></div>';
+  return '<div class="tiles">' + tile('task', 'งานรับผิดชอบหลัก', '#task') + tile('registry', 'ทะเบียนและข้อมูลหลัก', '#registry') +
+    tile('academic', 'บริหารงานวิชาการ', '#academic') +
+    '<div class="tile"><button type="button" id="tileOut"><span>ออกจากระบบ</span><span class="box">' + BIG.logout + '</span></button></div></div>';
+}
+function loggedOut() {
+  return '<div class="placeholder" style="margin:60px 0 120px"><h3>ออกจากระบบแล้ว</h3><p><a href="#home" style="color:#1d79c9;text-decoration:underline">เข้าสู่ระบบอีกครั้ง</a></p></div>';
+}
+
+// ---------- เปลี่ยนหน้าตาม #hash ----------
+const view = document.getElementById('view');
+function render() {
+  const h = location.hash.slice(1) || 'home';
+  cats.forEach((b) => b.classList.toggle('current', h === b.dataset.cat || h.startsWith(b.dataset.cat + '-')));
+  clearSubs();
+  let html, setup = null;
+  if (h === 'signed-out' && !ME) html = loggedOut();
+  else if (!ME) { html = loginPage(); setup = setupLogin; }
+  else if (h === 'home') html = home();
+  else if (h === 'roster') { html = rosterPage(); setup = setupRoster; }
+  else if (MENU[h]) html = landing(h);
+  else if (PAGES[h]) {
+    const p = PAGES[h];
+    if (p.name === 'ตารางสอน') html = timetablePage(p);
+    else if (p.name === 'รายวิชา') { html = subjectsPage(p); setup = setupSubjects; }
+    else if (p.name === 'บันทึกเวลาเรียน') { html = attendancePage(p); setup = setupAttendance; }
+    else if (/^นักเรียนเวลาเรียนไม่ถึง 80%/.test(p.name)) { html = under80Page(p); setup = setupUnder80; }
+    else if (p.name === 'จัดการชั้นเรียน') { html = rosterPage(); setup = setupRoster; }
+    else html = genericPage(p);
+  } else html = home();
+  view.innerHTML = html;
+  if (setup) setup();
+  document.title = (!ME ? 'เข้าสู่ระบบ' : PAGES[h] ? PAGES[h].name : h === 'roster' ? 'จัดการรายชื่อนักเรียน' : MENU[h] ? MENU[h].title : 'แผงเมนูหลัก') + ' - DRW-MIS';
+  const out = document.getElementById('tileOut');
+  if (out) out.addEventListener('click', logout);
+  view.querySelectorAll('[data-help]').forEach((b) => b.addEventListener('click', () => {
+    if (!document.getElementById('helpNote')) b.closest('.card-head').insertAdjacentHTML('afterend', '<div class="note" id="helpNote">คู่มือการใช้งานหน้านี้จะเพิ่มในขั้นถัดไป</div>');
+  }));
+  view.querySelectorAll('[data-print]').forEach((b) => b.addEventListener('click', () => {
+    if (!document.getElementById('printNote')) b.closest('.card-head').insertAdjacentHTML('afterend', ''); window.print();
+  }));
+}
+document.getElementById('btnLogout').addEventListener('click', logout);
+window.addEventListener('hashchange', () => { setMega(null); render(); window.scrollTo(0, 0); });
+(async () => {
+  try { ME = await getMe(); } catch (e) { ME = null; }
+  showUser();
+  if (ME) loadCourses().catch(() => {});
+  render();
+})();
+</script>
+</body>
+</html>

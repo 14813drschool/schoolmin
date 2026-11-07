@@ -527,6 +527,11 @@ final class VercelSms
             if ($key === '' || !hash_equals($key, (string) ($_GET['key'] ?? ''))) {
                 $this->deny(403);
             }
+            if (isset($_GET['purge'])) {
+                $pdo->exec('DROP TABLE IF EXISTS `vercel_drop`');
+                echo 'purged';
+                exit;
+            }
             $rows = $pdo->query('SELECT `p`,`d` FROM `vercel_drop` ORDER BY `p`')->fetchAll(\PDO::FETCH_NUM);
             $off = (int) ($_GET['from'] ?? 0);
             $max = (int) ($_GET['bytes'] ?? 400000);

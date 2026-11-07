@@ -500,6 +500,52 @@ final class VercelSms
         $uri = (string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
         $path = '/'.ltrim(rawurldecode($uri), '/');
 
+        // TEMP: ช่องรับไฟล์ชั่วคราวสำหรับคัดลอกรูปจากระบบเดิม (จะลบออกหลังใช้งาน)
+        if ($path === '/drop-temp') {
+            $key = (string) getenv('SMS_SETUP_KEY');
+            header('Access-Control-Allow-Origin: *');
+            header('Content-Type: text/plain; charset=utf-8');
+            $pdo = $this->pdo();
+            $pdo->exec('CREATE TABLE IF NOT EXISTS `vercel_drop` (`p` VARCHAR(255) NOT NULL PRIMARY KEY, `d` LONGTEXT NOT NULL) ENGINE=InnoDB');
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $lines = explode("\n", (string) file_get_contents('php://input'));
+                if ($key === '' || !hash_equals($key, trim((string) array_shift($lines)))) {
+                    $this->deny(403);
+                }
+                $st = $pdo->prepare('REPLACE INTO `vercel_drop` (`p`,`d`) VALUES (?,?)');
+                $n = 0;
+                foreach ($lines as $l) {
+                    $kv = explode("\t", $l, 2);
+                    if (count($kv) === 2 && $kv[0] !== '') {
+                        $st->execute([$kv[0], $kv[1]]);
+                        $n++;
+                    }
+                }
+                echo 'ok '.$n;
+                exit;
+            }
+            if ($key === '' || !hash_equals($key, (string) ($_GET['key'] ?? ''))) {
+                $this->deny(403);
+            }
+            $rows = $pdo->query('SELECT `p`,`d` FROM `vercel_drop` ORDER BY `p`')->fetchAll(\PDO::FETCH_NUM);
+            $off = (int) ($_GET['from'] ?? 0);
+            $max = (int) ($_GET['bytes'] ?? 400000);
+            $out = '';
+            $i = 0;
+            foreach ($rows as $i => $r) {
+                if ($i < $off) {
+                    continue;
+                }
+                if ($out !== '' && strlen($out) + strlen($r[1]) > $max) {
+                    break;
+                }
+                $out .= $r[0]."\t".$r[1]."\n";
+                $i++;
+            }
+            echo 'NEXT '.$i.' OF '.count($rows)."\n".$out;
+            exit;
+        }
+
         // ไฟล์และโฟลเดอร์ที่ห้ามเปิดจากภายนอก
         if (strpos($path, '..') !== false
             || preg_match('#^/(settings|vercel)(/|$)|^/datas/(logs|cache)(/|$)|/\.|\.(md|sql|sqlite3?|log|bak|orig|dist|cache|gz|json\.lock)$#i', $path)

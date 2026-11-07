@@ -125,16 +125,56 @@ function admin_top(): string
         $cols = '';
         foreach ($sections as $sec => $items) {
             $links = '';
-            foreach ($items as $op => $label) {
-                [$text, $ic, $col] = is_array($label) ? $label + ['', 'fa-caret-right', '#0883DC'] : [$label, 'fa-caret-right', '#0883DC'];
-                $links .= '<a class="waiting_link" href="?module=admin&option='.$op.'"><i class="fa '.$ic.'" style="width:18px;text-align:center;color:'.$col.'"></i> '.h($text).'</a>';
-            }
-            $cols .= '<div class="adm-col"><h3>'.h($sec).'</h3>'.$links.'</div>';
+            $cols .= menu_col($sec, $items);
         }
         $panels .= '<div class="adm-panel" id="ap'.$i.'" style="display:none">'.$cols.'<div style="clear:both"></div></div>';
         $i++;
     }
     return $nav.'|'.$panels;
+}
+
+/** ไอคอนเล็กของเมนู (ตามคำในชื่อเมนู) */
+function menu_icon(string $text): array
+{
+    static $map = [
+        'เลื่อนชั้น' => ['fa-level-up', '#16A085'], 'ยังไม่กำหนดห้อง' => ['fa-question-circle', '#E67E22'], 'การเข้าเรียน' => ['fa-sign-in', '#16A085'], 'ใช้ห้องเรียน' => ['fa-table', '#2980B9'],
+        'ผู้ดูแล' => ['fa-cog', '#E67E22'], 'สิทธิ์' => ['fa-key', '#F1C40F'], 'ปีงบ' => ['fa-money', '#27AE60'], 'ปีการศึกษา' => ['fa-globe', '#2980B9'], 'ภาคเรียน' => ['fa-calendar', '#C0392B'],
+        'ระดับการศึกษา' => ['fa-graduation-cap', '#8E44AD'], 'ระดับชั้น' => ['fa-signal', '#2980B9'], 'ห้อง' => ['fa-building', '#16A085'], 'แผนการเรียน' => ['fa-book', '#27AE60'],
+        'ที่พัก' => ['fa-home', '#C0392B'], 'เดินทาง' => ['fa-bus', '#E67E22'], 'บัตร' => ['fa-id-card-o', '#2C3E50'], 'ผู้บริหาร' => ['fa-user-secret', '#2C3E50'],
+        'คุณสมบัติ' => ['fa-lightbulb-o', '#F39C12'], 'สถานภาพ' => ['fa-briefcase', '#8E5A2B'], 'สถานะ' => ['fa-tags', '#8E44AD'], 'บุคลากร' => ['fa-users', '#C0392B'],
+        'สถิติ' => ['fa-line-chart', '#C0392B'], 'จัดการชั้นเรียน' => ['fa-th', '#2980B9'], 'จัดชั้น' => ['fa-th', '#2980B9'], 'เลื่อนชั้น' => ['fa-level-up', '#16A085'], 'นำเข้า' => ['fa-upload', '#27AE60'],
+        'โอน' => ['fa-exchange', '#27AE60'], 'ผู้ปกครอง' => ['fa-child', '#D35400'], 'ใบเสร็จ' => ['fa-file-text-o', '#16A085'], 'ใบแจ้ง' => ['fa-file-o', '#E67E22'],
+        'ชำระ' => ['fa-money', '#27AE60'], 'ค่าบำรุง' => ['fa-money', '#27AE60'], 'ตาราง' => ['fa-table', '#2980B9'], 'ปฏิทิน' => ['fa-calendar', '#C0392B'], 'คาบ' => ['fa-clock-o', '#E67E22'],
+        'วันเรียน' => ['fa-calendar-check-o', '#16A085'], 'เกณฑ์' => ['fa-check-square-o', '#8E44AD'], 'ระดับผล' => ['fa-sort-numeric-desc', '#C0392B'], 'ปพ.' => ['fa-print', '#2C3E50'],
+        'พิมพ์' => ['fa-print', '#2C3E50'], 'ผลสอบ' => ['fa-bullhorn', '#E67E22'], 'แก้ตัว' => ['fa-repeat', '#E74C3C'], 'ท็อป' => ['fa-trophy', '#F1C40F'], 'GPA' => ['fa-sort-amount-desc', '#2980B9'],
+        'ติด 0' => ['fa-exclamation-circle', '#E74C3C'], 'ไม่มีสิทธิ์' => ['fa-ban', '#E74C3C'], '80%' => ['fa-exclamation-triangle', '#E74C3C'], 'สมรรถนะ' => ['fa-star', '#F39C12'],
+        'พฤติกรรม' => ['fa-heart', '#E74C3C'], 'วิเคราะห์' => ['fa-pie-chart', '#E67E22'], 'ความพร้อม' => ['fa-child', '#16A085'], 'ขาดเรียน' => ['fa-user-times', '#C0392B'],
+        'มาสาย' => ['fa-clock-o', '#E67E22'], 'หนังสือ' => ['fa-envelope', '#2C3E50'], 'กิจกรรม' => ['fa-flag', '#27AE60'], 'เข้าชั้นเรียน' => ['fa-check', '#27AE60'],
+        'ลงเวลา' => ['fa-clock-o', '#2980B9'], 'ราชการ' => ['fa-car', '#16A085'], 'การลา' => ['fa-bed', '#8E44AD'], 'ลาราชการ' => ['fa-bed', '#8E44AD'], 'ออกนอก' => ['fa-sign-out', '#E67E22'],
+        'มาตรฐาน' => ['fa-certificate', '#F39C12'], 'หน้าปก' => ['fa-picture-o', '#16A085'], 'SAR' => ['fa-book', '#2C3E50'], 'SSR' => ['fa-user', '#2980B9'], 'ประเมิน' => ['fa-check-circle', '#27AE60'],
+        'ข่าว' => ['fa-newspaper-o', '#E67E22'], 'เอกสาร' => ['fa-folder-open', '#F39C12'], 'ประวัติ' => ['fa-history', '#7F8C8D'], 'รหัสผ่าน' => ['fa-lock', '#C0392B'], 'บัญชี' => ['fa-user-circle', '#2980B9'],
+        'ครูผู้สอน' => ['fa-share', '#16A085'], 'โรงเรียน' => ['fa-university', '#2980B9'], 'รายวิชา' => ['fa-book', '#2980B9'], 'หลักสูตร' => ['fa-sitemap', '#16A085'], 'กลุ่มสาระ' => ['fa-cubes', '#8E44AD'],
+        'ลงทะเบียน' => ['fa-pencil-square-o', '#27AE60'], 'คัดลอก' => ['fa-copy', '#7F8C8D'], 'อนุมัติ' => ['fa-thumbs-up', '#27AE60'], 'คุณลักษณะ' => ['fa-heart', '#E74C3C'],
+        'การอ่าน' => ['fa-book', '#E67E22'], 'เพื่อน' => ['fa-handshake-o', '#16A085'], 'ทุน' => ['fa-gift', '#F39C12'], 'ตรวจสอบ' => ['fa-search', '#2980B9'], 'สรุป' => ['fa-list-alt', '#2980B9'],
+        'รายงาน' => ['fa-list-alt', '#2980B9'], 'นักเรียน' => ['fa-user', '#2980B9'],
+    ];
+    foreach ($map as $k => $v) {
+        if (mb_strpos($text, $k) !== false) {
+            return $v;
+        }
+    }
+    return ['fa-caret-right', '#0883DC'];
+}
+
+/** คอลัมน์เมนู 1 หมวด */
+function menu_col(string $sec, array $items): string
+{
+    $links = '';
+    foreach ($items as $op => $label) {
+        [$text, $ic, $col] = is_array($label) ? $label : array_merge([$label], menu_icon($label));
+        $links .= '<a class="waiting_link" href="?module=admin&option='.$op.'"><i class="fa '.$ic.'" style="width:18px;text-align:center;color:'.$col.'"></i> '.h($text).'</a>';
+    }
+    return '<div class="adm-col"><h3>'.h($sec).'</h3>'.$links.'</div>';
 }
 
 function admin_css(): string
@@ -146,6 +186,10 @@ function admin_css(): string
 .adm-panel{background:linear-gradient(#fff 70%,#E9FBFF)}.adm-col{float:left;width:276px;margin:0 0 14px 24px;padding-right:20px;border-right:1px solid #eef5f8;min-height:120px}.adm-col:nth-child(3n){border-right:none}.adm-col:nth-child(3n+1){clear:left}
 .adm-col h3{font-family:thaisansbold;font-weight:normal;font-size:30px;color:#0F5A9C;margin:4px 0 6px}
 .adm-col a{display:block;font-size:12px;padding:4px 0;border-bottom:dashed 1px #ccc;color:#333}
+.adm-box{width:981px;margin:10px auto 0;border:1px solid #ddd;border-radius:6px;background:#fff;text-align:left;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.adm-box .hd{display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid #e5e5e5;background:#fafafa;border-radius:6px 6px 0 0}.adm-box .hd img{width:58px;height:58px}
+.adm-box .hd h1{font-family:thaisansbold;font-weight:normal;font-size:40px;color:#0F5A9C;margin:0;flex:1}.adm-box .hd a.x{font-size:22px;color:#999;text-decoration:none}.adm-box .bd{padding:14px 0 4px}
+.adm-tile a{cursor:pointer}.adm-tile.on a{border:2px solid #E74C3C;box-shadow:0 0 10px #F5B7B1}
 .adm-tiles{width:984px;margin:30px auto;text-align:center}.adm-tile{display:inline-block;width:235px;margin:10px 0 30px;vertical-align:top}
 .adm-tile h2{font-family:thaisansbold;font-size:24px;color:#019DF1;margin:0 0 8px}.adm-tile a{display:inline-block;width:150px;height:140px;border:1px solid #C9EFFB;border-radius:8px;background:#fff}
 .adm-tile a:hover{box-shadow:0 0 10px #C9EFFB}.adm-tile.off a{opacity:.35;filter:grayscale(1)}.adm-tile.off h2{color:#aaa}.adm-tile img{width:116px;height:116px;margin-top:12px}
@@ -303,13 +347,22 @@ function admin_home(): string
 {
     $news = admin_news_box();
     $tiles = '';
+    $boxes = '';
     $mine = user_modules();
     foreach (admin_modules() as $mk => [$name, $icon, $sections]) {
-        $first = array_key_first(reset($sections));
-        $tiles .= '<div class="adm-tile'.(in_array($mk, $mine, true) ? '' : ' off').'"><h2>'.h($name).'</h2><a href="'.a_url($first).'"><img src="../images/admin/'.$icon.'.svg" alt=""/></a></div>';
+        $cols = '';
+        foreach ($sections as $sec => $items) {
+            $cols .= menu_col($sec, $items);
+        }
+        $boxes .= '<div class="adm-box" id="hb_'.$mk.'" style="display:none"><div class="hd"><img src="../images/admin/'.$icon.'.svg" alt=""/><h1>'.h($name).'</h1>'
+            .'<a class="x" href="javascript:void(0)" onclick="homeBox(\'\')" title="ปิด">&times;</a></div><div class="bd">'.$cols.'<div style="clear:both"></div></div></div>';
+        $tiles .= '<div class="adm-tile'.(in_array($mk, $mine, true) ? '' : ' off').'" id="ht_'.$mk.'"><h2>'.h($name).'</h2><a onclick="homeBox(\''.$mk.'\')"><img src="../images/admin/'.$icon.'.svg" alt=""/></a></div>';
     }
     $tiles .= '<div class="adm-tile"><h2>ออกจากระบบ</h2><a href="../logout.php"><img src="../images/admin/logout.svg" alt=""/></a></div>';
-    return '<div style="padding-top:5px">'.$news.'<div class="adm-tiles">'.$tiles.'</div></div>';
+    $js = '<script>function homeBox(m){var b=document.querySelectorAll(".adm-box"),t=document.querySelectorAll(".adm-tile");for(var i=0;i<b.length;i++){b[i].style.display=b[i].id==="hb_"+m?"block":"none";}'
+        .'for(var j=0;j<t.length;j++){t[j].classList.toggle("on",t[j].id==="ht_"+m);}try{sessionStorage.setItem("misHome",m);}catch(e){}if(m){window.scrollTo(0,0);}}'
+        .'(function(){var m="";try{m=sessionStorage.getItem("misHome")||"";}catch(e){}if(m&&document.getElementById("hb_"+m)){homeBox(m);}})();</script>';
+    return '<div style="padding-top:5px">'.$boxes.$news.'<div class="adm-tiles">'.$tiles.'</div></div>'.$js;
 }
 
 function admin_news_box(): string

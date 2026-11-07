@@ -20,11 +20,13 @@ function import_sets(): array
         'advisors' => ['ครูที่ปรึกษาประจำห้อง', 'main', ['ห้อง' => '1/1', 'ชื่อผู้ใช้ครูที่ปรึกษา' => 'teacher01'], 'ห้องละ 1 คน (คนใหม่แทนคนเดิม)'],
         'sstatus' => ['สถานะนักเรียน (เข้าใหม่/จบ/ย้าย/ลาออก)', 'main', ['รหัสนักเรียน' => '12345', 'สถานะ' => 'จบการศึกษา', 'วันที่' => '31/03/2570', 'หมายเหตุ' => ''],
             'สถานะ: '.implode(', ', array_keys(SSTATUS))],
-        'courses' => ['รายวิชา (ภาคเรียนปัจจุบัน)', 'academic', ['รหัสวิชา' => 'ค21101', 'ชื่อวิชา' => 'คณิตศาสตร์ 1', 'ระดับชั้น' => 'ม.1', 'หน่วยกิต' => '1.5', 'คาบ/สัปดาห์' => '3',
-            'ประเภท (พื้นฐาน/เพิ่มเติม/กิจกรรม)' => 'พื้นฐาน', 'ชื่อผู้ใช้ครูผู้สอน' => 'teacher01'], 'บันทึกเป็นรายวิชาของภาคเรียน '.yt().' (รหัสวิชา+ชั้นเดิม = ปรับปรุง)'],
-        'enroll' => ['ลงทะเบียนเรียน', 'academic', ['รหัสวิชา' => 'ค21101', 'ห้อง หรือ รหัสนักเรียน' => '1/1'], 'ใส่ห้อง = ลงทะเบียนทั้งห้อง / ใส่รหัสนักเรียน = รายคน (รายวิชาของภาคเรียน '.yt().')'],
-        'scores' => ['คะแนน/ผลการเรียน', 'academic', ['รหัสวิชา' => 'ค21101', 'รหัสนักเรียน' => '12345', 'คะแนนระหว่างภาค' => '60', 'คะแนนปลายภาค' => '25', 'ผลการเรียน (เว้นว่างให้คำนวณ)' => ''],
-            'เช่นไฟล์ส่งออกจากโปรแกรม bookmark (รายวิชาของภาคเรียน '.yt().')'],
+        'courses' => ['รายวิชา (ได้ทุกปีการศึกษา)', 'academic', ['ปีการศึกษา' => '2568', 'ภาคเรียน' => '1', 'รหัสวิชา' => 'ค21101', 'ชื่อวิชา' => 'คณิตศาสตร์ 1', 'ระดับชั้น' => 'ม.1', 'หน่วยกิต' => '1.5', 'คาบ/สัปดาห์' => '3',
+            'ประเภท (พื้นฐาน/เพิ่มเติม/กิจกรรม)' => 'พื้นฐาน', 'ชื่อผู้ใช้ครูผู้สอน' => 'teacher01'], 'ใส่ปีการศึกษา/ภาคเรียนของแต่ละแถว ไฟล์เดียวมีหลายปีได้ (เว้นว่าง = ภาคเรียนปัจจุบัน '.yt().') / ปี+ภาค+รหัสวิชา+ชั้นเดิม = ปรับปรุง'],
+        'enroll' => ['ลงทะเบียนเรียน (ได้ทุกปีการศึกษา)', 'academic', ['ปีการศึกษา' => '2568', 'ภาคเรียน' => '1', 'รหัสวิชา' => 'ค21101', 'ห้อง หรือ รหัสนักเรียน' => '1/1'],
+            'ใส่ห้อง = ลงทะเบียนทั้งห้อง (ตามรายชื่อห้องปัจจุบัน) / ใส่รหัสนักเรียน = รายคน / ปีการศึกษาเว้นว่าง = ภาคเรียนปัจจุบัน'],
+        'scores' => ['ผลการเรียน (ได้ทุกปีการศึกษา)', 'academic', ['ปีการศึกษา' => '2568', 'ภาคเรียน' => '1', 'รหัสวิชา' => 'ค21101', 'รหัสนักเรียน' => '12345', 'คะแนนระหว่างภาค' => '60', 'คะแนนปลายภาค' => '25',
+            'ผลการเรียน (เว้นว่างให้คำนวณ)' => '', 'ชื่อวิชา' => 'คณิตศาสตร์ 1', 'หน่วยกิต' => '1.5', 'ระดับชั้นของรายวิชา' => 'ม.1', 'ประเภท (พื้นฐาน/เพิ่มเติม/กิจกรรม)' => 'พื้นฐาน'],
+            'ไฟล์เดียวใส่ผลการเรียนหลายปี/หลายภาคได้ ถ้ายังไม่มีรายวิชาในภาคนั้นและกรอกชื่อวิชาไว้ ระบบจะสร้างรายวิชาให้ / ผลการเรียนใส่ได้ทั้งตัวเลขและ ร มส มผ ผ'],
         'clubs' => ['ชุมนุม', 'academic', ['ชื่อชุมนุม' => 'ชุมนุมดนตรีไทย', 'ชื่อผู้ใช้ครูที่ปรึกษา' => 'teacher01', 'สถานที่' => 'ห้องดนตรี', 'จำนวนรับ' => '30', 'ระดับชั้น (ว่าง=ทุกชั้น)' => ''], 'ภาคเรียน '.yt()],
         'behavior' => ['พฤติกรรมบกพร่อง (ตัดคะแนน)', 'affairs', ['รหัสนักเรียน' => '12345', 'วันที่' => '08/11/2569', 'พฤติกรรม/ความผิด' => 'มาสาย', 'คะแนนที่ตัด' => '5', 'รายละเอียด' => ''],
             'พฤติกรรมที่ยังไม่มีในเกณฑ์จะถูกเพิ่มในเกณฑ์ตัดคะแนนให้'],
@@ -138,9 +140,32 @@ function imp_sex(string $v): ?string
     return in_array(trim($v), ['ช', 'ชาย', 'm', 'M', 'ด.ช.', 'นาย'], true) ? 'm' : (in_array(trim($v), ['ญ', 'หญิง', 'f', 'F'], true) ? 'f' : null);
 }
 
-function imp_course(string $code, int $class = 0): ?array
+/** ปีการศึกษา/ภาคเรียนจากไฟล์ (เว้นว่าง = ภาคเรียนปัจจุบัน) */
+function imp_term(string $y, string $t): array
 {
-    [$y, $t] = term();
+    [$cy, $ct] = term();
+    $y = trim($y);
+    $t = trim($t);
+    if ($y === '' && $t === '') {
+        return [(int) $cy, (int) $ct];
+    }
+    $yy = (int) $y;
+    if ($yy > 0 && $yy < 2400) {
+        $yy += 543;
+    }
+    if ($yy < 2450 || $yy > 2700) {
+        throw new \RuntimeException('ปีการศึกษาไม่ถูกต้อง: '.$y);
+    }
+    $tt = $t === '' ? (int) $ct : (int) $t;
+    if ($tt < 1 || $tt > 3) {
+        throw new \RuntimeException('ภาคเรียนไม่ถูกต้อง: '.$t);
+    }
+    return [$yy, $tt];
+}
+
+function imp_course(string $code, int $class = 0, ?array $yt = null): ?array
+{
+    [$y, $t] = $yt ?? term();
     return q1('SELECT * FROM {course} WHERE `course_code`=? AND `year`=? AND `term`=?'.($class ? ' AND `class`='.$class : '').' ORDER BY `id` LIMIT 1', [trim($code), $y, $t]);
 }
 
@@ -259,16 +284,16 @@ function imp_row(string $set, array $c): string
             return 'update';
 
         case 'courses':
-            [$code, $name, $cls, $credit, $period, $type, $un] = $c;
+            [$yr, $tm, $code, $name, $cls, $credit, $period, $type, $un] = $c;
             $need($code, 'รหัสวิชา');
             $need($name, 'ชื่อวิชา');
+            [$y, $t] = imp_term($yr, $tm);
             $cid = imp_class($cls);
             $typeId = array_search(trim($type), COURSE_TYPES, true) ?: 1;
             $tid = imp_user($un);
             if ($un !== '' && !$tid) {
                 throw new \RuntimeException('ไม่พบครู '.$un);
             }
-            [$y, $t] = term();
             $v = [mb_substr(trim($name), 0, 50), (int) $tid, $cid, max(0, (int) $period), min(9.9, max(0, (float) $credit)), (int) $typeId];
             if ($ex = q1('SELECT `id` FROM {course} WHERE `course_code`=? AND `class`=? AND `year`=? AND `term`=?', [trim($code), $cid, $y, $t])) {
                 q('UPDATE {course} SET `course_name`=?, `teacher_id`=IF(?>0,?,`teacher_id`), `class`=?, `period`=?, `credit`=?, `type`=? WHERE `id`=?', [$v[0], $v[1], $v[1], $v[2], $v[3], $v[4], $v[5], (int) $ex['id']]);
@@ -278,14 +303,15 @@ function imp_row(string $set, array $c): string
             return 'add';
 
         case 'enroll':
-            [$code, $who] = $c;
+            [$yr, $tm, $code, $who] = $c;
+            $yt = imp_term($yr, $tm);
             $rid = imp_room($who);
             $one = $rid ? null : imp_student($who);
             if (!$rid && !$one) {
                 throw new \RuntimeException('ไม่พบห้องหรือนักเรียน '.$who);
             }
-            $course = imp_course($code, $rid ? (int) (q1('SELECT `class` FROM {student} WHERE `room`=? LIMIT 1', [$rid])['class'] ?? 0) : (int) $one['class']) ?? imp_course($code)
-                ?? throw new \RuntimeException('ไม่พบรายวิชา '.$code.' ในภาคเรียน '.yt());
+            $course = imp_course($code, $rid ? (int) (q1('SELECT `class` FROM {student} WHERE `room`=? LIMIT 1', [$rid])['class'] ?? 0) : (int) $one['class'], $yt) ?? imp_course($code, 0, $yt)
+                ?? throw new \RuntimeException('ไม่พบรายวิชา '.$code.' ในภาคเรียน '.$yt[1].'/'.$yt[0]);
             $list = $rid ? q('SELECT S.`id`, S.`number`, S.`room` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`room`=? AND U.`active`=1', [$rid]) : [$one];
             $n = 0;
             foreach ($list as $s) {
@@ -297,10 +323,21 @@ function imp_row(string $set, array $c): string
             return $n ? 'add' : 'update';
 
         case 'scores':
-            [$code, $sc, $mid, $fin, $g] = $c;
+            [$yr, $tm, $code, $sc, $mid, $fin, $g, $cname, $credit, $ccls, $ctype] = $c;
+            $need($code, 'รหัสวิชา');
+            $yt = imp_term($yr, $tm);
             $s = imp_student($sc) ?? throw new \RuntimeException('ไม่พบนักเรียน '.$sc);
-            $course = imp_course($code, (int) $s['class']) ?? imp_course($code) ?? throw new \RuntimeException('ไม่พบรายวิชา '.$code.' ในภาคเรียน '.yt());
-            $g = trim($g) !== '' ? trim($g) : grade_of((int) $mid + (int) $fin);
+            $cc = imp_class($ccls);
+            $course = imp_course($code, $cc ?: (int) $s['class'], $yt) ?? imp_course($code, 0, $yt);
+            if (!$course) {
+                if (trim($cname) === '') {
+                    throw new \RuntimeException('ไม่พบรายวิชา '.$code.' ในภาคเรียน '.$yt[1].'/'.$yt[0].' (กรอกชื่อวิชาเพื่อให้สร้างรายวิชาอัตโนมัติ)');
+                }
+                q('INSERT INTO {course} (`course_name`,`course_code`,`teacher_id`,`class`,`period`,`credit`,`type`,`year`,`term`) VALUES (?,?,0,?,0,?,?,?,?)',
+                    [mb_substr(trim($cname), 0, 50), mb_substr(trim($code), 0, 20), $cc ?: (int) $s['class'], min(9.9, max(0, (float) $credit)), (int) (array_search(trim($ctype), COURSE_TYPES, true) ?: 1), $yt[0], $yt[1]]);
+                $course = imp_course($code, $cc ?: (int) $s['class'], $yt);
+            }
+            $g = trim($g) !== '' ? trim($g) : ((trim($mid) === '' && trim($fin) === '') ? '' : grade_of((int) $mid + (int) $fin));
             if ($ex = q1('SELECT `id` FROM {grade} WHERE `student_id`=? AND `course_id`=?', [(int) $s['id'], (int) $course['id']])) {
                 q('UPDATE {grade} SET `midterm`=?, `final`=?, `grade`=? WHERE `id`=?', [(int) $mid, (int) $fin, $g, (int) $ex['id']]);
                 return 'update';

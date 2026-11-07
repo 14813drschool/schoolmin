@@ -1,0 +1,443 @@
+<?php
+/**
+ * mis/app/import.php
+ * นำเข้าข้อมูลจากไฟล์ CSV (ศูนย์รวม) — แต่ละชุดข้อมูลมีไฟล์ตัวอย่างให้ดาวน์โหลด
+ * ไฟล์ที่บันทึกจาก Excel (CSV UTF-8 หรือ CSV ธรรมดา/TIS-620) ใช้ได้ทั้งคู่
+ * ข้อมูลที่มีอยู่แล้ว (รหัสเดียวกัน) จะถูกปรับปรุง ไม่สร้างซ้ำ
+ */
+defined('MIS') or exit;
+
+/** ชุดข้อมูล: key => [ชื่อ, โมดูลที่ต้องมีสิทธิ์, [หัวคอลัมน์ => ตัวอย่าง], คำอธิบาย] */
+function import_sets(): array
+{
+    return [
+        'rooms' => ['ระดับชั้นและห้องเรียน', 'main', ['ระดับชั้น' => 'ม.1', 'ห้องเรียน' => '1/1'], 'สร้างระดับชั้น/ห้องที่ยังไม่มี (ตั้งชื่อห้องเป็น เลขชั้น/เลขห้อง)'],
+        'students' => ['ทะเบียนนักเรียน', 'main', ['รหัสนักเรียน' => '12345', 'คำนำหน้า' => 'เด็กชาย', 'ชื่อ' => 'สมชาย', 'นามสกุล' => 'ใจดี', 'เพศ (ช/ญ)' => 'ช', 'ระดับชั้น' => 'ม.1',
+            'ห้อง' => '1/1', 'เลขที่' => '1', 'เลขประจำตัวประชาชน' => '1234567890123', 'วันเกิด (วว/ดด/ปปปป)' => '01/05/2556', 'ชื่อผู้ปกครอง' => 'นายสมศักดิ์ ใจดี', 'โทรศัพท์ผู้ปกครอง' => '0812345678', 'ที่อยู่' => '1 ม.1 ต.ท่าศาลา'],
+            'นักเรียนใหม่ใช้รหัสนักเรียนเป็นชื่อผู้ใช้และรหัสผ่านเริ่มต้น / รหัสที่มีอยู่แล้วจะปรับปรุงข้อมูล (ห้อง เลขที่ ผู้ปกครอง ฯลฯ)'],
+        'personnel' => ['ข้อมูลบุคลากร', 'main', ['ชื่อผู้ใช้' => 'teacher01', 'คำนำหน้า' => 'นาง', 'ชื่อ' => 'สมศรี', 'นามสกุล' => 'รักเรียน', 'เพศ (ช/ญ)' => 'ญ', 'ตำแหน่ง' => 'ครู',
+            'กลุ่มสาระ/กลุ่มงาน' => 'คณิตศาสตร์', 'โทรศัพท์' => '0891234567', 'รหัสผ่าน' => 'teacher01'], 'ตำแหน่ง/กลุ่มสาระที่ยังไม่มีจะถูกสร้างให้ / รหัสผ่านเว้นว่าง = ใช้ชื่อผู้ใช้ (บัญชีเดิมไม่เปลี่ยนรหัสผ่านถ้าเว้นว่าง)'],
+        'advisors' => ['ครูที่ปรึกษาประจำห้อง', 'main', ['ห้อง' => '1/1', 'ชื่อผู้ใช้ครูที่ปรึกษา' => 'teacher01'], 'ห้องละ 1 คน (คนใหม่แทนคนเดิม)'],
+        'sstatus' => ['สถานะนักเรียน (เข้าใหม่/จบ/ย้าย/ลาออก)', 'main', ['รหัสนักเรียน' => '12345', 'สถานะ' => 'จบการศึกษา', 'วันที่' => '31/03/2570', 'หมายเหตุ' => ''],
+            'สถานะ: '.implode(', ', array_keys(SSTATUS))],
+        'courses' => ['รายวิชา (ภาคเรียนปัจจุบัน)', 'academic', ['รหัสวิชา' => 'ค21101', 'ชื่อวิชา' => 'คณิตศาสตร์ 1', 'ระดับชั้น' => 'ม.1', 'หน่วยกิต' => '1.5', 'คาบ/สัปดาห์' => '3',
+            'ประเภท (พื้นฐาน/เพิ่มเติม/กิจกรรม)' => 'พื้นฐาน', 'ชื่อผู้ใช้ครูผู้สอน' => 'teacher01'], 'บันทึกเป็นรายวิชาของภาคเรียน '.yt().' (รหัสวิชา+ชั้นเดิม = ปรับปรุง)'],
+        'enroll' => ['ลงทะเบียนเรียน', 'academic', ['รหัสวิชา' => 'ค21101', 'ห้อง หรือ รหัสนักเรียน' => '1/1'], 'ใส่ห้อง = ลงทะเบียนทั้งห้อง / ใส่รหัสนักเรียน = รายคน (รายวิชาของภาคเรียน '.yt().')'],
+        'scores' => ['คะแนน/ผลการเรียน', 'academic', ['รหัสวิชา' => 'ค21101', 'รหัสนักเรียน' => '12345', 'คะแนนระหว่างภาค' => '60', 'คะแนนปลายภาค' => '25', 'ผลการเรียน (เว้นว่างให้คำนวณ)' => ''],
+            'เช่นไฟล์ส่งออกจากโปรแกรม bookmark (รายวิชาของภาคเรียน '.yt().')'],
+        'clubs' => ['ชุมนุม', 'academic', ['ชื่อชุมนุม' => 'ชุมนุมดนตรีไทย', 'ชื่อผู้ใช้ครูที่ปรึกษา' => 'teacher01', 'สถานที่' => 'ห้องดนตรี', 'จำนวนรับ' => '30', 'ระดับชั้น (ว่าง=ทุกชั้น)' => ''], 'ภาคเรียน '.yt()],
+        'behavior' => ['พฤติกรรมบกพร่อง (ตัดคะแนน)', 'affairs', ['รหัสนักเรียน' => '12345', 'วันที่' => '08/11/2569', 'พฤติกรรม/ความผิด' => 'มาสาย', 'คะแนนที่ตัด' => '5', 'รายละเอียด' => ''],
+            'พฤติกรรมที่ยังไม่มีในเกณฑ์จะถูกเพิ่มในเกณฑ์ตัดคะแนนให้'],
+        'scholar' => ['นักเรียนได้รับทุนการศึกษา', 'affairs', ['รหัสนักเรียน' => '12345', 'ชื่อทุน' => 'ทุนเรียนดี', 'จำนวนเงิน' => '2000', 'วันที่ได้รับ' => '08/11/2569'], 'ทุนที่ยังไม่มีจะถูกเพิ่มให้ (ปีการศึกษา '.yt().')'],
+        'leave' => ['การลาของบุคลากร', 'personnel', ['ชื่อผู้ใช้' => 'teacher01', 'ประเภทการลา' => 'ลาป่วย', 'ตั้งแต่วันที่' => '08/11/2569', 'ถึงวันที่' => '09/11/2569', 'จำนวนวัน' => '2', 'หมายเหตุ' => ''],
+            'ประเภท: '.implode(', ', LEAVE_TYPES)],
+        'holidays' => ['ปฏิทินวันหยุด', 'personnel', ['วันที่' => '05/12/2569', 'รายละเอียด' => 'วันพ่อแห่งชาติ'], 'บันทึกเป็นวันหยุดราชการ'],
+        'fees' => ['รายการค่าบำรุงการศึกษา', 'finance', ['รายการ' => 'ค่าคอมพิวเตอร์', 'ระดับชั้น (ว่าง=ทุกชั้น)' => 'ม.1', 'จำนวนเงิน' => '500', 'ใบเสร็จ (โรงเรียน/สพฐ.)' => 'โรงเรียน'], 'ภาคเรียน '.yt()],
+        'payments' => ['การชำระเงินค่าบำรุงการศึกษา', 'finance', ['รหัสนักเรียน' => '12345', 'จำนวนเงิน' => '3500', 'วันที่ชำระ' => '08/11/2569', 'วิธีชำระ (เงินสด/ธนาคาร/โอน)' => 'ธนาคาร', 'เล่มที่' => '', 'เลขที่' => '', 'เลขอ้างอิง' => 'TX0001'],
+            'บันทึกเป็นการชำระของภาคเรียน '.yt().' (ข้อมูลเดิมของนักเรียนคนเดิมจะถูกแทนที่)'],
+    ];
+}
+
+/* ---------------------------------------------------------------- ตัวช่วยค้นหา */
+
+function imp_date(string $v): string
+{
+    $v = trim($v);
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $v)) {
+        $y = (int) substr($v, 0, 4);
+        return $y > 2400 ? ($y - 543).substr($v, 4) : $v;
+    }
+    return preg_match('#^\d{1,2}/\d{1,2}/\d{4}$#', $v) ? be_date_to_iso($v) : '';
+}
+
+function imp_class(string $v): int
+{
+    $v = trim($v);
+    if ($v === '') {
+        return 0;
+    }
+    $classes = cats('class');
+    foreach ($classes as $id => $n) {
+        if ($v === $n || $v === class_short($id) || str_replace(' ', '', $v) === str_replace(' ', '', $n)) {
+            return (int) $id;
+        }
+    }
+    return 0;
+}
+
+/** ห้องจากชื่อ "1/1" หรือ "ม.1/1" */
+function imp_room(string $v): int
+{
+    $v = trim($v);
+    if ($v === '') {
+        return 0;
+    }
+    foreach (cats('room') as $id => $n) {
+        if ($v === $n) {
+            return (int) $id;
+        }
+    }
+    foreach (room_options() as $id => $n) {
+        if ($v === $n) {
+            return (int) $id;
+        }
+    }
+    return 0;
+}
+
+function imp_user(string $username): int
+{
+    return $username === '' ? 0 : (int) (q1('SELECT `id` FROM {user} WHERE `username`=?', [trim($username)])['id'] ?? 0);
+}
+
+function imp_student(string $code): ?array
+{
+    return trim($code) === '' ? null : q1('SELECT S.*, U.`name` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`student_id`=?', [trim($code)]);
+}
+
+/** หา id ในหมวดหมู่ (สร้างใหม่ถ้าไม่มี) */
+function imp_cat(string $type, string $name): int
+{
+    $name = trim($name);
+    if ($name === '') {
+        return 0;
+    }
+    $id = array_search($name, cats($type), true);
+    if ($id !== false) {
+        return (int) $id;
+    }
+    cat_save($type, null, $name);
+    return (int) (q1('SELECT MAX(CAST(`category_id` AS UNSIGNED)) m FROM {category} WHERE `type`=?', [$type])['m'] ?? 0);
+}
+
+function imp_md_find(string $kind, string $name, string $scope = ''): ?string
+{
+    foreach (md_rows($kind, null, $scope) as $r) {
+        if (trim((string) (json_decode((string) $r['value'], true)['name'] ?? '')) === trim($name)) {
+            return (string) $r['r1'];
+        }
+    }
+    return null;
+}
+
+/** หา r1 ในรายการ mis_data ตามชื่อ (สร้างใหม่ถ้าไม่มี) */
+function imp_md(string $kind, string $name, array $extra = [], string $scope = ''): string
+{
+    foreach (md_rows($kind, null, $scope) as $r) {
+        if (trim((string) (json_decode((string) $r['value'], true)['name'] ?? '')) === trim($name)) {
+            return (string) $r['r1'];
+        }
+    }
+    $id = (string) round(microtime(true) * 1000).random_int(10, 99);
+    md_set($kind, $id, $scope, '', json_encode(['name' => trim($name)] + $extra, JSON_UNESCAPED_UNICODE));
+    return $id;
+}
+
+function imp_sex(string $v): ?string
+{
+    return in_array(trim($v), ['ช', 'ชาย', 'm', 'M', 'ด.ช.', 'นาย'], true) ? 'm' : (in_array(trim($v), ['ญ', 'หญิง', 'f', 'F'], true) ? 'f' : null);
+}
+
+function imp_course(string $code, int $class = 0): ?array
+{
+    [$y, $t] = term();
+    return q1('SELECT * FROM {course} WHERE `course_code`=? AND `year`=? AND `term`=?'.($class ? ' AND `class`='.$class : '').' ORDER BY `id` LIMIT 1', [trim($code), $y, $t]);
+}
+
+/* ---------------------------------------------------------------- การนำเข้าแต่ละแถว: คืนค่า 'add' | 'update' หรือ throw ข้อความผิดพลาด */
+
+function imp_row(string $set, array $c): string
+{
+    $c = array_pad($c, 16, '');
+    $need = function (string $v, string $label) {
+        if (trim($v) === '') {
+            throw new \RuntimeException('ไม่มี'.$label);
+        }
+    };
+    switch ($set) {
+        case 'rooms':
+            [$cls, $room] = $c;
+            $need($room, 'ชื่อห้อง');
+            $new = false;
+            if ($cls !== '' && !imp_class($cls)) {
+                cat_save('class', null, trim($cls));
+                $new = true;
+            }
+            if (!array_search(trim($room), cats('room'), true)) {
+                cat_save('room', null, trim($room));
+                $new = true;
+            }
+            return $new ? 'add' : 'update';
+
+        case 'students':
+            [$code, $title, $fn, $ln, $sex, $cls, $room, $num, $card, $birth, $parent, $pphone, $addr] = $c;
+            $need($code, 'รหัสนักเรียน');
+            $s = imp_student($code);
+            $cid = imp_class($cls);
+            $rid = imp_room($room);
+            if ($room !== '' && !$rid) {
+                throw new \RuntimeException('ไม่พบห้อง '.$room.' (นำเข้าระดับชั้นและห้องเรียนก่อน)');
+            }
+            $card = preg_replace('/\D/', '', $card);
+            $u = array_filter(['name' => trim($fn) !== '' ? trim($title.$fn.' '.$ln) : null, 'sex' => imp_sex($sex), 'birthday' => imp_date($birth) ?: null, 'id_card' => strlen($card) === 13 ? $card : null], fn($v) => $v !== null);
+            if ($s) {
+                save_user((int) $s['id'], $u);
+                $set = [];
+                $p = [];
+                foreach (['class' => $cid ?: null, 'room' => $rid ?: null, 'number' => $num !== '' ? (int) $num : null, 'id_card' => $u['id_card'] ?? null, 'parent' => $parent !== '' ? mb_substr($parent, 0, 100) : null,
+                    'parent_phone' => $pphone !== '' ? mb_substr($pphone, 0, 32) : null, 'address' => $addr !== '' ? mb_substr($addr, 0, 100) : null] as $k => $v) {
+                    if ($v !== null) {
+                        $set[] = "`$k`=?";
+                        $p[] = $v;
+                    }
+                }
+                if ($set) {
+                    q('UPDATE {student} SET '.implode(',', $set).' WHERE `id`=?', array_merge($p, [(int) $s['id']]));
+                }
+                return 'update';
+            }
+            $need($fn, 'ชื่อ');
+            if (username_taken(trim($code), 0)) {
+                throw new \RuntimeException('ชื่อผู้ใช้ '.$code.' ถูกใช้แล้ว');
+            }
+            $uid = save_user(0, $u + ['username' => trim($code), 'status' => 0, 'active' => 1], trim($code));
+            q('INSERT INTO {student} (`id`,`student_id`,`class`,`room`,`number`,`id_card`,`department`,`parent`,`parent_phone`,`address`) VALUES (?,?,?,?,?,?,0,?,?,?)',
+                [$uid, trim($code), $cid, $rid, $num === '' ? null : (int) $num, $u['id_card'] ?? null, mb_substr($parent, 0, 100), mb_substr($pphone, 0, 32), mb_substr($addr, 0, 100)]);
+            return 'add';
+
+        case 'personnel':
+            [$un, $title, $fn, $ln, $sex, $pos, $dep, $phone, $pw] = $c;
+            $need($un, 'ชื่อผู้ใช้');
+            $id = imp_user($un);
+            if ($id && q1('SELECT 1 x FROM {student} WHERE `id`=?', [$id])) {
+                throw new \RuntimeException('ชื่อผู้ใช้ '.$un.' เป็นบัญชีนักเรียน');
+            }
+            if (!$id) {
+                $need($fn, 'ชื่อ');
+            }
+            $u = array_filter(['username' => trim($un), 'name' => trim($fn) !== '' ? trim($title.$fn.' '.$ln) : null, 'sex' => imp_sex($sex), 'phone' => trim($phone) !== '' ? trim($phone) : null], fn($v) => $v !== null);
+            $uid = save_user($id, $id ? $u : $u + ['status' => 0, 'active' => 1, 'permission' => ',can_teacher,'], trim($pw) !== '' ? trim($pw) : ($id ? '' : trim($un)));
+            $posId = imp_cat('position', $pos);
+            $depId = imp_cat('department', $dep);
+            if (q1('SELECT 1 x FROM {personnel} WHERE `id`=?', [$uid])) {
+                if ($posId || $depId) {
+                    q('UPDATE {personnel} SET `position`=IF(?>0,?,`position`), `department`=IF(?>0,?,`department`) WHERE `id`=?', [$posId, $posId, $depId, $depId, $uid]);
+                }
+            } else {
+                q('INSERT INTO {personnel} (`id`,`position`,`department`,`order`,`class`,`room`) VALUES (?,?,?,0,0,0)', [$uid, $posId, $depId]);
+            }
+            return $id ? 'update' : 'add';
+
+        case 'advisors':
+            [$room, $un] = $c;
+            $rid = imp_room($room);
+            $uid = imp_user($un);
+            if (!$rid) {
+                throw new \RuntimeException('ไม่พบห้อง '.$room);
+            }
+            if (!$uid || !q1('SELECT 1 x FROM {personnel} WHERE `id`=?', [$uid])) {
+                throw new \RuntimeException('ไม่พบบุคลากร '.$un);
+            }
+            $cid = 0;
+            foreach (rooms_by_class() as $cl => $rs) {
+                if (isset($rs[$rid])) {
+                    $cid = (int) $cl;
+                }
+            }
+            q('UPDATE {personnel} SET `class`=0, `room`=0 WHERE `room`=? AND `id`<>?', [$rid, $uid]);
+            q('UPDATE {personnel} SET `class`=?, `room`=? WHERE `id`=?', [$cid, $rid, $uid]);
+            return 'update';
+
+        case 'sstatus':
+            [$code, $st, $date, $note] = $c;
+            $s = imp_student($code) ?? throw new \RuntimeException('ไม่พบนักเรียน '.$code);
+            $key = array_search(trim($st), SSTATUS, true) ?: (isset(SSTATUS[trim($st)]) ? trim($st) : '');
+            if ($key === '') {
+                throw new \RuntimeException('สถานะไม่ถูกต้อง: '.$st);
+            }
+            md_set('sstatus', 'i'.(int) $s['id'], '', '', json_encode(['student' => (string) $s['id'], 'status' => $key, 'date' => imp_date($date) ?: date('Y-m-d'), 'entry' => '', 'note' => trim($note)], JSON_UNESCAPED_UNICODE));
+            return 'update';
+
+        case 'courses':
+            [$code, $name, $cls, $credit, $period, $type, $un] = $c;
+            $need($code, 'รหัสวิชา');
+            $need($name, 'ชื่อวิชา');
+            $cid = imp_class($cls);
+            $typeId = array_search(trim($type), COURSE_TYPES, true) ?: 1;
+            $tid = imp_user($un);
+            if ($un !== '' && !$tid) {
+                throw new \RuntimeException('ไม่พบครู '.$un);
+            }
+            [$y, $t] = term();
+            $v = [mb_substr(trim($name), 0, 50), (int) $tid, $cid, max(0, (int) $period), min(9.9, max(0, (float) $credit)), (int) $typeId];
+            if ($ex = q1('SELECT `id` FROM {course} WHERE `course_code`=? AND `class`=? AND `year`=? AND `term`=?', [trim($code), $cid, $y, $t])) {
+                q('UPDATE {course} SET `course_name`=?, `teacher_id`=IF(?>0,?,`teacher_id`), `class`=?, `period`=?, `credit`=?, `type`=? WHERE `id`=?', [$v[0], $v[1], $v[1], $v[2], $v[3], $v[4], $v[5], (int) $ex['id']]);
+                return 'update';
+            }
+            q('INSERT INTO {course} (`course_name`,`course_code`,`teacher_id`,`class`,`period`,`credit`,`type`,`year`,`term`) VALUES (?,?,?,?,?,?,?,?,?)', [$v[0], mb_substr(trim($code), 0, 20), $v[1], $v[2], $v[3], $v[4], $v[5], $y, $t]);
+            return 'add';
+
+        case 'enroll':
+            [$code, $who] = $c;
+            $rid = imp_room($who);
+            $one = $rid ? null : imp_student($who);
+            if (!$rid && !$one) {
+                throw new \RuntimeException('ไม่พบห้องหรือนักเรียน '.$who);
+            }
+            $course = imp_course($code, $rid ? (int) (q1('SELECT `class` FROM {student} WHERE `room`=? LIMIT 1', [$rid])['class'] ?? 0) : (int) $one['class']) ?? imp_course($code)
+                ?? throw new \RuntimeException('ไม่พบรายวิชา '.$code.' ในภาคเรียน '.yt());
+            $list = $rid ? q('SELECT S.`id`, S.`number`, S.`room` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`room`=? AND U.`active`=1', [$rid]) : [$one];
+            $n = 0;
+            foreach ($list as $s) {
+                if (!q1('SELECT 1 x FROM {grade} WHERE `course_id`=? AND `student_id`=?', [(int) $course['id'], (int) $s['id']])) {
+                    q('INSERT INTO {grade} (`student_id`,`course_id`,`number`,`room`,`type`) VALUES (?,?,?,?,1)', [(int) $s['id'], (int) $course['id'], $s['number'], (int) $s['room']]);
+                    $n++;
+                }
+            }
+            return $n ? 'add' : 'update';
+
+        case 'scores':
+            [$code, $sc, $mid, $fin, $g] = $c;
+            $s = imp_student($sc) ?? throw new \RuntimeException('ไม่พบนักเรียน '.$sc);
+            $course = imp_course($code, (int) $s['class']) ?? imp_course($code) ?? throw new \RuntimeException('ไม่พบรายวิชา '.$code.' ในภาคเรียน '.yt());
+            $g = trim($g) !== '' ? trim($g) : grade_of((int) $mid + (int) $fin);
+            if ($ex = q1('SELECT `id` FROM {grade} WHERE `student_id`=? AND `course_id`=?', [(int) $s['id'], (int) $course['id']])) {
+                q('UPDATE {grade} SET `midterm`=?, `final`=?, `grade`=? WHERE `id`=?', [(int) $mid, (int) $fin, $g, (int) $ex['id']]);
+                return 'update';
+            }
+            q('INSERT INTO {grade} (`student_id`,`course_id`,`number`,`room`,`type`,`midterm`,`final`,`grade`) VALUES (?,?,?,?,0,?,?,?)', [(int) $s['id'], (int) $course['id'], (int) $s['number'], (int) $s['room'], (int) $mid, (int) $fin, $g]);
+            return 'add';
+
+        case 'clubs':
+            [$name, $un, $place, $seats, $cls] = $c;
+            $need($name, 'ชื่อชุมนุม');
+            $had = imp_md_find('club', $name, yt()) !== null;
+            $id = imp_md('club', $name, [], yt());
+            $d = json_decode((string) md_get('club', $id, yt()), true) ?: [];
+            $d = ['name' => trim($name), 'teacher' => (string) (imp_user($un) ?: ($d['teacher'] ?? '')), 'place' => trim($place), 'seats' => trim($seats), 'class' => (string) imp_class($cls), 'detail' => $d['detail'] ?? ''];
+            md_set('club', $id, yt(), '', json_encode($d, JSON_UNESCAPED_UNICODE));
+            return $had ? 'update' : 'add';
+
+        case 'behavior':
+            [$code, $date, $rule, $pts, $detail] = $c;
+            $s = imp_student($code) ?? throw new \RuntimeException('ไม่พบนักเรียน '.$code);
+            $need($rule, 'พฤติกรรม');
+            $rid = imp_md('sa_rule', $rule, ['points' => trim($pts), 'level' => '']);
+            md_set('sa_bad', (string) round(microtime(true) * 1000).random_int(10, 99), yt(), '', json_encode(['student' => (string) $s['id'], 'date' => imp_date($date) ?: date('Y-m-d'), 'rule' => $rid,
+                'points' => trim($pts), 'punish' => '', 'detail' => trim($detail)], JSON_UNESCAPED_UNICODE));
+            return 'add';
+
+        case 'scholar':
+            [$code, $fund, $amount, $date] = $c;
+            $s = imp_student($code) ?? throw new \RuntimeException('ไม่พบนักเรียน '.$code);
+            $need($fund, 'ชื่อทุน');
+            $fid = imp_md('sa_fund', $fund, ['sponsor' => '', 'amount' => trim($amount), 'count' => '', 'condition' => '']);
+            $had = md_get('sa_fund_student', 'i'.(int) $s['id'].'_'.$fid, yt()) !== null;
+            md_set('sa_fund_student', 'i'.(int) $s['id'].'_'.$fid, yt(), '', json_encode(['student' => (string) $s['id'], 'fund' => $fid, 'date' => imp_date($date) ?: date('Y-m-d'), 'amount' => trim($amount), 'note' => 'นำเข้าจากไฟล์'], JSON_UNESCAPED_UNICODE));
+            return $had ? 'update' : 'add';
+
+        case 'leave':
+            [$un, $type, $from, $to, $days, $note] = $c;
+            $uid = imp_user($un) ?: throw new \RuntimeException('ไม่พบบุคลากร '.$un);
+            $tk = array_search(trim($type), LEAVE_TYPES, true) ?: (isset(LEAVE_TYPES[trim($type)]) ? trim($type) : 'other');
+            $f = imp_date($from) ?: throw new \RuntimeException('วันที่ไม่ถูกต้อง: '.$from);
+            md_set('leave', (string) round(microtime(true) * 1000).random_int(10, 99), yt(), '', json_encode(['person' => (string) $uid, 'type' => $tk, 'from' => $f, 'to' => imp_date($to) ?: $f, 'days' => trim($days) ?: '1', 'note' => trim($note)], JSON_UNESCAPED_UNICODE));
+            return 'add';
+
+        case 'holidays':
+            [$date, $name] = $c;
+            $d = imp_date($date) ?: throw new \RuntimeException('วันที่ไม่ถูกต้อง: '.$date);
+            $had = md_get('workdays', 'd'.$d) !== null;
+            md_set('workdays', 'd'.$d, '', '', json_encode(['date' => $d, 'type' => 'หยุด', 'name' => trim($name)], JSON_UNESCAPED_UNICODE));
+            return $had ? 'update' : 'add';
+
+        case 'fees':
+            [$name, $cls, $amount, $grp] = $c;
+            $need($name, 'รายการ');
+            $cid = imp_class($cls);
+            if (trim($cls) !== '' && !$cid) {
+                throw new \RuntimeException('ไม่พบระดับชั้น '.$cls);
+            }
+            $had = md_get('fee_item', 'f'.md5(trim($name).'|'.$cid), yt()) !== null;
+            md_set('fee_item', 'f'.md5(trim($name).'|'.$cid), yt(), '', json_encode(['name' => trim($name), 'class' => (string) $cid, 'amount' => (string) (float) str_replace(',', '', $amount),
+                'group' => mb_strpos($grp, 'สพฐ') !== false ? 'obec' : 'school'], JSON_UNESCAPED_UNICODE));
+            return $had ? 'update' : 'add';
+
+        case 'payments':
+            [$code, $amount, $date, $method, $book, $no, $ref] = $c;
+            $s = imp_student($code) ?? throw new \RuntimeException('ไม่พบนักเรียน '.$code);
+            $had = md_get('pay', (int) $s['id'], yt()) !== null;
+            $m = mb_strpos($method, 'ธนาคาร') !== false ? 'bank' : (mb_strpos($method, 'โอน') !== false ? 'transfer' : 'cash');
+            pay_record((int) $s['id'], (float) str_replace(',', '', $amount), imp_date($date) ?: date('Y-m-d'), $m, mb_substr(trim($book), 0, 20), mb_substr(trim($no), 0, 20), mb_substr(trim($ref), 0, 40));
+            return $had ? 'update' : 'add';
+    }
+    throw new \RuntimeException('ไม่รู้จักชุดข้อมูล');
+}
+
+/* ---------------------------------------------------------------- หน้า */
+
+function adm_csv_import(bool $post)
+{
+    $sets = import_sets();
+    $mine = user_modules();
+    $sets = array_filter($sets, fn($s) => in_array($s[1], $mine, true));
+    $key = (string) ($_GET['set'] ?? $_POST['set'] ?? '');
+
+    // ดาวน์โหลดไฟล์ตัวอย่าง (UTF-8 BOM ให้ Excel อ่านภาษาไทยได้)
+    if (isset($_GET['tpl']) && isset($sets[$_GET['tpl']])) {
+        $cols = $sets[$_GET['tpl']][2];
+        $line = fn($a) => implode(',', array_map(fn($v) => '"'.str_replace('"', '""', (string) $v).'"', $a))."\r\n";
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="import_'.$_GET['tpl'].'.csv"');
+        header('Cache-Control: no-store');
+        echo "\xEF\xBB\xBF".$line(array_keys($cols)).$line(array_values($cols));
+        return null;
+    }
+
+    $result = '';
+    if ($post && isset($sets[$key])) {
+        $headers = array_keys($sets[$key][2]);
+        $rows = csv_rows('csv');
+        $add = $upd = 0;
+        $errs = [];
+        foreach ($rows as $i => $r) {
+            // ข้ามแถวหัวตาราง
+            if ($i === 0 && trim((string) ($r[0] ?? '')) === $headers[0]) {
+                continue;
+            }
+            if (!array_filter($r, fn($v) => trim((string) $v) !== '')) {
+                continue;
+            }
+            try {
+                imp_row($key, array_map(fn($v) => trim((string) $v), $r)) === 'add' ? $add++ : $upd++;
+            } catch (\Throwable $e) {
+                $errs[] = [$i + 1, implode(', ', array_slice($r, 0, 3)), $e instanceof \RuntimeException ? $e->getMessage() : 'บันทึกไม่ได้'];
+            }
+        }
+        if (!$rows) {
+            $result = msg_box('ไม่พบข้อมูลในไฟล์ — กรุณาเลือกไฟล์ .csv', false);
+        } else {
+            $result = msg_box('นำเข้า "'.h($sets[$key][0]).'" เรียบร้อย: เพิ่มใหม่ '.$add.' รายการ, ปรับปรุง '.$upd.' รายการ'.($errs ? ', <b style="color:#C0392B">ผิดพลาด '.count($errs).' แถว</b>' : ''), !$errs);
+            if ($errs) {
+                $er = '';
+                foreach (array_slice($errs, 0, 200) as $j => [$line, $data, $msg]) {
+                    $er .= zrow([$line, h($data), '<span style="color:#C0392B">'.h($msg).'</span>'], $j);
+                }
+                $result .= list_table('แถวที่นำเข้าไม่ได้', ['แถวที่', 'ข้อมูล', 'สาเหตุ'], $er).'<div style="height:10px"></div>';
+            }
+        }
+    }
+
+    $mods = admin_modules();
+    $rows = '';
+    $i = 0;
+    foreach ($sets as $k => [$label, $mod, $cols, $note]) {
+        $rows .= zrow([++$i, '<b>'.h($label).'</b><br><span class="gray_12">'.h($mods[$mod][3] ?? $mods[$mod][0]).'</span>', '<span style="font-size:11px">'.h(implode(', ', array_keys($cols))).'</span><br><span class="gray_12" style="font-size:11px">'.h($note).'</span>',
+            ['<a href="'.a_url('csv_import', '&tpl='.$k).'"><i class="fa fa-download"></i> ไฟล์ตัวอย่าง</a>', ' align="center" style="white-space:nowrap"'],
+            ['<form method="post" enctype="multipart/form-data" action="'.h(a_url('csv_import', '&set='.$k)).'" style="margin:0;white-space:nowrap"><input type="hidden" name="set" value="'.$k.'"/>'
+                .'<input type="file" name="csv" accept=".csv,.txt" required style="width:190px;font-size:11px"/> <input type="submit" value="นำเข้า" class="general radius" style="height:24px"/></form>', ' align="center"']], $i);
+    }
+    $help = '<p style="width:983px;margin:0 auto 8px;text-align:left" class="gray_12">ขั้นตอน: 1) ดาวน์โหลดไฟล์ตัวอย่าง 2) กรอกข้อมูลใน Excel ตามหัวคอลัมน์ (ลบแถวตัวอย่างออก) 3) บันทึกเป็น CSV (UTF-8) 4) เลือกไฟล์แล้วกด "นำเข้า"<br>'
+        .'วันที่ใช้รูปแบบ วว/ดด/ปปปป (พ.ศ.) / ระดับชั้นใช้ชื่อเต็มหรือชื่อย่อ เช่น ม.1 / ห้องใช้ชื่อห้อง เช่น 1/1 / ข้อมูลที่มีอยู่แล้วจะถูกปรับปรุง ไม่สร้างซ้ำ</p>';
+    return ['นำเข้าข้อมูลจากไฟล์ CSV', $result.$help.list_table('ชุดข้อมูลที่นำเข้าได้', ['#', 'ข้อมูล', 'คอลัมน์ในไฟล์', ['ตัวอย่าง', ' style="text-align:center"'], ['นำเข้าไฟล์', ' style="text-align:center"']], $rows, count($sets).' ชุดข้อมูล')];
+}

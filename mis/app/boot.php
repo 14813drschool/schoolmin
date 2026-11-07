@@ -18,4 +18,5 @@ require MIS_APP.'admin.php';
 require MIS_APP.'affairs.php';
 require MIS_APP.'modules.php';
 require MIS_APP.'finance.php';
+require MIS_APP.'import.php';
 require MIS_APP.'pages.php';

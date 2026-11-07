@@ -52,6 +52,7 @@ function affairs_menu(): array
             'sa_leave' => ['การขออนุญาตออกนอกโรงเรียน', 'fa-square-o', '#27AE60'],
             'sa_conduct' => ['ออกรายงานความประพฤตินักเรียน', 'fa-list-alt', '#2980B9'],
             'sa_letter' => ['ออกจดหมายถึงผู้ปกครองนักเรียน', 'fa-envelope', '#2C3E50'],
+            'csv_import' => ['นำเข้าข้อมูลจากไฟล์ CSV', 'fa-upload', '#27AE60'],
         ],
         'ทุนการศึกษา' => [
             'sa_fund' => ['กำหนดทุนการศึกษาของโรงเรียน', 'fa-briefcase', '#2980B9'],

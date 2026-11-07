@@ -7,42 +7,86 @@
  */
 defined('MIS') or exit;
 
-function is_admin(): bool
+const MODULE_KEYS = ['main', 'academic', 'affairs', 'personnel', 'general', 'finance', 'settings'];
+
+/** โมดูลที่ผู้ใช้มีสิทธิ์ (ผู้ดูแลระบบสูงสุด = ทุกโมดูล; ที่กำหนดในหน้ากำหนดผู้ดูแลระบบ; ถ้ายังไม่กำหนดใช้สิทธิ์เดิมของ SMS) */
+function user_modules(?array $u = null): array
 {
-    $u = me();
-    return $u && ((int) $u['status'] === 1 || array_intersect(['can_config', 'can_manage_student', 'can_manage_course', 'can_manage_personnel'], $u['permission']));
+    static $cache = [];
+    $u = $u ?? me();
+    if (!$u) {
+        return [];
+    }
+    $id = (int) $u['id'];
+    if (isset($cache[$id])) {
+        return $cache[$id];
+    }
+    if ((int) $u['status'] === 1) {
+        return $cache[$id] = MODULE_KEYS;
+    }
+    $v = md_get('mod_perm', $id);
+    if ($v !== null) {
+        return $cache[$id] = array_values(array_intersect(MODULE_KEYS, json_decode($v, true) ?: []));
+    }
+    $p = is_array($u['permission'] ?? null) ? $u['permission'] : array_filter(explode(',', trim((string) ($u['permission'] ?? ''), ',')));
+    if (in_array('can_config', $p, true)) {
+        return $cache[$id] = MODULE_KEYS;
+    }
+    $m = [];
+    if (in_array('can_manage_student', $p, true)) {
+        array_push($m, 'main', 'affairs');
+    }
+    if (in_array('can_manage_course', $p, true)) {
+        $m[] = 'academic';
+    }
+    if (in_array('can_manage_personnel', $p, true)) {
+        $m[] = 'personnel';
+    }
+    return $cache[$id] = array_values(array_intersect(MODULE_KEYS, $m));
 }
 
-/** เมนูของแต่ละโมดูล: [ชื่อ, ไอคอน, [หัวข้อ => [option => ชื่อเมนู]]] */
+function is_admin(): bool
+{
+    return (bool) user_modules();
+}
+
+/** เมนูของแต่ละโมดูล: [ชื่อ, ไอคอน, [หัวข้อ => [option => ชื่อเมนู]], ชื่อบนแถบเมนู] */
 function admin_modules(): array
 {
-    return [
-        'main' => ['ทะเบียนและข้อมูลหลัก', 'main', [
-            'ข้อมูลหลัก' => ['class' => 'ระดับชั้น', 'room' => 'ห้องเรียน', 'program' => 'แผนการเรียน'],
-            'ทะเบียนนักเรียน' => ['student' => 'ทะเบียนนักเรียน', 'student_import' => 'นำเข้ารายชื่อนักเรียน', 'student_class' => 'จัดการชั้นเรียน / ครูที่ปรึกษา', 'promote' => 'เลื่อนชั้นนักเรียน', 'stat' => 'สถิตินักเรียน'],
-        ]],
-        'academic' => ['บริหารงานวิชาการ', 'academic', [
-            'หลักสูตร' => ['course' => 'รายวิชา', 'course_copy' => 'คัดลอกรายวิชาจากภาคเรียนก่อน', 'enroll' => 'ลงทะเบียนเรียน', 'sara' => 'กลุ่มสาระการเรียนรู้'],
-            'ตารางสอนและการวัดผล' => ['timetable' => 'จัดตารางสอน', 'calendar' => 'ปฏิทินการเรียนการสอน', 'approve' => 'อนุมัติผลการเรียน', 'grade_report' => 'ผลการเรียนรายห้อง'],
-        ]],
+    static $m = null;
+    return $m ??= [
+        'main' => ['ทะเบียนและข้อมูลหลัก', 'main', main_menu()],
+        'academic' => ['บริหารงานวิชาการ', 'academic', academic_menu()],
         'affairs' => ['บริหารงานกิจการนักเรียน', 'affairs', affairs_menu()],
-        'personnel' => ['บริหารงานบุคลากร', 'personnel', [
-            'ทะเบียนบุคลากร' => ['personnel' => 'บุคลากร', 'permission' => 'สิทธิ์การใช้งาน', 'position' => 'ตำแหน่ง', 'department' => 'กลุ่มงาน/กลุ่มสาระ'],
-            'การปฏิบัติงาน' => ['leave' => 'บันทึกการลา', 'leave_report' => 'สรุปวันลา'],
-        ]],
-        'general' => ['บริหารงานทั่วไป', 'general', [
-            'ประชาสัมพันธ์' => ['news' => 'ข่าวประกาศ', 'document' => 'เอกสาร/หนังสือเวียน'],
-            'ระบบ' => ['log' => 'ประวัติการใช้งาน'],
-        ]],
+        'personnel' => ['บริหารงานบุคลากร', 'personnel', personnel_menu()],
+        'general' => ['บริหารงานทั่วไป', 'general', general_menu()],
+        'finance' => ['รับชำระเงินค่าบำรุงการศึกษา', 'finance', finance_menu(), 'รับชำระเงิน'],
         'settings' => ['การตั้งค่า', 'settings', [
-            'ตั้งค่าระบบ' => ['school' => 'ข้อมูลโรงเรียน / ปีการศึกษา', 'users' => 'บัญชีผู้ใช้', 'password' => 'เปลี่ยนรหัสผ่าน', 'teacher_view' => 'ไปหน้าครูผู้สอน'],
+            'ตั้งค่าระบบ' => ['school' => 'ข้อมูลโรงเรียน / ปีการศึกษา', 'admins' => 'กำหนดผู้ดูแลระบบและสิทธิ์โมดูล', 'users' => 'บัญชีผู้ใช้', 'password' => 'เปลี่ยนรหัสผ่าน', 'teacher_view' => 'ไปหน้าครูผู้สอน'],
         ]],
     ];
 }
 
-function admin_option_info(string $option): array
+/** โมดูลทั้งหมดที่มีเมนูนี้ */
+function option_modules(string $option): array
 {
+    $out = [];
     foreach (admin_modules() as $mk => [$mname, $icon, $sections]) {
+        foreach ($sections as $items) {
+            if (isset($items[$option])) {
+                $out[] = $mk;
+                break;
+            }
+        }
+    }
+    return $out;
+}
+
+function admin_option_info(string $option, string $prefer = ''): array
+{
+    $mods = admin_modules();
+    $order = $prefer !== '' && isset($mods[$prefer]) ? [$prefer => $mods[$prefer]] + $mods : $mods;
+    foreach ($order as $mk => [$mname, $icon, $sections]) {
         foreach ($sections as $sec => $items) {
             if (isset($items[$option])) {
                 return [$mk, $mname, $sec, is_array($items[$option]) ? $items[$option][0] : $items[$option]];
@@ -50,6 +94,16 @@ function admin_option_info(string $option): array
         }
     }
     return ['', '', '', ''];
+}
+
+/** หน้าแจ้งไม่มีสิทธิ์ */
+function denied_box(string $module = ''): string
+{
+    $name = $module !== '' ? (admin_modules()[$module][0] ?? '') : '';
+    return '<div style="width:983px;margin:60px auto;text-align:center;border:1px solid #F5B7B1;border-radius:8px;background:#FDEDEC;padding:40px 0">'
+        .'<img src="../images/001_11.png" style="width:48px"/><h1 style="font-family:thaisansbold;font-weight:normal;font-size:38px;color:#C0392B;margin:10px 0">ไม่มีสิทธิ์เข้าใช้งานระบบ</h1>'
+        .'<p style="font-size:14px;color:#555">'.($name !== '' ? 'บัญชีของคุณไม่ได้รับสิทธิ์ใช้งานโมดูล "'.h($name).'"<br>' : '').'กรุณาติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์การใช้งาน</p>'
+        .'<p style="margin-top:15px"><a href="index.php" id="pinkgreenbtns"><img src="../icon_tools/vec_x_white.png" height="14"/> กลับหน้าหลัก</a></p></div>';
 }
 
 /* ================================================================ หน้าตา */
@@ -60,11 +114,14 @@ function admin_top(): string
     $nav = '';
     $panels = '';
     $i = 0;
-    foreach ($mods as $mk => [$name, $icon, $sections]) {
+    $n = count($mods) - 1;
+    $w = (int) floor((983 - 5 * ($n - 1)) / $n);
+    foreach ($mods as $mk => $m) {
+        [$name, $icon, $sections] = $m;
         if ($mk === 'settings') {
             continue;
         }
-        $nav .= '<li id="am'.$i.'" onclick="adminMenu('.$i.')" style="margin-right:'.($i < 4 ? '5' : '0').'px"><a href="javascript:void(0);" class="adm-nav">'.h($name).'</a></li>';
+        $nav .= '<li id="am'.$i.'" onclick="adminMenu('.$i.')" style="margin-right:'.($i < $n - 1 ? '5' : '0').'px"><a href="javascript:void(0);" class="adm-nav" style="width:'.$w.'px">'.h($m[3] ?? $name).'</a></li>';
         $cols = '';
         foreach ($sections as $sec => $items) {
             $links = '';
@@ -83,7 +140,7 @@ function admin_top(): string
 function admin_css(): string
 {
     return '<style>
-#nav li a.adm-nav{padding:6px 0;width:190px;text-align:center;font-family:thaisansbold;font-size:21px;color:#fff}
+#nav li a.adm-nav{padding:6px 0;width:190px;text-align:center;font-family:thaisansbold;font-size:19px;color:#fff;white-space:nowrap;overflow:hidden}
 #nav li.selected{background-color:#00F0FF}#nav li.selected a.adm-nav{color:#000}
 .adm-panel{width:978px;border:3px solid #A9F4F9;border-radius:8px;background:#fff;margin:4px 0 10px;padding:10px 0;text-align:left;position:absolute;z-index:21}
 .adm-panel{background:linear-gradient(#fff 70%,#E9FBFF)}.adm-col{float:left;width:276px;margin:0 0 14px 24px;padding-right:20px;border-right:1px solid #eef5f8;min-height:120px}.adm-col:nth-child(3n){border-right:none}.adm-col:nth-child(3n+1){clear:left}
@@ -91,7 +148,7 @@ function admin_css(): string
 .adm-col a{display:block;font-size:12px;padding:4px 0;border-bottom:dashed 1px #ccc;color:#333}
 .adm-tiles{width:984px;margin:30px auto;text-align:center}.adm-tile{display:inline-block;width:235px;margin:10px 0 30px;vertical-align:top}
 .adm-tile h2{font-family:thaisansbold;font-size:24px;color:#019DF1;margin:0 0 8px}.adm-tile a{display:inline-block;width:150px;height:140px;border:1px solid #C9EFFB;border-radius:8px;background:#fff}
-.adm-tile a:hover{box-shadow:0 0 10px #C9EFFB}.adm-tile img{width:116px;height:116px;margin-top:12px}
+.adm-tile a:hover{box-shadow:0 0 10px #C9EFFB}.adm-tile.off a{opacity:.35;filter:grayscale(1)}.adm-tile.off h2{color:#aaa}.adm-tile img{width:116px;height:116px;margin-top:12px}
 .adm-form td.titleinputfill{width:200px}.adm-news{width:983px;margin:0 auto 10px;text-align:left;border:1px solid #c6d5e1;border-radius:4px;background:#FFFDF2;padding:8px 12px}
 </style>';
 }
@@ -166,11 +223,28 @@ function admin_done(string $option, string $extra = ''): void
 function run_admin(string $option, string $func): void
 {
     if (!is_admin()) {
-        redirect('index.php');
+        render_page('ไม่มีสิทธิ์เข้าใช้งานระบบ', denied_box(), '');
+        return;
     }
     if ($option === 'teacher_view') {
         setcookie('mis_teacher_view', '1', ['path' => '/mis/', 'samesite' => 'Lax']);
         redirect('index.php');
+    }
+    $prefer = '';
+    if ($option !== '' && $option !== 'password') {
+        $mods = option_modules($option);
+        $mine = user_modules();
+        $ok = array_values(array_intersect($mods, $mine));
+        // เมนูที่ไม่อยู่ในโมดูลใด ให้เฉพาะผู้มีสิทธิ์การตั้งค่า
+        if (($mods && !$ok) || (!$mods && !in_array('settings', $mine, true))) {
+            render_admin('ไม่มีสิทธิ์เข้าใช้งานระบบ', denied_box($mods[0] ?? ''), $mods[0] ?? '');
+            return;
+        }
+        $prefer = $ok[0] ?? '';
+        $links = admin_links();
+        if (isset($links[$option])) {
+            redirect($links[$option]);
+        }
     }
     $post = ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST';
     $fn = 'adm_'.$option.($func !== '' ? '_'.$func : '');
@@ -181,7 +255,7 @@ function run_admin(string $option, string $func): void
         render_admin('แผงเมนูหลัก', admin_home(), '');
         return;
     }
-    [$mk, $mname, $sec, $label] = admin_option_info($option);
+    [$mk, $mname, $sec, $label] = admin_option_info($option, $prefer);
     $body = $fn($post);
     if ($body === null) {
         return;
@@ -199,7 +273,8 @@ function render_admin(string $title, string $content, string $module): void
     [$nav, $panels] = explode('|', admin_top(), 2);
     $mods = array_keys(admin_modules());
     $idx = array_search($module, $mods, true);
-    if ($idx !== false && $idx < 5) {
+    $nmod = count($mods) - 1;
+    if ($idx !== false && $idx < $nmod) {
         $nav = str_replace('<li id="am'.$idx.'"', '<li class="selected" id="am'.$idx.'"', $nav);
     }
     $top = tpl('layout_top.html');
@@ -218,8 +293,8 @@ function render_admin(string $title, string $content, string $module): void
         }
         $top = substr($top, 0, $a).$panels.substr($top, $p);
     }
-    $js = '<script type="text/javascript">function adminMenu(i){for(var k=0;k<5;k++){var p=document.getElementById("ap"+k);if(p){p.style.display=(k===i&&p.style.display==="none")?"block":"none";}}}'
-        .'document.addEventListener("click",function(e){if(!e.target.closest||(!e.target.closest("#nav")&&!e.target.closest(".adm-panel"))){for(var k=0;k<5;k++){var p=document.getElementById("ap"+k);if(p)p.style.display="none";}}});</script>';
+    $js = '<script type="text/javascript">function adminMenu(i){for(var k=0;k<'.$nmod.';k++){var p=document.getElementById("ap"+k);if(p){p.style.display=(k===i&&p.style.display==="none")?"block":"none";}}}'
+        .'document.addEventListener("click",function(e){if(!e.target.closest||(!e.target.closest("#nav")&&!e.target.closest(".adm-panel"))){for(var k=0;k<'.$nmod.';k++){var p=document.getElementById("ap"+k);if(p)p.style.display="none";}}});</script>';
     $GLOBALS['mis_top_override'] = $top;
     render_page($title, admin_css().$js.$content, '');
 }
@@ -228,9 +303,10 @@ function admin_home(): string
 {
     $news = admin_news_box();
     $tiles = '';
+    $mine = user_modules();
     foreach (admin_modules() as $mk => [$name, $icon, $sections]) {
         $first = array_key_first(reset($sections));
-        $tiles .= '<div class="adm-tile"><h2>'.h($name).'</h2><a href="'.a_url($first).'"><img src="../images/admin/'.$icon.'.svg" alt=""/></a></div>';
+        $tiles .= '<div class="adm-tile'.(in_array($mk, $mine, true) ? '' : ' off').'"><h2>'.h($name).'</h2><a href="'.a_url($first).'"><img src="../images/admin/'.$icon.'.svg" alt=""/></a></div>';
     }
     $tiles .= '<div class="adm-tile"><h2>ออกจากระบบ</h2><a href="../logout.php"><img src="../images/admin/logout.svg" alt=""/></a></div>';
     return '<div style="padding-top:5px">'.$news.'<div class="adm-tiles">'.$tiles.'</div></div>';

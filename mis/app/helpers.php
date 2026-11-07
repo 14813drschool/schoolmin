@@ -96,7 +96,7 @@ function can(string ...$perms): bool
 
 function is_manager(): bool
 {
-    return can('can_manage_student', 'can_manage_course');
+    return can('can_manage_student', 'can_manage_course') || (function_exists('user_modules') && array_intersect(['main', 'academic', 'affairs'], user_modules()));
 }
 
 function role_text(array $u): string

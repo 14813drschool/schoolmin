@@ -55,7 +55,19 @@ function affairs_menu(): array
         ],
         'ทุนการศึกษา' => [
             'sa_fund' => ['กำหนดทุนการศึกษาของโรงเรียน', 'fa-briefcase', '#2980B9'],
+            'sa_fund_nom' => ['เสนอชื่อนักเรียนรับทุนการศึกษา', 'fa-hand-o-up', '#16A085'],
+            'sa_fund_pick' => ['คัดเลือกนักเรียนรับทุนการศึกษา', 'fa-check-square-o', '#8E44AD'],
             'sa_fund_student' => ['นักเรียนได้รับทุนการศึกษา', 'fa-star', '#F39C12'],
+        ],
+        'สารสนเทศเวลาเรียน' => [
+            'sa_act_permit' => ['ขออนุญาตให้นักเรียนเข้าร่วมกิจกรรม', 'fa-file-text', '#2980B9'],
+            'activity' => ['ทะเบียนนักเรียนเข้าร่วมกิจกรรม', 'fa-users', '#27AE60'],
+            'sa_late_duty' => ['กำหนดครูเวรเช็คนักเรียนมาสาย', 'fa-calendar-check-o', '#D35400'],
+            'school_att' => ['บันทึกการมาโรงเรียน', 'fa-check-square', '#16A085'],
+            'absent_follow' => ['ติดตามนักเรียนไม่มาเรียน', 'fa-search', '#C0392B'],
+            'late_gate' => ['บันทึกนักเรียนมาโรงเรียนสาย', 'fa-clock-o', '#E67E22'],
+            'under80' => ['นักเรียนเวลาเรียนไม่ถึง 80%', 'fa-exclamation-triangle', '#E74C3C'],
+            'absent_letter' => ['ออกหนังสือถึงผู้ปกครอง', 'fa-envelope', '#2C3E50'],
         ],
     ];
 }
@@ -128,7 +140,8 @@ function adm_sa_profile(bool $post)
 {
     return md_page('sa_profile', 'sa_profile', 'ข้อมูลนักเรียนรายบุคคล', [
         'student' => f_student(), 'talent' => f_text('ความสามารถพิเศษ'), 'health' => f_text('ด้านสุขภาพ/โรคประจำตัว'), 'family' => f_sel('สถานภาพครอบครัว', ['อยู่ด้วยกัน' => 'บิดามารดาอยู่ด้วยกัน', 'แยกกันอยู่' => 'แยกกันอยู่', 'หย่าร้าง' => 'หย่าร้าง', 'เสียชีวิต' => 'บิดา/มารดาเสียชีวิต', 'อื่น ๆ' => 'อื่น ๆ'], false),
-        'income' => f_text('รายได้ครอบครัว/เดือน'), 'live_with' => f_text('อาศัยอยู่กับ'), 'travel' => f_text('การเดินทางมาโรงเรียน'), 'note' => f_area('ข้อมูลอื่น ๆ'),
+        'income' => f_text('รายได้ครอบครัว/เดือน'), 'live_with' => f_text('อาศัยอยู่กับ'), 'dwelling' => f_sel('ที่พักอาศัย', fn() => md_options('dwelling', 'name'), false),
+        'travel' => f_sel('การเดินทางมาโรงเรียน', fn() => md_options('travel', 'name'), false), 'note' => f_area('ข้อมูลอื่น ๆ'),
     ], ['student' => 'นักเรียน', 'talent' => 'ความสามารถพิเศษ', 'health' => 'สุขภาพ', 'family' => 'ครอบครัว', 'live_with' => 'อาศัยอยู่กับ'], $post);
 }
 
@@ -603,6 +616,56 @@ function fund_given(array $d): string
         }
     }
     return (string) ($c[$d['name'] ?? ''] ?? 0);
+}
+
+function adm_sa_fund_nom(bool $post)
+{
+    return md_page('sa_fund_nom', 'sa_fund_nom', 'การเสนอชื่อรับทุน', ['student' => f_student(), 'fund' => f_sel('ทุนการศึกษา', fn() => md_options('sa_fund', 'name')), 'by' => f_sel('ผู้เสนอชื่อ', 'personnel_options', false),
+        'reason' => f_area('เหตุผล/คุณสมบัติ', true), 'file' => f_file('เอกสารประกอบ')], ['student' => 'นักเรียน', 'fund' => 'ทุน', 'by' => 'ผู้เสนอ', 'reason' => 'เหตุผล',
+        'st' => ['ผลการคัดเลือก', fn($d) => ['ได้รับ' => '<span style="color:#27AE60">ได้รับทุน</span>', 'ไม่ได้รับ' => '<span style="color:#E74C3C">ไม่ได้รับ</span>'][$d['pick'] ?? ''] ?? 'รอคัดเลือก']], $post, yt());
+}
+
+/** คัดเลือกจากรายชื่อที่เสนอ: ได้รับทุน = เพิ่มในนักเรียนได้รับทุนการศึกษา */
+function adm_sa_fund_pick(bool $post)
+{
+    foreach (['ok' => 'ได้รับ', 'no' => 'ไม่ได้รับ'] as $k => $v) {
+        if (isset($_GET[$k])) {
+            $id = (string) $_GET[$k];
+            $d = json_decode((string) md_get('sa_fund_nom', $id, yt()), true);
+            if ($d) {
+                $d['pick'] = $v;
+                md_set('sa_fund_nom', $id, yt(), '', json_encode($d, JSON_UNESCAPED_UNICODE));
+                $amount = (json_decode((string) md_get('sa_fund', $d['fund'] ?? ''), true) ?: [])['amount'] ?? '';
+                md_set('sa_fund_student', 'n'.$id, yt(), '', $v === 'ได้รับ' ? json_encode(['student' => $d['student'], 'fund' => $d['fund'], 'date' => date('Y-m-d'), 'amount' => $amount, 'note' => 'คัดเลือกจากการเสนอชื่อ'], JSON_UNESCAPED_UNICODE) : null);
+            }
+            admin_done('sa_fund_pick');
+        }
+    }
+    $st = student_options();
+    $funds = md_options('sa_fund', 'name');
+    $rows = '';
+    $i = 0;
+    foreach (md_rows('sa_fund_nom', null, yt()) as $r) {
+        $d = json_decode((string) $r['value'], true) ?: [];
+        $p = $d['pick'] ?? '';
+        $rows .= zrow([++$i, h($st[$d['student'] ?? 0] ?? ''), h($funds[$d['fund'] ?? ''] ?? ''), h(mb_substr((string) ($d['reason'] ?? ''), 0, 120)),
+            [$p === 'ได้รับ' ? '<b style="color:#27AE60">ได้รับทุน</b>' : ($p === 'ไม่ได้รับ' ? '<span style="color:#E74C3C">ไม่ได้รับ</span>' : 'รอคัดเลือก'), ' align="center"'],
+            ['<a href="'.a_url('sa_fund_pick', '&ok='.rawurlencode((string) $r['r1'])).'">ให้ทุน</a> | <a href="'.a_url('sa_fund_pick', '&no='.rawurlencode((string) $r['r1'])).'">ไม่ให้ทุน</a>', ' align="center"']], $i);
+    }
+    return list_table('คัดเลือกนักเรียนรับทุนการศึกษา ปีการศึกษา '.yt(), ['#', 'นักเรียน', 'ทุน', 'เหตุผลที่เสนอ', 'ผล', 'คัดเลือก'], $rows, $i.' รายชื่อ', btn('เสนอชื่อนักเรียน', a_url('sa_fund_nom', '&func=Edit'), 'add'));
+}
+
+function adm_sa_act_permit(bool $post)
+{
+    return md_page('sa_act_permit', 'sa_act_permit', 'การขออนุญาตนักเรียนเข้าร่วมกิจกรรม', ['activity' => f_text('ชื่อกิจกรรม', true), 'date' => f_date('วันที่'), 'place' => f_text('สถานที่', true),
+        'students' => f_area('รายชื่อนักเรียน', true), 'teacher' => f_sel('ครูผู้ควบคุม', 'personnel_options'), 'status' => f_sel('ผลการพิจารณา', ['รอพิจารณา' => 'รอพิจารณา', 'อนุญาต' => 'อนุญาต', 'ไม่อนุญาต' => 'ไม่อนุญาต'], false), 'file' => f_file('หนังสือขออนุญาต')],
+        ['activity' => 'กิจกรรม', 'date' => 'วันที่', 'place' => 'สถานที่', 'teacher' => 'ครูผู้ควบคุม', 'status' => 'ผล'], $post, yt());
+}
+
+function adm_sa_late_duty(bool $post)
+{
+    return md_page('sa_late_duty', 'sa_late_duty', 'ครูเวรเช็คนักเรียนมาสาย', ['day' => f_sel('วัน', ['1' => 'จันทร์', '2' => 'อังคาร', '3' => 'พุธ', '4' => 'พฤหัสบดี', '5' => 'ศุกร์']),
+        'teacher' => f_sel('ครูเวร', 'personnel_options'), 'point' => f_text('จุดประจำ (เช่น ประตูหน้า)'), 'note' => f_text('หมายเหตุ')], ['day' => 'วัน', 'teacher' => 'ครูเวร', 'point' => 'จุดประจำ', 'note' => 'หมายเหตุ'], $post, yt());
 }
 
 function adm_sa_fund_student(bool $post)

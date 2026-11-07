@@ -590,9 +590,16 @@ function act_task_absent_teacher_notice_SaveFollow(): void
 const GRADE_SCALE = [[80, '4'], [75, '3.5'], [70, '3'], [65, '2.5'], [60, '2'], [55, '1.5'], [50, '1'], [0, '0']];
 const GRADE_COLS = ['4', '3.5', '3', '2.5', '2', '1.5', '1', '0', 'ร', 'มส'];
 
+/** เกณฑ์ระดับผลการเรียน (ตั้งค่าได้ที่ บริหารงานวิชาการ > กำหนดระดับผลการเรียน) */
+function grade_scale(): array
+{
+    static $sc = null;
+    return $sc ??= (json_decode((string) md_get('cfg', 'grade_scale'), true) ?: GRADE_SCALE);
+}
+
 function grade_of(int $total): string
 {
-    foreach (GRADE_SCALE as [$min, $g]) {
+    foreach (grade_scale() as [$min, $g]) {
         if ($total >= $min) {
             return $g;
         }

@@ -23,7 +23,8 @@ if (defined('ROOT_PATH')) {
         'JSON Support' => function_exists('json_encode') && function_exists('json_decode') ? 'correct' : 'incorrect',
         'XML Support' => extension_loaded('xml') ? 'correct' : 'incorrect',
         'Open SSL Support' => function_exists('openssl_random_pseudo_bytes') ? 'correct' : 'incorrect',
-        'GD Support' => extension_loaded('gd') ? 'correct' : 'incorrect',
+        // บน Vercel ไม่มีส่วนขยาย gd แต่มีตัวแทนที่ทำงานผ่าน FFI (vercel/gd/) ให้ฟังก์ชัน image*() ครบตามที่ระบบใช้
+        'GD Support' => extension_loaded('gd') || function_exists('imagecreatetruecolor') ? 'correct' : 'incorrect',
         'cURL Support' => function_exists('curl_version') ? 'correct' : 'incorrect'
     ];
     $error = false;

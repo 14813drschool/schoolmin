@@ -1,0 +1,552 @@
+<body bgcolor="#ffffff"   onLoad="window.scrollBy(document_height, 200);">
+<center>
+<div class="header_area"><DIV style="display: table;width:984px">
+    <DIV style="display: table-row">
+        <DIV style="text-align:left;display: table-cell">
+            <span style="float:left;width:570px;padding-top:1px;padding-bottom:20px">
+            <span class="left" style="margin:0px">
+            <a href="index.php"><img src="../gallery/logo/school_logo.png" alt="logo" class="logo" style="border:none; outline:none"/></a>
+            </span>
+            <span class="left" style="white-space:nowrap">
+            	<h2>ระบบบริหารจัดการสารสนเทศโรงเรียน</h2>
+                <h5 style="font-size:28px">โรงเรียนดรุณราษฎร์วิทยา</h5>
+                <h4>Daroonrajwittaya School</h4>
+            </span>
+            </span>
+            <span style="float:left;padding-top:0px">
+            <a href="javascript:void(0);" onclick="openSub('drop_year', 'aca_years');"><img name="aca_years" src="../images/dropyear.png" width="123" height="15" border="0" id="aca_years" alt=""/></a>
+            <div id="drop_year" style="display:none;position:relative">
+<table width="123" height="58" border="0" cellpadding="0" cellspacing="0" style="margin-top:-17px">
+<tr>
+<td align="center" valign="top" background="../images/select_year_bg.png">
+<table width="100" height="52" border="0" cellpadding="0" cellspacing="0">
+<tr>
+<td width="100" align="center" valign="bottom" style="padding-top:5px">
+<form method="post" name="select_year" action="{{SELF}}">
+    <select name="select_active" class="textbox_blue_12" id="select_active" style="width:100px" onchange="select_year.submit();">{{YEAR_OPTIONS}}</select>
+</form>
+</td>
+</tr>
+<tr>
+<td align="right" valign="bottom"><span class="link_white" style="font-size:12px"><a href="javascript:void(0);" onclick="closeSub('drop_year');document.getElementById('aca_years').style.display=''">ปิด</a></span></td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</div></span>
+            <span style="float:left;padding-bottom:10px"><DIV style="display: table;width:290px;margin-top:8px">
+    <DIV style="display: table-row;width:194px">
+    	<DIV style="text-align:left;display: table-cell; vertical-align:top;padding-left:20px" class="green_12">{{ONLINE}}
+ </DIV>
+        <DIV style="text-align:right;display: table-cell;width:96px;padding-top:5px">
+			 <a href="javascript:void(0)" onclick="location.href='../logout.php'"><img src="../images/logout_btn.png" width="86" height="20" border="0"/></a>
+        </DIV>
+	</DIV>
+</DIV>
+
+<DIV style="display: table;width:290px;margin-top:20px">
+    <DIV style="display: table-row">
+        <DIV style="text-align:right;display: table-cell">
+			<span class="gray_12" style="white-space:nowrap;line-height:20px;color:#333399"><b>ID : {{UID}}</b><br/>คุณ&nbsp;<span class='bluelink'><a href='?module=profile'>{{UNAME}}</a></span> [ {{UROLE}} ]</span>
+        </DIV>
+	</DIV>
+</DIV>
+
+<DIV style="display: table;width:290px;margin-top:8px">
+    <DIV style="display: table-row;width:194px">
+        <DIV style="text-align:right;display: table-cell;font-size:12px">
+			<span class="gray_12">{{TODAY}},</span> ภาคเรียนที่ <b>{{T}}</b> ปีการศึกษา<b> {{Y}}</b>
+        </DIV>
+	</DIV>
+</DIV></span>
+        </DIV>
+	</DIV>
+</DIV></div>
+<div class="menu_area">
+    <div><DIV id="nav" style="display: table;width:984px">
+    <DIV style="display: table-row">
+        <DIV style="text-align:left;display: table-cell">
+            <ul>
+                <li {{SEL00}}id="me00">
+                	<a href="javascript:void(0);" style="padding:6px 99px"><img src="../images/menu_title_responsible.png" border="0"/></a>
+                </li>
+                <li {{SEL01}}id="me01">
+                	<a href="javascript:void(0);" style="padding:6px 99px"><img src="../images/menu_title_main.png" border="0"/></a>
+                </li>
+                <li {{SEL02}}id="me02" style="margin-right:0px">
+                	<a href="javascript:void(0);" style="padding:6px 99px 6px 100px"><img src="../images/menu_title_academic.png" border="0"/></a>
+                </li>
+            </ul>
+            <div class="clear"></div>
+		</DIV>
+	</DIV>
+</DIV>
+
+<DIV style="display: table;width:985px">
+    <DIV style="display: table-row">
+        <DIV style="text-align:left;display: table-cell" id="menuareacont">
+        <div id="sbmenu00" onMouseOver="openSub('sbmenu00', 'menu00')" class="submenu-main">
+    <div id="sbmenu00bg">
+    
+        <div class="submenu-triangle" style="background-image	: url(../images/triangle.png);margin-left:160px">&nbsp;</div>
+    
+        <div class="submenu-title-top" style="background-image	: url(../edu_03_teacher/mod_task_teacher/main_images/title01.png);margin-top:-3px"></div>
+        <div class='submenu-cont-top' style='height:270px'"><table border="0" cellpadding="0" cellspacing="0" class="menutable">
+<tr>
+<td rowspan="11">&nbsp;</td>
+<td align="left" valign="top" class="blue_12"><a href="?module=task&option=respons_subject" class="waiting_link" ><img src="../menu_images/001_43.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">รายชื่อนักเรียนที่รับผิดชอบการสอน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+<td rowspan="11">&nbsp;</td>
+<td align="left" valign="top" class="blue_12"><a href="?module=task&option=respons_student" class="waiting_link" ><img src="../menu_images/img_14.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">รายชื่อนักเรียนประจำชั้น</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+<td rowspan="11">&nbsp;</td>
+<td align="left" valign="top" class="blue_12"><a href="?module=task&option=report_attendance" class="waiting_link" ><img src="../menu_images/img_15.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">รายงานการเข้าเรียนรายวิชาและกิจกรรม</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+<td rowspan="9">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=teacher_timetable" class="waiting_link"><img src="../menu_images/001_44_blue.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">ตารางสอน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top"><a href="?module=task&amp;option=school_attendance_report&amp;RoomNum={{ADVROOM}}" class="waiting_link"><img src="../menu_images/pie-chart_graph.gif" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">รายงานการมาโรงเรียน</span></a> <br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=ask_measurement" class="waiting_link"><img src="../menu_images/1429195095_bubble-128.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">บันทึกและขออนุมัติผลการเรียนรายวิชา</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=design_measurement" class="waiting_link" ><img src="../menu_images/31.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">ออกแบบการวัดผลการเรียนรู้รายวิชา</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&amp;option=absent_school_attention" class="waiting_link" ><img src="../menu_images/flag_mark_green.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">ติดตามนักเรียนไม่มาเรียน</span></a> <br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=report_character" class="waiting_link"><img src="../menu_images/img_20.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">สรุปคะแนนคุณลักษณะอันพึงประสงค์</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=time_attendance_byroom" class="waiting_link" ><img src="../menu_images/attend.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">บันทึกเวลาเรียน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&amp;option=absent_adviser_notice" class="waiting_link" ><img src="../menu_images/img_45.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">ติดตามนักเรียนขาดเรียนรายวิชา</span></a> <br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=report_skill" class="waiting_link"><img src="../menu_images/img_19.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">สรุปคะแนนการอ่าน คิดวิเคราะห์และเขียน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=study_record" class="waiting_link"><img src="../menu_images/img_07.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">บันทึกผลการเรียน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top"><a href="?module=task&amp;option=period_attendance_report" class="waiting_link"><img src="../menu_images/1429195074_bubbles-128.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">รายงานนักเรียนขาดเรียนรายคาบ</span></a> <br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=report_record_byroom" class="waiting_link" ><img src="../menu_images/img_22.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">ผลการเรียนแบบแยกห้องเรียน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=character_record" class="waiting_link"><img src="../menu_images/Person.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">บันทึกคุณลักษณะอันพึงประสงค์</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&amp;option=attend_consider" class="waiting_link"><img src="../menu_images/img_46.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">นักเรียนเวลาเรียนไม่ถึง 80%</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=report_pp5" class="waiting_link" ><img src="../menu_images/img_21.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">พิมพ์สมุด ปพ. 5</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=skill_record" class="waiting_link"><img src="../menu_images/billboard16.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">บันทึกการอ่าน คิดวิเคราะห์และเขียน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&amp;option=grasha_status" class="waiting_link" ><img src="../menu_images/img_07.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">จัดการข้อมูลแบบสอบถามของกราชา</span></a> <br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=report_pp6" class="waiting_link"><img src="../menu_images/Address-book.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">พิมพ์สมุด ปพ.6</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=failure_attend" class="waiting_link"><img src="../menu_images/img_46.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">นักเรียนเวลาเรียนไม่ถึง 80%</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&amp;option=kolb_status" class="waiting_link" ><img src="../menu_images/img_12.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">จัดการข้อมูลแบบสอบถามของคอร์บ</span></a> <br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=report_questionnaire_teacher" class="waiting_link"><img src="../menu_images/Good-mark.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">ผลการประเมินครูผู้สอนของนักเรียน-ผู้ปกครอง</span></a></td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=absent_teacher_notice" class="waiting_link" ><img src="../menu_images/1383492098_user_female.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">รายชื่อนักเรียนขาดเรียน-บันทึกติดตาม</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&amp;option=info_pp6" class="waiting_link" ><img src="../menu_images/1438816396_AIM.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">บันทึกการเจริญเติบโตและความเห็นต่อนร.(ปพ.6)</span></a> <br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=join_activity" class="waiting_link" ><img src="../menu_images/1429195074_bubbles-128.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">ขออนุญาตให้นักเรียนร่วมกิจกรรม</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&amp;option=usability_info" class="waiting_link"><img src="../menu_images/balloon.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">ข้อมูลการใช้งาน</span></a></td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td>&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=join_activity_student" class="waiting_link" ><img src="../menu_images/img_18.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">ทะเบียนประวัตินักเรียนเข้าร่วมกิจกรรม</span></a></td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;</td>
+  <td>&nbsp;</td>
+</tr>
+
+<tr>
+<td><img src="../images/spacer.gif" width="44" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="274" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="55" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="279" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="50" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="279" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="32" height="1" border="0" alt="" /></td>
+</tr>
+</table>
+</div>
+        
+                <div class="submenu-title-mid" style="background-image	: url(../edu_03_teacher/mod_task_teacher/main_images/title02.png);margin-top:0px"></div>
+        <div class="submenu-bottom-big" style="margin-top:-2px"><table width="984" border="0" cellpadding="0" cellspacing="0" class="menutable">
+<tr>
+<td rowspan="9">&nbsp;</td>
+<td align="left" valign="top" class="blue_12"><a href="?module=task&option=capacity" class="waiting_link"><img src="../menu_images/img_40.png" border="0" align="absbottom" style="padding-top:3px;height:18px"/><span style="padding-left:10px">สมรรถนะผู้เรียนและตัวชี้วัด</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+<td rowspan="9">&nbsp;</td>
+<td align="left" valign="top" class="blue_12"><a href="?module=task&option=grasha_report" class="waiting_link" ><img src="../menu_images/img_22.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">รายงานสรุปวิเคราะห์ผู้เรียนของกราชา</span></a> <br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+<td rowspan="9">&nbsp;</td>
+<td align="left" valign="top" class="blue_12">&nbsp;</td>
+<td rowspan="9">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=action_prathom" class="waiting_link"><img src="../menu_images/balloon.png" border="0" align="absbottom" style="padding-top:3px;width:16px"/><span style="padding-left:10px">พฤติกรรมของตัวชี้วัด (ประถม)</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=kolb_report" class="waiting_link" ><img src="../menu_images/img_34.png" border="0" align="absbottom" style="padding-top:3px;height:16px"/><span style="padding-left:10px">รายงานสรุปวิเคราะห์ผู้เรียนของคอร์บ</span></a></td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&option=action_junior" class="waiting_link"><img src="../menu_images/balloon.png" border="0" align="absbottom" style="padding-top:3px;width:16px"/><span style="padding-left:10px">พฤติกรรมของตัวชี้วัด (ม.ต้น)</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&amp;option=capacity_evaluate_prathom" class="waiting_link"><img src="../menu_images/img_14.png" border="0" align="absbottom" style="padding-top:3px;height:18px"/><span style="padding-left:10px">ผลประเมินสมรรถนะสำคัญของผู้เรียน (ประถม)</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&amp;option=capacity_evaluate_junior" class="waiting_link"><img src="../menu_images/img_18.png" border="0" align="absbottom" style="padding-top:3px;height:18px"/><span style="padding-left:10px">ผลประเมินสมรรถนะสำคัญของผู้เรียน (ม.ต้น)</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&amp;option=capacity_summary"><img src="../menu_images/img_35.png" border="0" align="absbottom" style="padding-top:3px;height:18px"/><span style="padding-left:10px">สรุปผลการประเมินรายชั้นเรียน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:250px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a href="?module=task&amp;option=capacity_assign_friend" class="waiting_link"><img src="../menu_images/img_33.png" border="0" align="absbottom" style="padding-top:3px;height:18px"/><span style="padding-left:10px">เพื่อนประเมินผู้เรียน (มัธยมเท่านั้น)</span></a></td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+
+
+<tr>
+<td><img src="../images/spacer.gif" width="44" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="274" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="55" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="279" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="50" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="279" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="32" height="1" border="0" alt="" /></td>
+</tr>
+</table>
+</div>
+    	        
+    </div>
+</div>
+
+        <div id="sbmenu01" onMouseOver="openSub('sbmenu01', 'menu01')" class="submenu-min">
+    <div id="sbmenu01bg">
+    
+        <div class="submenu-triangle" style="background-image	: url(../images/triangle.png);margin-left:510px">&nbsp;</div>
+    
+        <div class="submenu-title-top" style="background-image	: url(../edu_03_teacher/mod_01_main/main_images/title01.png);margin-top:-3px"></div>
+        <div class="submenu-bottom"><table border="0" cellpadding="0" cellspacing="0" class="menutable">
+<tr>
+<td rowspan="8">&nbsp;</td>
+<td align="left" valign="top" class="blue_12"><a class="waiting_link"  href="?module=main&option=level"><img src="../menu_images/themes16.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">ระดับการศึกษา</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+<td rowspan="9">&nbsp;</td>
+<td align="left" valign="top" class="blue_12"><a class="waiting_link"  href="?module=main&option=student_regist"><img src="../menu_images/User-Group.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">ทะเบียนนักเรียนปัจจุบัน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+<td rowspan="9">&nbsp;</td>
+<td align="left" valign="top" class="blue_12"><a class="waiting_link"  href="?module=main&option=personel_regist"><img src="../menu_images/couple16.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">บุคลากร</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+<td rowspan="8">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link"  href="?module=main&option=class"><img src="../menu_images/organization16.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">ระดับชั้น</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link"  href="?module=main&option=student_class"><img src="../menu_images/layout16.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">จัดการชั้นเรียน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link"  href="?module=main&option=manager"><img src="../menu_images/man1-16.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">ผู้บริหารโรงเรียน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link"  href="?module=main&option=room"><img src="../menu_images/billboard16.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">ห้องเรียน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link"  href="?module=main&option=student_stat"><img src="../menu_images/chart_stock.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">สถิตินักเรียน</span></a></td>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link"  href="?module=main&option=personel_past"><img src="../menu_images/Briefcase16.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">บุคลากรสถานภาพอื่น ๆ</span></a></td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link"  href="?module=main&option=study_program"><img src="../menu_images/Autocomplete16.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">แผนการเรียน</span></a></td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+</tr>
+<tr>
+  <td>&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td>&nbsp;</td>
+</tr>
+
+
+<tr>
+<td><img src="../images/spacer.gif" width="44" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="254" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="75" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="259" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="70" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="259" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="52" height="1" border="0" alt="" /></td>
+</tr>
+</table>
+</div>
+
+    </div>
+</div>
+            
+        <div id="sbmenu02" onMouseOver="openSub('sbmenu02', 'menu02')" class="submenu-min">
+    <div id="sbmenu02bg">
+    
+        <div class="submenu-triangle" style="background-image	: url(../images/triangle.png);margin-left:830px">&nbsp;</div>
+    
+        <div class="submenu-title-top" style="background-image	: url(../edu_03_teacher/mod_02_academic/main_images/title01.png);margin-top:-3px"></div>
+        <div class="submenu-bottom-big" style="margin-top:0px"><table border="0" cellpadding="0" cellspacing="0" class="menutable">
+<tr>
+<td rowspan="8">&nbsp;</td>
+<td align="left" valign="top" class="blue_12"><a class="waiting_link" href="?module=academic&option=character"><img src="../menu_images/Person.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">คุณลักษณะอันพึงประสงค์</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+<td rowspan="10">&nbsp;</td>
+<td align="left" valign="top" class="blue_12"><a class="waiting_link" href="?module=academic&option=room_building"><img src="../menu_images/001_41.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">ห้องเรียน/ประชุม/กิจกรรม</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+<td rowspan="10">&nbsp;</td>
+<td align="left" valign="top" class="blue_12"><a class="waiting_link" href="?module=academic&option=attendance_type"><img src="../menu_images/type.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">ประเภทการเข้าเรียน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+<td rowspan="8">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link" href="?module=academic&option=skill"><img src="../menu_images/img_07.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">การอ่าน คิดวิเคราะห์และเขียน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link" href="?module=academic&option=student_timetable"><img src="../menu_images/001_44_blue.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">พิมพ์ตารางเรียน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link" href="?module=academic&option=learning_estimate"><img src="../menu_images/ruler_triangle.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">ระดับผลการเรียน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link" href="?module=academic&option=subject"><img src="../menu_images/billboard16.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">รายวิชา</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link" href="?module=academic&option=teacher_timetable"><img src="../menu_images/001_44_brown.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">พิมพ์ตารางสอน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link" href="?module=academic&option=skill_criterion"><img src="../menu_images/folder-search.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">เกณฑ์ประเมินการอ่าน คิดวิเคราะห์ฯ</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link" href="?module=academic&option=activity"><img src="../menu_images/001_40.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">กิจกรรมพัฒนาผู้เรียน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link" href="?module=academic&option=room_timetable"><img src="../menu_images/119.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">พิมพ์ตารางการใช้ห้องเรียน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link" href="?module=academic&option=character_criterion"><img src="../menu_images/1322078541_4.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">เกณฑ์ประเมินคุณลักษณะอันพึงประสงค์</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link" href="?module=academic&option=sara"><img src="../menu_images/img_37.png" border="0" align="absbottom" style="padding-top:3px;height:17px"/><span style="padding-left:10px">กลุ่มสาระการเรียนรู้</span></a><br /></td>
+  <td align="left" valign="top" class="blue_12"><a class="waiting_link" href="?module=academic&option=academic_calendar"><img src="../menu_images/academic_calendar.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">ปฏิทินการเรียนการสอน</span></a></td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=academic&option=target"><img src="../menu_images/img_01.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">ค่าเป้าหมายการวัดและประเมินผลการเรียน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top"><a href="?module=academic&option=sara_standard"><img src="../menu_images/1438816396_AIM.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">สาระและมาตรฐานการเรียนรู้</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top"><a href="?module=academic&option=teacher_questionnaire"><img src="../menu_images/1383492098_user_female.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">แบบประเมินครูผู้สอน</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+</tr>
+<tr>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=academic&option=childhood_development"><img src="../menu_images/31.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">พัฒนาการทั้ง 4 ด้าน (ปฐมวัย)</span></a><br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+</tr>
+<tr>
+  <td>&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=academic&option=childhood_behaviour"><img src="../menu_images/img_12.png" border="0" align="absbottom" style="padding-top:3px;height:17px"/><span style="padding-left:10px">พฤติกรรมของพัฒนาการ (ปฐมวัย)</span></a> <br><div style='border-bottom:dashed 1px #ccc;padding-top:3px;width:230px;height:1px'>&nbsp;</div></td>
+  <td>&nbsp;</td>
+</tr>
+<tr>
+  <td>&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12">&nbsp;</td>
+  <td align="left" valign="top" class="blue_12"><a href="?module=academic&option=childhood_athome"><img src="../menu_images/img_02.png" border="0" align="absbottom" style="padding-top:3px"/><span style="padding-left:10px">พฤติกรรมที่บ้านของนักเรียน (ปฐมวัย)</span></a></td>
+  <td>&nbsp;</td>
+</tr>
+
+
+<tr>
+<td><img src="../images/spacer.gif" width="44" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="254" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="75" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="259" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="70" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="259" height="1" border="0" alt="" /></td>
+<td><img src="../images/spacer.gif" width="52" height="1" border="0" alt="" /></td>
+</tr>
+</table>
+</div>
+
+    </div>
+</div>
+                               
+        </DIV>
+	</DIV>
+</DIV>
+
+<script src="../scripts/drop_Menu.js" type=text/javascript></script>
+<script src="../scripts/Open_SubMenu.js" type=text/javascript></script>
+<script type=text/javascript>
+	var sb01 = 0;
+	var sb02 = 0;
+	var sb04 = 0;
+	var sb05 = 0;
+	var sb06 = 0;
+	var sb00 = 0;
+
+$(document).ready(function(){	
+	$( "li#me00" )  
+	.click(function() {    
+		if(sb00==0){
+			openSub('sbmenu00', 'menu00');
+			sb01 = 0;
+			sb02 = 0;
+			sb03 = 0;
+			sb04 = 0;
+			sb05 = 0;
+			sb06 = 0;
+			sb00 = 1;	
+		}else if(sb00==1){
+			closeSubTimeout('sbmenu00', 100);
+			sb00 = 0;
+		}
+	});
+
+
+	$( "li#me01" )  
+	.click(function() { 
+		if(sb01==0){
+			openSub('sbmenu01', 'menu01');
+			sb01 = 1;
+			sb02 = 0;
+			sb04 = 0;
+			sb05 = 0;
+			sb06 = 0;	
+			sb07 = 0;	
+			sb08 = 0;	
+		}else if(sb01==1){
+			closeSubTimeout('sbmenu01', 100);
+			sb01 =0;
+		}
+	});
+	
+	$( "li#me02" )  
+	.click(function() {    
+		if(sb02==0){
+			openSub('sbmenu02', 'menu02');
+			sb01 = 0;
+			sb02 = 1;
+			sb04 = 0;
+			sb05 = 0;
+			sb06 = 0;	
+			sb07 = 0;	
+			sb08 = 0;	
+		}else if(sb02==1){
+			closeSubTimeout('sbmenu02', 100);
+			sb02 =0;
+		}
+	});
+
+
+	$( "li#me04" )  
+	.click(function() {    
+		if(sb04==0){
+			openSub('sbmenu04', 'menu04');
+			sb01 = 0;
+			sb02 = 0;
+			sb04 = 1;
+			sb05 = 0;
+			sb06 = 0;	
+			sb07 = 0;	
+			sb08 = 0;	
+		}else if(sb04==1){
+			closeSubTimeout('sbmenu04', 100);
+			sb04 =0;
+		}
+	});
+	
+
+	$( "li#me05" )  
+	.click(function() {    
+		if(sb05==0){
+			openSub('sbmenu05', 'menu05');
+			sb01 = 0;
+			sb02 = 0;
+			sb04 = 0;
+			sb05 = 1;
+			sb06 = 0;	
+			sb07 = 0;	
+			sb08 = 0;	
+		}else if(sb05==1){
+			closeSubTimeout('sbmenu05', 100);
+			sb05 =0;
+		}
+	});
+
+	$( "li#me06" )  
+	.click(function() {    
+		if(sb06==0){
+			openSub('sbmenu06', 'menu06');
+			sb01 = 0;
+			sb02 = 0;
+			sb04 = 0;
+			sb05 = 0;
+			sb06 = 1;	
+			sb07 = 0;	
+			sb08 = 0;	
+		}else if(sb06==1){
+			closeSubTimeout('sbmenu06', 100);
+			sb06 =0;
+		}
+	});
+	
+	$( "li#me07" )  
+	.click(function() {    
+		if(sb07==0){
+			openSub('sbmenu07', 'menu07');
+			sb01 = 0;
+			sb02 = 0;
+			sb04 = 0;
+			sb05 = 0;
+			sb06 = 0;	
+			sb07 = 1;
+			sb08 = 0;	
+		}else if(sb07==1){
+			closeSubTimeout('sbmenu07', 100);
+			sb07 =0;
+		}
+	});
+	
+	$( "li#me08" )  
+	.click(function() {    
+		if(sb08==0){
+			openSub('sbmenu08', 'menu08');
+			sb01 = 0;
+			sb02 = 0;
+			sb04 = 0;
+			sb05 = 0;
+			sb06 = 0;	
+			sb07 = 0;	
+			sb08 = 1;	
+		}else if(sb08==1){
+			closeSubTimeout('sbmenu08', 100);
+			sb08 =0;
+		}
+	});
+
+	
+});
+</script></div>
+    

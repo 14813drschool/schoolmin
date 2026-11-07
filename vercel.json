@@ -12,6 +12,10 @@
   },
   "routes": [
     {
+      "src": "^/mis/app(/.*)?$",
+      "dest": "/api/index.php"
+    },
+    {
       "src": "^/(settings|vercel|datas|language|install)(/.*)?$",
       "dest": "/api/index.php"
     },

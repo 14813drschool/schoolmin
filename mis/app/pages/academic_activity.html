@@ -1,0 +1,794 @@
+<div style="padding-top:5px">
+ <div id="page_topic_blue" style="width:967px">
+ <div style="float:left">
+ <h1 class='title_26' style='font-size:21px;float:left;white-space:nowrap'>&nbsp;บริหารงานวิชาการ&nbsp;<img src="../images/white_br_next.png" border="0" style="width:5px"/>&nbsp;หลักสูตร</h1>
+ </div>
+ <div style="float:right">
+ <span style="float:left;margin-top:3px;padding:5px 10px;background-image:url(../icon_tools/menubar_year.png); background-repeat:no-repeat;width:163px;height:22px;font-size:11px;font-weight:normal">แสดงข้อมูล ปีการศึกษา {{YT}}</span>
+ <span style="float:left;margin-top:3px;padding:0px 2px">
+ <a href="../edumain"><img src="../icon_tools/menubar_dashboard.png" border="0" alt="แผงเมนูหลัก" title="แผงเมนูหลัก"/></a>
+ </span>
+ </div>
+ </div>
+ <div id="maindetail" style="width:965px"><table border="0" cellpadding="0" cellspacing="0" style="margin-top:3px;width:967px">
+<tr>
+<td align="left" valign="bottom" style="width:70px;white-space:nowrap">&nbsp;<img src="../icon_tools/icon_main.png"/></td>
+<td align="left" valign="bottom" style="padding-left:5px;white-space:nowrap">
+<table border="0" cellspacing="0" cellpadding="0">
+ <tr>
+ <td style="white-space:nowrap"><h1 class="header_subtitle" style="font-size:25px;white-space:nowrap">กิจกรรมพัฒนาผู้เรียน</h1></td>
+ </tr>
+ <tr>
+ <td style="white-space:nowrap"><h1 class="blue_secondtitle" style="font-size:23px;white-space:nowrap">กิจกรรมพัฒนาผู้เรียน</h1></td>
+ </tr>
+</table>
+</td>
+<td align="right" valign="middle" style="white-space:nowrap"><DIV style="float:right"><div style='float:left;margin:0px 2px'> <a href='javascript:void(0);' onMouseOver="MM_swapImage('icon_help','','../icon_tools/icon_help.png',1);" onMouseOut="MM_swapImgRestore();" onclick="OpenHelp('help/?module=academic&option=activity');"><img id='icon_help' name='icon_help' src='../icon_tools/hicon_help.png' border='0' title='ช่วยเหลือ' align='top'/></a> </div></DIV></td>
+</tr>
+</table>
+</div>
+ </div>
+</div>
+<div style="margin-top:10px;min-height:750px;z-index:100">
+<link rel="stylesheet" type="text/css" href="../css/tiny_style.css">
+<script type="text/javascript" src="../scripts/SorterScripts.js"></script>
+<form id="list" name="list" method="post">
+<table id="mainList" border="0" cellspacing="0" cellpadding="0">
+<tr id="searchList">
+ <td>
+ <span class="search">
+ <table name="colsearch" border="0" cellspacing="0" cellpadding="0">
+ <tr>
+ <td><select id="columns" onchange="sorter.search('query')" class="general radius searchborder" style="height:25px;width:200px"></select></td>
+ <td style="padding-left:5px"><input type="text" class="general radius searchborder" id="query" style="width:150px;height:19px;padding-top:2px;padding-bottom:2px;" onkeyup="sorter.search('query')"/></td>
+ </tr>
+ </table>
+ </span>
+ </td>
+</tr>
+<tr id="titleList">
+ <td>
+ <div class="titlenav" style="width:969px">
+ <span style="float:left;white-space:nowrap">
+ <span id="Listtitle">&nbsp;</span>
+ <h1 style="font-size:23px; white-space:nowrap">รายการกิจกรรมพัฒนาผู้เรียน</h1>
+ </span>
+ <span style="float:right;margin-top:5px;white-space:nowrap">
+ แสดงรายการที่&nbsp;<span id="startrecord"></span>-<span id="endrecord"></span>&nbsp;จากทั้งหมด&nbsp;<span id="totalrecords"></span>&nbsp;รายการ</span></span>
+ </span>
+ </div>
+ </td>
+</tr><tr id="contentList">
+ <td>
+ <span id="tablewrapper">
+ <span id="tableheader">
+ <table border="0" cellpadding="0" cellspacing="0" class="tinytable" id="table" align="left" style="width:983px">
+ <thead>
+ <tr>
+ <th width="24" class="nosort"><h3>#</h3></th>
+ <th><h3>รหัสกิจกรรม</h3></th>
+ <th><h3>ชื่อกิจกรรม</h3></th>
+ <th><h3>ประเภท</h3></th>
+ <th><h3>หลักสูตร</h3></th>
+ <th width="80"><h3>บังคับ/เลือก</h3></th>
+ <th width="80"><h3>ระดับชั้น</h3></th>
+ <th width="80"><h3>ภาคเรียน</h3></th>
+ </tr>
+ </thead>
+ <tbody>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>1<a name="1"></a></td>
+ <td>ก11901</td>
+ <td>ลูกเสือ-ยุวกาชาด 1</td>
+ <td>กิจกรรมลูกเสือ-เนตรนารี</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.1</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>2<a name="5"></a></td>
+ <td>ก12901</td>
+ <td>ลูกเสือ-ยุวกาชาด 2</td>
+ <td>กิจกรรมลูกเสือ-เนตรนารี</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.2</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>3<a name="9"></a></td>
+ <td>ก13901</td>
+ <td>ลูกเสือ-ยุวกาชาด 3</td>
+ <td>กิจกรรมลูกเสือ-เนตรนารี</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.3</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>4<a name="13"></a></td>
+ <td>ก14901</td>
+ <td>ลูกเสือ-ยุวกาชาด 4</td>
+ <td>กิจกรรมลูกเสือ-เนตรนารี</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.4</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>5<a name="17"></a></td>
+ <td>ก15901</td>
+ <td>ลูกเสือ-ยุวกาชาด 5</td>
+ <td>กิจกรรมลูกเสือ-เนตรนารี</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.5</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>6<a name="21"></a></td>
+ <td>ก16901</td>
+ <td>ลูกเสือ-ยุวกาชาด 6</td>
+ <td>กิจกรรมลูกเสือ-เนตรนารี</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.6</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>7<a name="25"></a></td>
+ <td>ก21901</td>
+ <td>ลูกเสือ-เนตรนารี</td>
+ <td>กิจกรรมลูกเสือ-เนตรนารี</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.1</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>8<a name="26"></a></td>
+ <td>ก21906</td>
+ <td>ลูกเสือ-เนตรนารี</td>
+ <td>กิจกรรมลูกเสือ-เนตรนารี</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.1</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>9<a name="33"></a></td>
+ <td>ก22901</td>
+ <td>ลูกเสือ-เนตรนารี</td>
+ <td>กิจกรรมลูกเสือ-เนตรนารี</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.2</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>10<a name="34"></a></td>
+ <td>ก22905</td>
+ <td>ลูกเสือ-เนตรนารี</td>
+ <td>กิจกรรมลูกเสือ-เนตรนารี</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.2</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>11<a name="41"></a></td>
+ <td>ก23901</td>
+ <td>ลูกเสือ-เนตรนารี</td>
+ <td>กิจกรรมลูกเสือ-เนตรนารี</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.3</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>12<a name="42"></a></td>
+ <td>ก23905</td>
+ <td>ลูกเสือ-เนตรนารี</td>
+ <td>กิจกรรมลูกเสือ-เนตรนารี</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.3</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>13<a name="3"></a></td>
+ <td>ก11903</td>
+ <td>แนะแนว 1</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.1</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>14<a name="7"></a></td>
+ <td>ก12903</td>
+ <td>แนะแนว 2</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.2</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>15<a name="11"></a></td>
+ <td>ก13903</td>
+ <td>แนะแนว 3</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.3</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>16<a name="15"></a></td>
+ <td>ก14903</td>
+ <td>แนะแนว 4</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.4</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>17<a name="19"></a></td>
+ <td>ก15903</td>
+ <td>แนะแนว 5</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.5</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>18<a name="23"></a></td>
+ <td>ก16903</td>
+ <td>แนะแนว 6</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.6</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>19<a name="29"></a></td>
+ <td>ก21902</td>
+ <td>แนะแนว 1</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.1</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>20<a name="30"></a></td>
+ <td>ก21905</td>
+ <td>แนะแนว 1</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.1</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>21<a name="37"></a></td>
+ <td>ก22902</td>
+ <td>แนะแนว 2</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.2</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>22<a name="38"></a></td>
+ <td>ก22906</td>
+ <td>แนะแนว 2</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.2</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>23<a name="45"></a></td>
+ <td>ก23902</td>
+ <td>แนะแนว 3</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.3</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>24<a name="46"></a></td>
+ <td>ก23906</td>
+ <td>แนะแนว 3</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.3</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>25<a name="49"></a></td>
+ <td>ก31901</td>
+ <td>แนะแนว 4</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.4</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>26<a name="53"></a></td>
+ <td>ก31904</td>
+ <td>แนะแนว</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.4</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>27<a name="56"></a></td>
+ <td>ก32901</td>
+ <td>แนะแนว</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.5</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>28<a name="59"></a></td>
+ <td>ก32904</td>
+ <td>แนะแนว</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.5</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>29<a name="62"></a></td>
+ <td>ก33901</td>
+ <td>แนะแนว</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.6</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>30<a name="68"></a></td>
+ <td>ก33904</td>
+ <td>แนะแนว</td>
+ <td>กิจกรรมแนะแนว</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.6</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>31<a name="2"></a></td>
+ <td>ก11902</td>
+ <td>ชุมนุม 1</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.1</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>32<a name="6"></a></td>
+ <td>ก12902</td>
+ <td>ชุมนุม 2</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.2</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>33<a name="10"></a></td>
+ <td>ก13902</td>
+ <td>ชุมนุม 3</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.3</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>34<a name="14"></a></td>
+ <td>ก14902</td>
+ <td>ชุมนุม 4</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ป.4</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>35<a name="18"></a></td>
+ <td>ก15902</td>
+ <td>ชุมนุม 5</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ป.5</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>36<a name="22"></a></td>
+ <td>ก16902</td>
+ <td>ชุมนุม 6</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ป.6</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>37<a name="27"></a></td>
+ <td>ก21903</td>
+ <td>ชุมนุม 1</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.1</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>38<a name="28"></a></td>
+ <td>ก21907</td>
+ <td>ชุมนุม 1</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.1</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>39<a name="35"></a></td>
+ <td>ก22903</td>
+ <td>ชุมนุม 2</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.2</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>40<a name="36"></a></td>
+ <td>ก22907</td>
+ <td>ชุมนุม 2</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.2</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>41<a name="43"></a></td>
+ <td>ก23903</td>
+ <td>ชุมนุม 3</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.3</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>42<a name="44"></a></td>
+ <td>ก23907</td>
+ <td>ชุมนุม 3</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.3</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>43<a name="50"></a></td>
+ <td>ก31902</td>
+ <td>ชุมนุม</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.4</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>44<a name="54"></a></td>
+ <td>ก31905</td>
+ <td>ชุมนุม</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.4</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>45<a name="57"></a></td>
+ <td>ก32902</td>
+ <td>ชุมนุม</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.5</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>46<a name="60"></a></td>
+ <td>ก32905</td>
+ <td>ชุมนุม</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.5</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>47<a name="64"></a></td>
+ <td>ก33902</td>
+ <td>ชุมนุม</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.6</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>48<a name="69"></a></td>
+ <td>ก33905</td>
+ <td>ชุมนุม</td>
+ <td>กิจกรรมชุมนุม</td>
+ <td>รายภาค</td>
+ <td>เลือกเสรี</td>
+ <td>ม.6</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>49<a name="4"></a></td>
+ <td>ก11904</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.1</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>50<a name="8"></a></td>
+ <td>ก12904</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.2</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>51<a name="12"></a></td>
+ <td>ก13904</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.3</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>52<a name="16"></a></td>
+ <td>ก14904</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.4</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>53<a name="20"></a></td>
+ <td>ก15904</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.5</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>54<a name="24"></a></td>
+ <td>ก16904</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายปี</td>
+ <td>บังคับ</td>
+ <td>ป.6</td>
+ <td>1-2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>55<a name="31"></a></td>
+ <td>ก21904</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.1</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>56<a name="32"></a></td>
+ <td>ก21908</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.1</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>57<a name="39"></a></td>
+ <td>ก22904</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.2</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>58<a name="40"></a></td>
+ <td>ก22908</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.2</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>59<a name="47"></a></td>
+ <td>ก23904</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.3</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>60<a name="48"></a></td>
+ <td>ก23908</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.3</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>61<a name="51"></a></td>
+ <td>ก31903</td>
+ <td>กิจกรรมเพื่อสังคม และสาธารณะประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.4</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>62<a name="55"></a></td>
+ <td>ก31906</td>
+ <td>กิจกรรมเพื่อสังคม และสาธารณะประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.4</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>63<a name="58"></a></td>
+ <td>ก32903</td>
+ <td>กิจกรรมเพื่อสังคม และสาธารณะประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.5</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>64<a name="61"></a></td>
+ <td>ก32906</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณะประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.5</td>
+ <td>2</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>65<a name="66"></a></td>
+ <td>ก33903</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.6</td>
+ <td>1</td>
+ </tr>
+ <tr onclick="SelecteachRow(event,$(this))">
+ <td>66<a name="70"></a></td>
+ <td>ก33906</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณะประโยชน์</td>
+ <td>กิจกรรมเพื่อสังคมและสาธารณประโยชน์</td>
+ <td>รายภาค</td>
+ <td>บังคับ</td>
+ <td>ม.6</td>
+ <td>2</td>
+ </tr>
+ </tbody>
+ </table>
+ </span>
+ </span>
+ </td>
+</tr>
+<tr id="PaginationList">
+<td align="top">
+<div class="pagenav" style="width:969px">
+ <span id="tablecurrentpage">หน้าปัจจุบัน <span id="currentpage"></span>/<span id="totalpages"></span></span>
+ <span id="tablepagenav" style="width:533px">
+ <img src="../images/first_page.png" alt="First Page" border="0" id="firstpagenav" onclick="move_to(-1,true)"/><img src="../images/previous_page.png" alt="Previous Page" border="0" id="prevnextpagenav" onclick="move_to(-1)"/><img src="../images/next_page.png" alt="Next Page" border="0" id="prevnextpagenav" onclick="move_to(1)"/><img src="../images/last_page.png" alt="Last Page" border="0" id="lastpagenav" onclick="move_to(1,true)"/>
+ </span>
+ <span id="tableselectsize">
+ แสดง&nbsp;
+ <select name="this_size" onchange="curr_size(this.value);" style="padding:1px;height:22px;width:50px;font-size:11px" class="sizeradius">
+ <option value="2" >2</option>
+ <option value="5" >5</option>
+ <option value="10" >10</option>
+ <option value="25" >25</option>
+ <option value="60" >60</option>
+ <option value="100" >100</option>
+ <option value="120" selected>120</option>
+ <option value="150" >150</option>
+ <option value="200" >200</option>
+ <option value="300" >300</option>
+ </select>
+ &nbsp;รายการ/หน้า
+ </span>
+ </div>
+</td>
+</tr><script type="text/javascript" src="../scripts/Tinyscript.js"></script>
+<script type="text/javascript">
+var sorter = new TINY.table.sorter('sorter','table',{
+ headclass:'head',
+ ascclass:'asc',
+ descclass:'desc',
+ evenclass:'evenrow',
+ oddclass:'oddrow',
+ evenselclass:'evenselected',
+ oddselclass:'oddselected',
+ paginate:true,
+ size:200,
+ colddid:'columns',
+ currentid:'currentpage',
+ totalid:'totalpages',
+ startingrecid:'startrecord',
+ endingrecid:'endrecord',
+ totalrecid:'totalrecords',
+ navid:'tablepagenav',
+ init:true
+});
+ sorter.size(getCookie("currentsize"));
+</script>
+</table>
+</form></div>

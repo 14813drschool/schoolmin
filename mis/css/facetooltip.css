@@ -1,0 +1,67 @@
+#facetooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  text-align: left;
+}
+
+#facetooltip .popup{
+  position:relative;
+  border:1px solid rgba(0,0,0,0);
+  -webkit-border-radius:5px;
+  -moz-border-radius:5px;
+  border-radius:5px;
+  -webkit-box-shadow:0 0 10px rgba(0,0,0,0.8);
+  -moz-box-shadow:0 0 10px rgba(0,0,0,0.8);
+  box-shadow:0 0 10px rgba(0,0,0,0.8);
+}
+
+
+#facetooltip .content > p:first-child{
+  margin-top:0;
+}
+#facetooltip .content > p:last-child{
+  margin-bottom:0;
+}
+
+#facetooltip .close {
+	background: rgb(255, 255, 255, 0); padding: 2px; top: 5px; right: 5px; position: absolute;
+}
+#facetooltip .close img {
+	opacity: 0.7;
+}
+#facetooltip .close:hover img {
+	opacity: 1;
+}
+#facetooltip .loading {
+	text-align: center;
+}
+
+
+#facetooltip .image {
+  text-align: center;
+}
+
+#facetooltip img {
+  border: 0;
+  margin: 0;
+}
+
+#facetooltip_overlay {
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  height:100%;
+  width:100%;
+}
+
+
+.facetooltip_hide {
+  z-index:-100;
+}
+
+.facetooltip_overlayBG {
+  background-color: #000;
+  z-index: 99;
+}

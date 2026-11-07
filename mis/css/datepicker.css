@@ -1,0 +1,301 @@
+INPUT.fd-hidden-input {
+	DISPLAY: none
+}
+SELECT.fd-hidden-input {
+	DISPLAY: none
+}
+.fd-screen-reader {
+	POSITION: absolute; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; OUTLINE-WIDTH: 0px; WIDTH: 1px; HEIGHT: 1px; OVERFLOW: hidden; TOP: 0px; LEFT: -999em; -moz-outline: 0 none
+}
+A.dp-disabled {
+	FILTER: alpha(opacity=100); opacity: 1
+}
+.dp-disabled TABLE {
+	FILTER: alpha(opacity=100); opacity: 1
+}
+.dp-disabled {
+	CURSOR: default !important
+}
+.dp-disabled TD {
+	CURSOR: default !important
+}
+.dp-disabled TH {
+	CURSOR: default !important
+}
+.dp-disabled TH SPAN {
+	CURSOR: default !important
+}
+A.date-picker-control:focus {
+	OUTLINE-STYLE: none; OUTLINE-COLOR: invert; OUTLINE-WIDTH: 0px; COLOR: rgb(100,130,170) !important; OVERFLOW: hidden; -moz-outline: 0 none
+}
+A.date-picker-controls:focus {
+	OUTLINE-STYLE: none; OUTLINE-COLOR: invert; OUTLINE-WIDTH: 0px; COLOR: rgb(100,130,170) !important; OVERFLOW: hidden; -moz-outline: 0 none
+}
+DIV.datePicker TABLE TD:focus {
+	OUTLINE-STYLE: none; OUTLINE-COLOR: invert; OUTLINE-WIDTH: 0px; COLOR: rgb(100,130,170) !important; OVERFLOW: hidden; -moz-outline: 0 none
+}
+DIV.datePicker {
+	Z-INDEX: 9999; POSITION: absolute; TEXT-ALIGN: center; FONT:9px Verdana, Sans-Serif; BACKGROUND: none transparent scroll repeat 0% 0%; -moz-user-select: none; -khtml-user-select: none
+}
+DIV.static-datepicker {
+	POSITION: relative; TOP: 5px; LEFT: 0px
+}
+DIV.datePicker TABLE {
+	WIDTH: auto; HEIGHT: auto
+}
+DIV.datePicker TFOOT TH.drag-enabled {
+	CURSOR: move
+}
+DIV.datePicker THEAD TH.drag-enabled {
+	CURSOR: move
+}
+DIV.datePicker THEAD TH.drag-enabled SPAN {
+	CURSOR: move
+}
+IFRAME.iehack {
+	Z-INDEX: 9998; BORDER-BOTTOM: 0px; POSITION: absolute; BORDER-LEFT: 0px; PADDING-BOTTOM: 0px; MARGIN: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; DISPLAY: none; BACKGROUND: #fff; BORDER-TOP: 0px; BORDER-RIGHT: 0px; PADDING-TOP: 0px
+}
+A.date-picker-control:link {
+	MARGIN: 0px 0px 0px 10px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; BACKGROUND: url(../images/cal.gif) no-repeat 50% 50%; VISIBILITY: visible; VERTICAL-ALIGN: top; BORDER-TOP: 0px; CURSOR: pointer; BORDER-RIGHT: 0px; TEXT-DECORATION: none; PADDING-TOP: 0px
+}
+A.date-picker-control:visited {
+	MARGIN: 0px 0px 0px 10px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; BACKGROUND: url(../images/cal.gif) no-repeat 50% 50%; VISIBILITY: visible; VERTICAL-ALIGN: top; BORDER-TOP: 0px; CURSOR: pointer; BORDER-RIGHT: 0px; TEXT-DECORATION: none; PADDING-TOP: 0px
+}
+A.date-picker-control:hover {
+	BACKGROUND: url(../images/cal-grey.gif) no-repeat 50% 50%; z-index:2000;
+}
+A.date-picker-control:active {
+	BACKGROUND: url(../images/cal-grey.gif) no-repeat 50% 50%;z-index:2000;
+}
+A.date-picker-control:focus {
+	BACKGROUND: url(../images/cal-grey.gif) no-repeat 50% 50%;z-index:2000;
+}
+
+
+A.date-picker-controls:link {
+	MARGIN: 5px 0px 0px 10px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; BACKGROUND: url(../images/cal.gif) no-repeat 50% 50%; VISIBILITY: visible; VERTICAL-ALIGN: top; BORDER-TOP: 0px; CURSOR: pointer; BORDER-RIGHT: 0px; TEXT-DECORATION: none; PADDING-TOP: 0px
+}
+A.date-picker-controls:visited {
+	MARGIN: 5px 0px 0px 10px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; BACKGROUND: url(../images/cal.gif) no-repeat 50% 50%; VISIBILITY: visible; VERTICAL-ALIGN: top; BORDER-TOP: 0px; CURSOR: pointer; BORDER-RIGHT: 0px; TEXT-DECORATION: none; PADDING-TOP: 0px
+}
+A.date-picker-controls:hover {
+	BACKGROUND: url(../images/cal-grey.gif) no-repeat 50% 50%;z-index:2000;
+}
+A.date-picker-controls:active {
+	BACKGROUND: url(../images/cal-grey.gif) no-repeat 50% 50%;z-index:2000;
+}
+A.date-picker-controls:focus {
+	BACKGROUND: url(../images/cal-grey.gif) no-repeat 50% 50%;z-index:2000;
+}
+
+
+A.dp-button-active:link {
+	BACKGROUND: url(../images/cal-grey.gif) no-repeat 50% 50%;z-index:2000;
+}
+A.dp-button-active:visited {
+	BACKGROUND: url(../images/cal-grey.gif) no-repeat 50% 50%;z-index:2000;
+}
+A.dp-button-active:hover {
+	BACKGROUND: url(../images/cal-grey.gif) no-repeat 50% 50%;z-index:2000;
+}
+A.dp-button-active:active {
+	BACKGROUND: url(../images/cal-grey.gif) no-repeat 50% 50%;z-index:2000;
+}
+A.dp-button-active:focus {
+	BACKGROUND: url(../images/cal-grey.gif) no-repeat 50% 50%;z-index:2000;
+}
+* HTML A.date-picker-control {
+	WIDTH: 16px
+}
+* HTML A.date-picker-controls {
+	WIDTH: 16px
+}
+A.date-picker-control {
+	DISPLAY: inline-block
+}
+A.date-picker-controls {
+	DISPLAY: inline-block
+}
+A.date-picker-control SPAN {
+	MARGIN: auto 0px; WIDTH: 16px; DISPLAY: block; HEIGHT: 16px
+}
+A.date-picker-controls SPAN {
+	MARGIN: auto 0px; WIDTH: 16px; DISPLAY: block; HEIGHT: 16px
+}
+DIV.datePicker THEAD TH SPAN {
+	BORDER-BOTTOM: 0px; TEXT-ALIGN: center; BORDER-LEFT: 0px; PADDING-BOTTOM: 0px; LINE-HEIGHT: 1.2em; MARGIN: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; DISPLAY: block; BACKGROUND: none transparent scroll repeat 0% 0%; BORDER-TOP: 0px; CURSOR: pointer; FONT-WEIGHT: bold; BORDER-RIGHT: 0px; PADDING-TOP: 0px
+}
+DIV.datePicker TH SPAN.month-display {
+	TEXT-TRANSFORM: uppercase; DISPLAY: inline; FONT: 1.2em Verdana, Sans-Serif; LETTER-SPACING: 1px; CURSOR: default
+}
+DIV.datePicker TH SPAN.year-display {
+	TEXT-TRANSFORM: uppercase; DISPLAY: inline; FONT: 1.2em Verdana, Sans-Serif; LETTER-SPACING: 1px; CURSOR: default
+}
+DIV.datePicker TH SPAN.prev-but {
+	FONT-FAMILY: georgia, times new roman, palatino, times, bookman, serif; FONT-SIZE: 2em; CURSOR: pointer !important; FONT-WEIGHT: lighter
+}
+DIV.datePicker TH SPAN.next-but {
+	FONT-FAMILY: georgia, times new roman, palatino, times, bookman, serif; FONT-SIZE: 2em; CURSOR: pointer !important; FONT-WEIGHT: lighter
+}
+DIV.datePicker TH SPAN.prev-but:hover {
+	COLOR: #a84444
+}
+DIV.datePicker TH SPAN.next-but:hover {
+	COLOR: #a84444
+}
+DIV.datePicker TH SPAN.today-but:hover {
+	COLOR: #a84444
+}
+DIV.datePicker TH SPAN.today-but {
+	TEXT-ALIGN: center; TEXT-TRANSFORM: uppercase; MARGIN: 0px auto; WIDTH: 100%; FONT: 1.2em Verdana, Sans-Serif; VERTICAL-ALIGN: middle; CURSOR: pointer !important; TEXT-DECORATION: none; PADDING-TOP: 0em
+}
+DIV.dp-disabled TH SPAN.prev-but {
+	COLOR: #aaa; CURSOR: default !important
+}
+DIV.dp-disabled TH SPAN.next-but {
+	COLOR: #aaa; CURSOR: default !important
+}
+DIV.dp-disabled TH SPAN.today-but {
+	COLOR: #aaa; CURSOR: default !important
+}
+DIV.dp-disabled TH SPAN.prev-but:hover {
+	COLOR: #aaa; CURSOR: default !important
+}
+DIV.dp-disabled TH SPAN.next-but:hover {
+	COLOR: #aaa; CURSOR: default !important
+}
+DIV.dp-disabled TH SPAN.today-but:hover {
+	COLOR: #aaa; CURSOR: default !important
+}
+DIV.datePicker TH SPAN.fd-disabled.prev-but:hover {
+	COLOR: #aaa; CURSOR: default !important
+}
+DIV.datePicker TH SPAN.fd-disabled.next-but:hover {
+	COLOR: #aaa; CURSOR: default !important
+}
+DIV.datePicker THEAD TH SPAN.fd-disabled {
+	COLOR: #aaa; CURSOR: default !important
+}
+DIV.datePicker TH SPAN.fd-disabled:hover {
+	COLOR: #aaa; CURSOR: default !important
+}
+DIV.datePicker TH SPAN.fd-day-header {
+	TEXT-ALIGN: center; TEXT-TRANSFORM: lowercase; MARGIN: 0px auto; FONT: 900 1.1em Verdana, Sans-Serif; CURSOR: pointer; TEXT-DECORATION: none
+}
+DIV.datePicker TABLE {
+	BORDER-BOTTOM: #ccc 1px solid; TEXT-ALIGN: center; BORDER-LEFT: #ccc 1px solid; PADDING-BOTTOM: 0em; MARGIN: 0px; PADDING-LEFT: 0em; BORDER-SPACING: 2px; WIDTH: auto; PADDING-RIGHT: 0em; EMPTY-CELLS: show; BACKGROUND: url(../images/gradient-e5e5e5-ffffff.gif) #fff repeat-x 0px -20px; BORDER-TOP: #ccc 1px solid; BORDER-RIGHT: #ccc 1px solid; PADDING-TOP: 0em; -moz-border-radius: 0.8em; border-radius: 0.8em
+}
+DIV.datePicker TABLE TD {
+	BORDER-BOTTOM: #ccc 1px solid; TEXT-ALIGN: center; BORDER-LEFT: #ccc 1px solid; PADDING-BOTTOM: 0px; TEXT-TRANSFORM: none; OUTLINE-STYLE: none; OUTLINE-COLOR: transparent; PADDING-LEFT: 0px; OUTLINE-WIDTH: 0px; WIDTH: 3em; PADDING-RIGHT: 0px; BACKGROUND: url(../images/gradient-e5e5e5-ffffff.gif) #fff repeat-x 0px -40px; HEIGHT: 3em; VERTICAL-ALIGN: middle; OVERFLOW: hidden; BORDER-TOP: #ccc 1px solid; CURSOR: pointer; BORDER-RIGHT: #ccc 1px solid; PADDING-TOP: 0px; -moz-border-radius: 2px; border-radius: 2px
+}
+DIV.datePicker TABLE TBODY TH {
+	BORDER-BOTTOM: #ccc 1px solid; TEXT-ALIGN: center; BORDER-LEFT: #ccc 1px solid; PADDING-BOTTOM: 0px; TEXT-TRANSFORM: none; OUTLINE-STYLE: none; OUTLINE-COLOR: transparent; PADDING-LEFT: 0px; OUTLINE-WIDTH: 0px; WIDTH: 3em; PADDING-RIGHT: 0px; BACKGROUND: url(../images/gradient-e5e5e5-ffffff.gif) #fff repeat-x 0px -40px; HEIGHT: 3em; VERTICAL-ALIGN: middle; OVERFLOW: hidden; BORDER-TOP: #ccc 1px solid; CURSOR: pointer; BORDER-RIGHT: #ccc 1px solid; PADDING-TOP: 0px; -moz-border-radius: 2px; border-radius: 2px
+}
+DIV.datePicker TABLE TD:focus {
+	OUTLINE-STYLE: none; OUTLINE-COLOR: red; OUTLINE-WIDTH: 0px
+}
+DIV.datePicker TABLE TD:active {
+	OUTLINE-STYLE: none; OUTLINE-COLOR: red; OUTLINE-WIDTH: 0px
+}
+DIV.datePicker TABLE TH {
+	BORDER-BOTTOM: 0px; TEXT-ALIGN: center; BORDER-LEFT: 0px; PADDING-BOTTOM: 0px; TEXT-TRANSFORM: none; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; COLOR: #222; VERTICAL-ALIGN: middle; BORDER-TOP: 0px; FONT-WEIGHT: bold; BORDER-RIGHT: 0px; PADDING-TOP: 0px
+}
+DIV.datePicker TABLE THEAD TH {
+	HEIGHT: auto !important
+}
+DIV.datePicker TABLE TBODY TH {
+	BORDER-BOTTOM: #dcdcdc 1px solid; BORDER-LEFT: #dcdcdc 1px solid; BORDER-TOP: #dcdcdc 1px solid; BORDER-RIGHT: #dcdcdc 1px solid
+}
+DIV.datePicker TABLE THEAD TH.date-picker-week-header {
+	FONT-STYLE: oblique; BACKGROUND: none transparent scroll repeat 0% 0%; CURSOR: default
+}
+DIV.datePicker TABLE TBODY TH.date-picker-week-header {
+	FONT-STYLE: oblique; BACKGROUND: none transparent scroll repeat 0% 0%; CURSOR: default
+}
+DIV.datePicker TABLE THEAD TH.date-picker-week-header {
+	BORDER-BOTTOM: 0px; BORDER-LEFT: 0px; PADDING-BOTTOM: 0.2em; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; BORDER-TOP: 0px; CURSOR: help; BORDER-RIGHT: 0px; PADDING-TOP: 0px
+}
+DIV.datePicker TFOOT TH {
+	BORDER-BOTTOM: 0px; BORDER-LEFT: 0px; TEXT-TRANSFORM: uppercase; BACKGROUND: #fff; LETTER-SPACING: 0.1em; HEIGHT: 2.8em; BORDER-TOP: 0px; CURSOR: default; FONT-WEIGHT: normal; BORDER-RIGHT: 0px
+}
+DIV.datePicker TABLE TBODY TD.date-picker-unused {
+	BORDER-BOTTOM-COLOR: #dcdcdc; BORDER-TOP-COLOR: #dcdcdc; BACKGROUND: url(../images/backstripes.gif) #fff; BORDER-RIGHT-COLOR: #dcdcdc; BORDER-LEFT-COLOR: #dcdcdc; CURSOR: default !important
+}
+DIV.datePicker TABLE THEAD TH.date-picker-title {
+	PADDING-BOTTOM: 0.4em; PADDING-LEFT: 0px; WIDTH: auto; PADDING-RIGHT: 0px; HEIGHT: auto; PADDING-TOP: 0.4em
+}
+DIV.datePicker TABLE THEAD TH.date-picker-day-header {
+	TEXT-TRANSFORM: lowercase; HEIGHT: auto; CURSOR: help
+}
+DIV.datePicker TABLE TBODY TD.date-picker-today {
+	BACKGROUND: url(../images/bullet2.gif) #fff no-repeat 0px 0px; COLOR: rgb(100,100,100) !important
+}
+DIV.datePicker TABLE TBODY TD.date-picker-highlight.month-out {
+	COLOR: #aa8866 !important
+}
+DIV.datePicker TABLE TBODY TD.date-picker-highlight {
+	COLOR: #a86666 !important
+}
+DIV.datePicker TABLE THEAD TH.date-picker-highlight {
+	COLOR: #a86666 !important
+}
+DIV.datePicker TABLE TBODY TD.date-picker-hover {
+	BORDER-BOTTOM-COLOR: rgb(100,130,170) !important; BORDER-TOP-COLOR: rgb(100,130,170) !important; BACKGROUND: url(../images/bg_header.jpg) #fff no-repeat 0px 0px; COLOR: rgb(100,130,170); BORDER-RIGHT-COLOR: rgb(100,130,170) !important; BORDER-LEFT-COLOR: rgb(100,130,170) !important; CURSOR: pointer; text-shadow: 0px 1px 1px #fff
+}
+DIV.datePicker TABLE TBODY TD.day-disabled {
+	BACKGROUND: url(../images/backstripes.gif) #fff no-repeat 0px 0px; COLOR: #aaa !important; CURSOR: default;
+}
+DIV.datePicker TABLE TBODY TD.month-out {
+	BORDER-BOTTOM-COLOR: #ddd; BORDER-TOP-COLOR: #ddd; BACKGROUND: url(../images/gradient-e5e5e5-ffffff.gif) #fff repeat-x 0px -40px; COLOR: #aaa !important; BORDER-RIGHT-COLOR: #ddd; BORDER-LEFT-COLOR: #ddd
+}
+DIV.datePicker TABLE TBODY TD.date-picker-selected-date {
+	BORDER-BOTTOM-COLOR: #333 !important; BORDER-TOP-COLOR: #333 !important; COLOR: #333 !important; BORDER-RIGHT-COLOR: #333 !important; BORDER-LEFT-COLOR: #333 !important
+}
+DIV.datePicker TABLE TBODY TD.out-of-range {
+	FONT-STYLE: oblique; BACKGROUND: #fcfcfc; COLOR: #ccc !important; CURSOR: default !important
+}
+DIV.datePicker TABLE TBODY TD.not-selectable {
+	FONT-STYLE: oblique; BACKGROUND: #fcfcfc; COLOR: #ccc !important; CURSOR: default !important
+}
+DIV.datePicker TABLE TBODY TH.month-out {
+	FONT-STYLE: oblique; BACKGROUND: #fcfcfc; COLOR: #aaa !important
+}
+DIV.datePicker TABLE TBODY TH.out-of-range {
+	FONT-STYLE: oblique; BACKGROUND: #fcfcfc; COLOR: #aaa !important
+}
+DIV.datePicker TABLE TBODY TH.out-of-range {
+	FILTER: alpha(opacity=60); opacity: 0.6
+}
+DIV.datePicker TABLE TBODY TD.not-selectable {
+	FILTER: alpha(opacity=80); opacity: 0.8
+}
+DIV.datePicker TABLE TBODY TR {
+	DISPLAY: table-row
+}
+DIV.datePicker TABLE TFOOT SUP {
+	POSITION: relative; LINE-HEIGHT: 1; TEXT-TRANSFORM: none; LETTER-SPACING: normal; HEIGHT: 0px; FONT-SIZE: 0.86em; VERTICAL-ALIGN: baseline !important; TOP: -0.2em
+}
+DIV.datePicker TABLE THEAD TH.date-picker-day-header {
+	text-shadow: 0px 1px 1px #fff
+}
+DIV.datePicker TABLE THEAD SPAN.month-display {
+	text-shadow: 0px 1px 1px #fff
+}
+DIV.datePicker TABLE THEAD SPAN.year-display {
+	text-shadow: 0px 1px 1px #fff
+}
+DIV.datepicker-focus {
+	OUTLINE-STYLE: none; OUTLINE-COLOR: invert; OUTLINE-WIDTH: medium
+}
+DIV.datepicker-focus TABLE.datePickerTable {
+	BORDER-BOTTOM-COLOR: #999 !important; BORDER-TOP-COLOR: #999 !important; BORDER-RIGHT-COLOR: #999 !important; BORDER-LEFT-COLOR: #999 !important
+}
+DIV.datePicker TABLE TBODY TR TD:focus {
+	OUTLINE-STYLE: none; OUTLINE-COLOR: invert; OUTLINE-WIDTH: 0px; COLOR: rgb(100,130,170) !important; OVERFLOW: hidden; -moz-outline: 0 none
+}
+* HTML DIV.datePicker TABLE TD {
+	BACKGROUND-IMAGE: none;
+}
+* HTML DIV.datePicker TABLE TD.date-picker-unused {
+	BACKGROUND: #f2f2f2;
+}

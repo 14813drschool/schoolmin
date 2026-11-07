@@ -1,0 +1,140 @@
+<div style="padding-top:5px">
+ <div id="page_topic_blue" style="width:967px">
+ <div style="float:left">
+ <h1 class='title_26' style='font-size:21px;float:left;white-space:nowrap'>&nbsp;งานรับผิดชอบหลัก&nbsp;<img src="../images/white_br_next.png" border="0" style="width:5px"/>&nbsp;งานครูที่ปรึกษา</h1>
+ </div>
+ <div style="float:right">
+ <span style="float:left;margin-top:3px;padding:5px 10px;background-image:url(../icon_tools/menubar_year.png); background-repeat:no-repeat;width:163px;height:22px;font-size:11px;font-weight:normal">แสดงข้อมูล ปีการศึกษา {{YT}}</span>
+ <span style="float:left;margin-top:3px;padding:0px 2px">
+ <a href="../edumain"><img src="../icon_tools/menubar_dashboard.png" border="0" alt="แผงเมนูหลัก" title="แผงเมนูหลัก"/></a>
+ </span>
+ </div>
+ </div>
+ <div id="maindetail" style="width:965px"><table border="0" cellpadding="0" cellspacing="0" style="margin-top:3px;width:967px">
+<tr>
+<td align="left" valign="bottom" style="width:70px;white-space:nowrap">&nbsp;<img src="../icon_tools/icon_setting.png"/></td>
+<td align="left" valign="bottom" style="padding-left:5px;white-space:nowrap">
+<table border="0" cellspacing="0" cellpadding="0">
+ <tr>
+ <td style="white-space:nowrap"><h1 class="header_subtitle" style="font-size:25px;white-space:nowrap">ติดตามนักเรียนไม่มาเรียน</h1></td>
+ </tr>
+ <tr>
+ <td style="white-space:nowrap"><h1 class="blue_secondtitle" style="font-size:23px;white-space:nowrap">รายชื่อนักเรียนในที่ปรึกษาขาดเรียน</h1></td>
+ </tr>
+</table>
+</td>
+<td align="right" valign="middle" style="white-space:nowrap"><DIV style="float:right"><div style='float:left;margin:0px 2px'> <a href='javascript:void(0);' onMouseOver="MM_swapImage('icon_print','','../icon_tools/icon_print.png',1);" onMouseOut="MM_swapImgRestore();" onclick="ReportPortrait('print_portrait.php?module=task&option=absent_school_attention&func=PrintRoomAttention');"><img id='icon_print' name='icon_print' src='../icon_tools/hicon_print.png' border='0' title='พิมพ์' align='top'/></a> </div><div style='float:left;margin:0px 2px'> <a href='javascript:void(0);' onMouseOver="MM_swapImage('icon_help','','../icon_tools/icon_help.png',1);" onMouseOut="MM_swapImgRestore();" onclick="OpenHelp('help/?module=task&option=absent_school_attention');"><img id='icon_help' name='icon_help' src='../icon_tools/hicon_help.png' border='0' title='ช่วยเหลือ' align='top'/></a> </div></DIV></td>
+</tr>
+</table>
+</div>
+ </div>
+</div>
+<div style="margin-top:10px;min-height:750px;z-index:100">
+<link rel="stylesheet" type="text/css" href="../css/faceform.css">
+<link rel="stylesheet" type="text/css" href="../css/tiny_style.css">
+<link rel="stylesheet" type="text/css" href="../css/jquery.sBubble-0.1.1.css"/>
+<script type="text/javascript" src="../scripts/jquery.tipsy.js"></script>
+<script type="text/javascript" src="../scripts/jquery.sBubble-0.1.1.js"></script>
+<script type="text/javascript" src="../scripts/SorterScripts.js"></script>
+<script type="text/javascript" src="../scripts/faceform.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+ $('.icontooltip').tipsy({ html:false , gravity: 's'});
+});
+</script>
+<script>
+function select_absent(Status){
+ if(Status!=""){
+ location = "?module=task&option=absent_school_attention&Status="+Status;
+ }else{
+ location = "?module=task&option=absent_school_attention";
+ }
+}
+</script>
+<script type="text/javascript">
+ $(document).ready(function() {
+ $('.submit_on_enter').keydown(function(event) {
+ if (event.keyCode == 13) {
+ this.form.submit();
+ return false;
+ }
+ });
+ });
+</script>
+<style>
+ table.tinytable th { height:30px;vertical-align:top }
+</style>
+<form id="list" name="list" method="post">
+<table id="mainList" border="0" cellspacing="0" cellpadding="0">
+<tr id="info_teacher">
+<td style="padding-bottom:10px"> 
+<DIV style="margin-top:5px;display:table;width:959px;border:dashed 1px #33cc99;padding:5px 10px 10px 10px;border-radius:4px">
+<DIV style="display: table-row">
+ <DIV id="table-left" style="float:left;margin-top:5px;display: table;padding:5px 10px 5px 5px">
+ <DIV style="display: table-row">
+ <DIV style="text-align:left;display: table-cell">
+ <h1 class="thaisansregular blue_12" style="font-size:34px">
+ <img src="../images/home.png" border="0" height="60"/>
+ </h1>
+ </DIV>
+ <DIV style="text-align:left;display:table-cell;vertical-align:top;padding-left:15px">
+ <h1 class="thaisansregular blue_12" style="font-size:28px;color:#33cc99">
+ ชั้นมัธยมศึกษาปีที่ {{ADVROOMNAME}} </h1> 
+ <h1 class="thaisansregular blue_12" style="font-size:24px;color:#FF6633">
+ สถานะ : ขาดรวม (ขาด/สาย/หนี) </h1> 
+ </DIV>
+ </DIV>
+ </DIV>
+ <DIV id="table-right" style="float:right;margin-top:5px;display:table;padding:5px 10px 10px 10px">
+ <DIV id="table-right-row1" style="display: table-row">
+ <h1 class="thaisansregular" style="color:#FDBE00; font-size:34px; text-align:right">
+ ภาคเรียนที่ {{T}} ปีการศึกษา {{Y}} </h1>
+ <h1 class="thaisansregular blue_12" style="font-size:22px;color:#111">
+ ครูที่ปรึกษา 1) {{TNAME}}&nbsp; </h1>
+ </DIV>
+ </DIV>
+</DIV>
+</DIV>
+</td>
+</tr>
+<tr id="searchList">
+ <td>
+ <span class="search">
+ <table name="colsearch" border="0" cellspacing="0" cellpadding="0">
+ <tr>
+ <td><select id="columns" onchange="sorter.search('query')" class="general radius searchborder" style="height:25px;width:200px"></select></td>
+ <td style="padding-left:5px"><input type="text" class="general radius searchborder" id="query" style="width:150px;height:19px;padding-top:2px;padding-bottom:2px;" onkeyup="sorter.search('query')"/></td>
+ </tr>
+ </table>
+ </span>
+ <span style="float:right">
+ <span class="search">
+ <table border="0" cellspacing="0" cellpadding="0" style="width:270px">
+ <tr>
+ <td>
+ <select name="absent_status" class="general radius searchborder" id="absent_status" style="height:25px;width:240px" onChange="select_absent(this.value);">
+ <optgroup label="เลือกสถานะ"></optgroup>
+ <option value="sum" selected='selected'>ขาดรวม (ขาด/สาย/หนี)</option>
+ <option value="absent" >ขาด</option>
+ <option value="late" >สาย</option>
+ <option value="skip" >หนี</option> 
+ <option value="other" >อื่น ๆ (ลากิจ/ลาป่วย)</option> 
+ </select>
+ </td>
+ <td style="display:none">
+ <select name="absent_freq" class="general radius searchborder" id="absent_freq" style="height:25px;width:180px" onChange="select_absent(this.value);">
+ <optgroup label="เลือกสถานะ"></optgroup>
+ <option value="1" >3 วันติดต่อกัน</option>
+ <option value="2" >5 วันในรอบเดือน</option>
+ <option value="3" >10 วันขึ้นไป</option>
+ </select>
+ </td>
+ <td><img src="../icon_tools/vec_scope_dark.png" onclick="studentsearch(document.getElementById('percent_search').value);"/></td>
+ </tr>
+ </table>
+ </span>
+ </span>
+ </td>
+</tr>
+</table>
+</form></div>

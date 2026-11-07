@@ -1,0 +1,434 @@
+{
+"academic_academic_calendar": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"academic_activity": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"academic_attendance_type": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"academic_character": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"academic_character_criterion": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"academic_childhood_athome": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"academic_childhood_behaviour": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"academic_childhood_development": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"academic_learning_estimate": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"academic_room_building": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"academic_room_timetable": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"academic_sara": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"academic_sara_standard": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"academic_skill": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"academic_skill_criterion": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"academic_student_timetable": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"academic_subject": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"academic_target": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"academic_teacher_questionnaire": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"academic_teacher_timetable": {
+"title": "บริหารงานวิชาการ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"index_": {
+"title": "แผงเมนูหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"main_class": {
+"title": "ทะเบียนและข้อมูลหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"main_level": {
+"title": "ทะเบียนและข้อมูลหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"main_manager": {
+"title": "ทะเบียนและข้อมูลหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"main_personel_past": {
+"title": "ทะเบียนและข้อมูลหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"main_personel_regist": {
+"title": "ทะเบียนและข้อมูลหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"main_room": {
+"title": "ทะเบียนและข้อมูลหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"main_student_class": {
+"title": "ทะเบียนและข้อมูลหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"main_student_regist": {
+"title": "ทะเบียนและข้อมูลหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"main_student_stat": {
+"title": "ทะเบียนและข้อมูลหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 4
+},
+"main_study_program": {
+"title": "ทะเบียนและข้อมูลหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"onlineTeacher_": {
+"title": "ข้อมูลการเข้าใช้งานระบบ - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"profile_": {
+"title": "ประวัติส่วนตัวบุคลากร - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 2
+},
+"task_absent_adviser_notice": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"task_absent_school_attention": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"task_absent_teacher_notice": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"task_action_junior": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"task_action_prathom": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"task_ask_measurement": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_attend_consider": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"task_capacity": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"task_capacity_assign_friend": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_capacity_evaluate_junior": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_capacity_evaluate_prathom": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"task_capacity_summary": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_character_record": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_design_measurement": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_failure_attend": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"task_grasha_report": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_grasha_status": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_info_pp6": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_join_activity": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"task_join_activity_student": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"task_kolb_report": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_kolb_status": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_period_attendance_report": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"task_report_attendance": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_report_character": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_report_pp5": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_report_pp6": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_report_questionnaire_teacher": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_report_record_byroom": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_report_skill": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_respons_student": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_respons_subject": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_school_attendance_report": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"task_skill_record": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_study_record": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_teacher_timetable": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"task_time_attendance_byroom": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+},
+"task_time_attendance_byroom_Attendance": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 0
+},
+"task_usability_info": {
+"title": "งานรับผิดชอบหลัก - ระบบบริหารจัดการสารสนเทศโรงเรียน",
+"head": [],
+"inline": [],
+"tbody": 1
+}
+}

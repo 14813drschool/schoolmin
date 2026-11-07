@@ -1,0 +1,94 @@
+/**
+ * BlankPlate | Yet another HTML5 Starter Kit
+ *
+ * BlankPlate Basic Typography stylesheet
+ *
+ * Normally you don't have to make any changes in this file.
+ * Your changes should be placed in styles.css file.
+ *
+ * @copyright	Copyright 2012, Dimitris Krestos
+ * @license		Apache License, Version 2.0 (http://www.opensource.org/licenses/apache2.0.php)
+ * @link		http://vdw.staytuned.gr/html5-starter-kit-blankplate/
+ * @package		BlankPlate
+ * @version		v1.2.3
+ */
+
+/**
+ * FONTS
+ * A font face implementation
+ * -------------------------------------------------------------------------------------------------
+ */
+/*
+@font-face {
+	font-family: 'TheDummyFontID';
+	src: url('fonts/dummyfont.eot'); /* IE6–8 */
+
+	/* FF3.6+, IE, Chrome6+, Saf5.1+ */
+	/* Saf3—5, Chrome4+, FF3.5, Opera 10+ */
+/*
+	src: url('fonts/dummyfont.eot?#iefix') format('embedded-opentype'),
+		 url('fonts/dummyfont.woff') format('woff'),
+		 url('fonts/dummyfont.ttf') format('truetype'),
+		 url('fonts/dummyfont.svg#TheDummyFontID') format('svg');
+	font-weight: normal;
+	font-style: normal;
+}
+*/
+/**
+ * DOCUMENT FONT
+ * A basic declaration of document font and some font stacks
+ * -------------------------------------------------------------------------------------------------
+ */
+/**
+ * LINKS
+ *
+ * -------------------------------------------------------------------------------------------------
+ */
+A {
+	color: black;
+	text-decoration: none
+}
+
+A:hover {
+	text-decoration: underline
+}
+
+/**
+ * HEADINGS
+ *
+ * -------------------------------------------------------------------------------------------------
+ */
+/**
+ * RULERS AND PARAGRAPHS
+ *
+ * -------------------------------------------------------------------------------------------------
+ */
+
+/**
+ * LISTS
+ *
+ * -------------------------------------------------------------------------------------------------
+ */
+UL, OL { /* Horizontal & vertical lists */
+	margin:  14px 0px 14px 0px ; /*  14px 0 14px 20px */
+}
+
+UL LI, OL LI {
+	line-height: 1.385em
+}
+
+UL.vertical { /* Vertical lists */
+	margin: 0
+}
+
+UL.horizontal { /* Horizontal lists */
+	display: inline;
+	margin: 0
+}
+
+UL.horizontal > LI {
+	display: inline-block;
+	*margin: 1px;
+	zoom: 1;
+	*display: inline;
+}

@@ -1,0 +1,2585 @@
+<div style="padding-top:5px">
+ <div id="page_topic_blue" style="width:967px">
+ <div style="float:left">
+ <h1 class='title_26' style='font-size:21px;float:left;white-space:nowrap'>&nbsp;ประวัติส่วนตัวบุคลากร&nbsp;<img src="../images/white_br_next.png" border="0" style="width:5px"/>&nbsp;ประวัติส่วนตัวบุคลากร</h1>
+ </div>
+ <div style="float:right">
+ <span style="float:left;margin-top:3px;padding:5px 10px;background-image:url(../icon_tools/menubar_year.png); background-repeat:no-repeat;width:163px;height:22px;font-size:11px;font-weight:normal">แสดงข้อมูล ปีการศึกษา {{YT}}</span>
+ <span style="float:left;margin-top:3px;padding:0px 2px">
+ <a href="../edumain"><img src="../icon_tools/menubar_dashboard.png" border="0" alt="แผงเมนูหลัก" title="แผงเมนูหลัก"/></a>
+ </span>
+ </div>
+ </div>
+ <div id="maindetail" style="width:965px"><table border="0" cellpadding="0" cellspacing="0" style="margin-top:3px;width:967px">
+<tr>
+<td align="left" valign="bottom" style="width:70px;white-space:nowrap">&nbsp;<img src="../icon_tools/icon_main.png"/></td>
+<td align="left" valign="bottom" style="padding-left:5px;white-space:nowrap">
+<table border="0" cellspacing="0" cellpadding="0">
+ <tr>
+ <td style="white-space:nowrap"><h1 class="header_subtitle" style="font-size:25px;white-space:nowrap">แก้ไขประวัติส่วนตัว</h1></td>
+ </tr>
+ <tr>
+ <td style="white-space:nowrap"><h1 class="blue_secondtitle" style="font-size:23px;white-space:nowrap">แก้ไขข้อมูลส่วนตัว</h1></td>
+ </tr>
+</table>
+</td>
+<td align="right" valign="middle" style="white-space:nowrap"><DIV style="float:right"><div style='float:left;margin:0px 2px'> <a href='javascript:void(0);' onMouseOver="MM_swapImage('icon_help','','../icon_tools/icon_help.png',1);" onMouseOut="MM_swapImgRestore();" onclick="OpenHelp('help/?module=profile&option=');"><img id='icon_help' name='icon_help' src='../icon_tools/hicon_help.png' border='0' title='ช่วยเหลือ' align='top'/></a> </div></DIV></td>
+</tr>
+</table>
+</div>
+ </div>
+</div>
+<div style="margin-top:10px;min-height:750px;z-index:100">
+<link rel="stylesheet" type="text/css" href="../css/tiny_style.css">
+<link rel="stylesheet" type="text/css" href="../css/tabset/typography.css">
+<link rel="stylesheet" type="text/css" href="../css/tabset/animatetabs.css">
+<link rel="stylesheet" type="text/css" href="../css/facetooltip.css">
+<script type="text/javascript" src="../scripts/facetooltip.js"></script>
+<script type="text/javascript" src="../scripts/tabset/waypoints.min.js"></script>
+<script type="text/javascript" src="../scripts/tabset/waypoints-sticky.min.js"></script>
+<script type="text/javascript" src="../scripts/tabset/jquery.tabslet.min.js"></script>
+<script type="text/javascript" src="../scripts/tabset/initializerstabsmooth.js"></script>
+<script type="text/javascript">
+function chknull(){
+ var total_school = "";
+ for(var i=0; i < document.operationform.aca_school.length; i++){
+ if(document.operationform.aca_school[i].value!=""){
+ total_school +=document.operationform.aca_school[i].value+",";
+ }else{
+ total_school += "null,";
+ }
+ }
+ var total_period = "";
+ for(var i=0; i < document.operationform.aca_period.length; i++){
+ if(document.operationform.aca_period[i].value!=""){
+ total_period +=document.operationform.aca_period[i].value+",";
+ }else{
+ total_period += "null,";
+ }
+ }
+ var total_edu = "";
+ for(var i=0; i < document.operationform.edu_bg_no.length; i++){
+ if(document.operationform.edu_bg_no[i].value!=""){
+ total_edu +=document.operationform.edu_bg_no[i].value+",";
+ }else {
+ total_edu += "null,";
+ }
+ }
+ var total_major = "";
+ for(var i=0; i < document.operationform.field_major.length; i++){
+ if(document.operationform.field_major[i].value!=""){
+ total_major +=document.operationform.field_major[i].value+",";
+ }else {
+ total_major += "null,";
+ }
+ }
+ var total_minor = "";
+ for(var i=0; i < document.operationform.field_minor.length; i++){
+ if(document.operationform.field_minor[i].value!=""){
+ total_minor +=document.operationform.field_minor[i].value+",";
+ }else {
+ total_minor += "null,";
+ }
+ }
+ document.operationform.school.value = total_school;
+ document.operationform.period.value = total_period;
+ document.operationform.edu_bg.value = total_edu;
+ document.operationform.major.value = total_major;
+ document.operationform.minor.value = total_minor;
+ if(document.operationform.personel_id.value==""){
+ AlertBox.alert("<br>โปรดระบุรหัสบุคลากร");
+ }else if(document.operationform.psn_name.value==""){
+ AlertBox.alert("<br>โปรดระบุชื่อบุคลากร");
+ }else if(document.operationform.psn_surname.value==""){
+ AlertBox.alert("<br>โปรดระบุนามสกุลบุคลากร");
+ }else if(document.operationform.psn_id_card.value!="" && isNaN(document.operationform.psn_id_card.value)==true){
+ AlertBox.alert("<br>โปรดระบุรหัสประจำตัวประชาชนของบุคลากรเป็นตัวเลขเท่านั้น","psn_id_card");
+ document.operationform.psn_id_card.value = "";
+ /*
+ }else if(document.operationform.psn_sara.value==""){
+ AlertBox.alert("<br>โปรดระบุกลุ่มสาระ","psn_sara");
+ */
+ }else{
+ document.forms.operationform.submit();
+ }
+}
+</script>
+<div class="form_content">
+ <form id="operationform" name="operationform" method="post" action="?module=profile&option=&func=Update" style="width:964px" enctype="multipart/form-data" autocomplete="off">
+ <div class="formframeheader" style="width:970px">
+ <div class="content_edit"><h1 style="margin-left:25px;margin-top:-3px">แก้ไขข้อมูลส่วนตัว</h1></div>
+ </div>
+ <div class="formframe" id="formframe" style="width:970px">
+ <div class="warningfillform" style="width:948px">
+ <span style="float:left"><img src="../images/iconinwaring.png" border="0"/></span>
+ <span class="warningfillform_img">&nbsp;กรุณากรอกรายละเอียดในช่องที่มีเครื่องหมาย * ให้ครบทุกช่อง</span>
+ </div>
+ <table border="0" cellspacing="0" cellpadding="0" class="black_12" style="width:100%">
+ <tr>
+ <td width="180">&nbsp;</td>
+ <td width="320">
+ <input name="old_image" type="hidden" id="old_image" value="" />
+ <input name="old_sign" type="hidden" id="old_sign" value="" /></td>
+ <td width="199">&nbsp;</td>
+ <td><input name="psn_old_id" type="hidden" id="psn_old_id" value="" /></td>
+ </tr>
+ <tr>
+ <td width="180" rowspan="8" valign="top" class="titleinputfill">รูปภาพประจำตัว <span class="nowarningfiilsign">:</span></td>
+ <td rowspan="8" valign="top" class="columninputfill">
+ <table border="0" cellpadding="0" cellspacing="0">
+ <tr>
+ <td></td>
+ <td></td>
+ </tr>
+ <tr>
+ <td style="width:50%">
+ <img id="lastpsn_img" src="{{PHOTOURL}}" border="0" align="top" style="border:solid 1px #ccc;border-radius:4px;padding:5px 5px;margin-top:2px;margin-bottom:10px;max-height:100px;max-width:100px"/>
+ <img id="psn_img" width="120" style="padding-bottom:10px"/>
+ <input name="psn_image" type="file" id="psnupload" class="generalbrowse" style="width:60%" onchange="$('#psn_img')[0].src = window.URL.createObjectURL(this.files[0]);document.getElementById('psn_img').style.display='';document.getElementById('lastpsn_img').style.display='none';"> 
+ </td>
+ <td style="width:50%">
+ <img id="lastsign_img" src="../images/no-image.png" border="0" align="top" style="border:solid 1px #ccc;border-radius:4px;padding:5px 5px;margin-top:2px;margin-bottom:10px;max-height:100px;max-width:100px"/>
+ <img id="sign_img" width="120" style="padding-bottom:10px"/>
+ <input name="sign_image" type="file" id="signupload" class="generalbrowse" style="width:60%" onchange="$('#sign_img')[0].src = window.URL.createObjectURL(this.files[0]);document.getElementById('sign_img').style.display='';document.getElementById('lastsign_img').style.display='none';">
+ </td>
+ </tr>
+ </table> 
+ </td>
+ <td valign="top" class="titleinputfill">รหัสบุคลากร <span class="warningfiilsign">*<span style='color:#000'>:</span></span></td>
+ <td valign="top" class="columninputfill"><input name="personel_id" type="text" class="general radius redborder borderleftthick_red" id="personel_id" style="width:250px" value="" maxlength="6" readonly="readonly"/>
+ <span class="blue_11_fade"><br>
+ (ตัวเลขเท่านั้น)</span></td>
+ </tr>
+ <tr>
+ <td valign="top" class="columninputfill">&nbsp;</td>
+ <td valign="top" class="columninputfill">&nbsp;</td>
+ </tr>
+ <tr>
+ <td valign="top" class="titleinputfill">เลขที่บัตรประจำตัวประชาชน <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill"><input name="psn_id_card" type="text" class="general radius grayborder borderleftthick_gray" id="psn_id_card" style="width:250px" value="" maxlength="13"/>
+ <span class="blue_11_fade"><br>
+ (ตัวเลขเท่านั้น)</span></td>
+ </tr>
+ <tr>
+ <td valign="middle" class="columninputfill">รหัสจากเครื่องสแกนลายนิ้วมือ<span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill"><input name="psn_scan_id" type="text" class="general radius grayborder borderleftthick_gray" id="psn_scan_id" style="width:250px" value="" maxlength="3"/></td>
+ </tr>
+ <tr>
+ <td valign="top" class="columninputfill">&nbsp;</td>
+ <td valign="top" class="columninputfill">&nbsp;</td>
+ </tr>
+ <tr>
+ <td valign="top" class="titleinputfill">เพศ <span class="warningfiilsign">*<span style='color:#000'>:</span></span></td>
+ <td valign="top" class="columninputfill"><label>
+ <input name="psn_gender" type="radio" id="gender1" class="miniregular-radio" value="1" />
+ <label for = "gender1" style="margin-top:5px"></label>
+ &nbsp;เพศชาย
+ </label>
+ &nbsp;&nbsp;
+ <label>
+ <input name="psn_gender" type="radio" id="gender2" class="miniregular-radio" value="2" />
+ <label for = "gender2" style="margin-top:5px"></label>
+ &nbsp;เพศหญิง
+ </label> 
+ <label>&nbsp;&nbsp;&nbsp;&nbsp;<input name="psn_thai" type="checkbox" id="psn_thai" class="gray-regular-checkbox" value="1" /><label for="psn_thai" style="text-align:center;margin:0px 10px 0px 0px"></label>ครูต่างชาติ
+ </label> </td>
+ </tr>
+ <tr>
+ <td valign="top" class="columninputfill">&nbsp;</td>
+ <td valign="top" class="columninputfill">&nbsp;</td>
+ </tr>
+ <tr>
+ <td valign="top" class="titleinputfill">คำนำหน้าชื่อ <span class="warningfiilsign">*<span style='color:#000'>:</span></span></td>
+ <td valign="top" class="columninputfill"><select name="psn_title" class="general radius redborder borderleftthick_red" id="psn_title" style="width:263px">
+ <option value="3" > นาย </option>
+ <option value="4" > นางสาว </option>
+ <option value="5" > นาง </option>
+ <option value="6" > ว่าที่ร้อยตรี </option>
+ <option value="7" > หม่อมหลวง </option>
+ <option value="8" > พระ </option>
+ <option value="9" > Mr. </option>
+ <option value="10" > Mrs. </option>
+ <option value="11" > Miss </option>
+ <option value="12" > Ms. </option>
+ </select> </td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td width="180" valign="top" class="titleinputfill">ชื่อบุคลากร <span class="warningfiilsign">*<span style='color:#000'>:</span></span></td>
+ <td valign="top" class="columninputfill"><input name="psn_name" type="text" class="general radius redborder borderleftthick_red" id="psn_name" style="width:250px" value="" maxlength="50"/></td>
+ <td width="199" valign="top" class="titleinputfill">นามสกุล <span class="warningfiilsign">*<span style='color:#000'>:</span></span></td>
+ <td valign="top" class="columninputfill"><input name="psn_surname" type="text" class="general radius redborder borderleftthick_red" id="psn_surname" style="width:250px" value="" maxlength="50"/></td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td width="180" valign="top" class="titleinputfill">ประเภทบุคลากร <span class="warningfiilsign">*<span style='color:#000'>:</span></span></td>
+ <td valign="top" class="columninputfill">
+ <select name="psn_type" class="general radius redborder borderleftthick_red grayborder borderleftthick_gray" id="psn_type" style="width:263px" disabled='disable'>
+ <option value="1" > ผู้บริหาร</option>
+ <option value="2" > ครูผู้สอน</option>
+ <option value="3" > อื่น ๆ</option>
+ </select> </td>
+ <td width="199" valign="top" class="titleinputfill">สถานภาพ <span class="warningfiilsign">*<span style='color:#000'>:</span></span></td>
+ <td valign="top" class="columninputfill">
+ <select name="psn_status_no" class="general radius redborder borderleftthick_red grayborder borderleftthick_gray" id="psn_status_no" style="width:263px" disabled='disable'>
+ <option value="1" > ปฏิบัติงานปกติ </option>
+ <option value="2" > ลาออก </option>
+ <option value="3" > พักการสอน </option>
+ <option value="4" > พ้นสภาพ </option>
+ <option value="5" > เกษียณอายุ </option>
+ <option value="6" > ย้ายสถานศึกษา </option>
+ </select> </td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td valign="top" class="titleinputfill">กลุ่มสาระ <span class="warningfiilsign">*<span style='color:#000'>:</span></span></td>
+ <td valign="top" class="columninputfill"><span class="columninputfill">
+ <select name="psn_sara" class="general radius redborder borderleftthick_red grayborder borderleftthick_gray" id="psn_sara" style="width:263px" disabled='disable'>
+ <option value="" >เลือกกลุ่มสาระ</option>
+ <option value="1" > ภาษาไทย</option>
+ <option value="2" > คณิตศาสตร์</option>
+ <option value="3" > วิทยาศาสตร์และเทคโนโลยี</option>
+ <option value="4"> สังคมศึกษา ศาสนาและวัฒนธรรม</option>
+ <option value="5" > สุขศึกษาและพลศึกษา</option>
+ <option value="6" > ศิลปะ</option>
+ <option value="7" > การงานอาชีพ</option>
+ <option value="8" > ภาษาต่างประเทศ</option>
+ </select>
+ </span> </td>
+ <td width="199" valign="top" class="titleinputfill">ชื่อตำแหน่ง <span class="warningfiilsign">*<span style='color:#000'>:</span></span></td>
+ <td valign="top" class="columninputfill">
+ <select name="psn_pos_no" class="general radius redborder borderleftthick_red grayborder borderleftthick_gray" id="psn_pos_no" style="width:263px" disabled='disable'>
+ <option value="1" > ผู้รับใบอนุญาต </option>
+ <option value="2" > ผู้จัดการโรงเรียน </option>
+ <option value="3" > ผู้อำนวยการโรงเรียน </option>
+ <option value="4" > รองผู้อำนวยการฝ่ายการเงิน </option>
+ <option value="5" > รองผู้อำนวยการฝ่ายวิชาการ </option>
+ <option value="6" > รองผู้อำนวยการฝ่ายปฐมวัย </option>
+ <option value="7" > อาคารสถานที่ </option>
+ <option value="8" > หัวหน้าฝ่ายวิชาการ </option>
+ <option value="9" > วัดผลและประเมินผล </option>
+ <option value="10" > เจ้าหน้าที่การเงิน </option>
+ <option value="11" > ครู </option>
+ <option value="12" > บุคลากรทางการศึกษา </option>
+ </select> </td>
+ </tr>
+ <tr>
+ <td valign="top" class="titleinputfill">&nbsp;</td>
+ <td valign="top" class="columninputfill">&nbsp;</td>
+ <td valign="top" class="titleinputfill">&nbsp;</td>
+ <td valign="top" class="columninputfill">&nbsp;</td>
+ </tr>
+ <tr>
+ <td width="180" valign="top" class="titleinputfill">ชื่อเล่น <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill"><input name="psn_nickname" type="text" class="general radius grayborder borderleftthick_gray" id="psn_nickname" style="width:250px" value="" maxlength="10"/></td>
+ <td width="199" valign="top" class="titleinputfill">เบอร์โทรศัพท์ <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill"><input name="psn_phone" type="text" class="general radius grayborder borderleftthick_gray" id="psn_phone" style="width:250px" value="" maxlength="20" autocomplete="off"/></td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td width="180" valign="top" class="titleinputfill">สิทธิ์เข้าใช้ระบบ <span class="nowarningfiilsign">:</span></td>
+ <td colspan="3">
+ <div style="display:table-row">
+ <div style="display:table-cell">
+ <div style="margin-top:6px;"><label>
+ <div style="display:table-cell;width:20px;font-size:18px;color:#009999">
+ &#9745; <label for = "acc_level1" style="text-align:center;margin:0px 10px 0px 0px"></label>
+ </div>
+ <div style="display:table-cell;white-space:nowrap">
+ <span class="01">งานฝ่ายบริหาร</span> </div>
+ </label></div>
+ </div>
+ <div style="display:table-cell">
+ <div style="margin-top:6px;margin-left:10px"><label>
+ <div style="display:table-cell;width:20px;font-size:18px;color:#009999">
+ &#9745; <label for = "acc_level2" style="text-align:center;margin:0px 10px 0px 0px"></label>
+ </div>
+ <div style="display:table-cell;white-space:nowrap">
+ <span class="01">งานครูผู้สอน</span> </div>
+ </label></div>
+ </div>
+ <div style="display:table-cell">
+ <div style="margin-top:6px;margin-left:10px"><label>
+ <div style="display:table-cell;width:20px;font-size:18px;color:#009999">
+ &#9745; <label for = "acc_level3" style="text-align:center;margin:0px 10px 0px 0px"></label>
+ </div>
+ <div style="display:table-cell;white-space:nowrap">
+ <span class="01">งานวิชาการ</span> </div>
+ </label></div>
+ </div>
+ <div style="display:table-cell">
+ <div style="margin-top:6px;margin-left:10px"><label>
+ <div style="display:table-cell;width:20px;font-size:18px;color:#009999">
+ &#9745; <label for = "acc_level7" style="text-align:center;margin:0px 10px 0px 0px"></label>
+ </div>
+ <div style="display:table-cell;white-space:nowrap">
+ <span class="01">งานกลุ่มสาระ</span> </div>
+ </label></div>
+ </div>
+ <div style="display:table-cell">
+ <div style="margin-top:6px;margin-left:10px"><label>
+ <div style="display:table-cell;width:20px;font-size:18px;color:#009999">
+ &#9745; <label for = "acc_level8" style="text-align:center;margin:0px 10px 0px 0px"></label>
+ </div>
+ <div style="display:table-cell;white-space:nowrap">
+ <span class="01">เว็บโรงเรียน</span> </div>
+ </label></div>
+ </div>
+ </div> 
+ </td>
+ </tr>
+ <tr>
+ <td colspan="4">&nbsp;</td>
+ </tr>
+ <tr>
+ <td colspan="4">&nbsp;</td>
+ </tr>
+ </table>
+<div class='tabs tabs_active'>
+ <ul class='horizontal'>
+ <li><a href="#tab-1">ข้อมูลส่วนตัว</a></li>
+ <li><a href="#tab-2">ข้อมูลการศึกษา</a></li>
+ <li><a href="#tab-3">การฝึกอบรมและดูงาน</a></li>
+ <li><a href="#tab-4">ตำแหน่งและอัตราเงินเดือน</a></li>
+ <li><a href="#tab-5">เครื่องราชอิสริยาภรณ์</a></li>
+ <li><a href="#tab-6">ผลงานต่าง ๆ</a></li>
+ </ul>
+ <div id='tab-1'> <div style="display:table;width:100%;padding:0px 0px 20px 12px">
+ <div style="display:table-row">
+ <div style="display:table-cell;float:left">
+ <h1 style="font-size:28px;margin-top:10px">ข้อมูลส่วนตัวบุคลากร</h1>
+ </div>
+ </div>
+ <div style="display:table-row">
+ <table border="0" cellspacing="0" cellpadding="0" class="black_12" style="width:100%">
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td width="170" valign="top" class="titleinputfill">รหัสผ่านเข้าใช้ระบบ <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill">
+ <input style="display:none" type="text" name="fakeusernameremembered"/>
+ <input style="display:none" type="password" name="fakepasswordremembered"/>
+ <input name="psn_pass" type="password" class="general radius grayborder borderleftthick_gray" id="psn_pass" style="width:250px" maxlength="12" autocomplete="new-password" /> </td>
+ <td width="180" valign="top" class="titleinputfill" style="padding-left:40px">วันเริ่มปฏิบัติงานใน รร. <span class="warningfiilsign">*<span style='color:#000'>:</span></span></td>
+ <td valign="top" class="columninputfill">
+ <select class="general radius redborder borderleftthick_red" id="start_day" name="start_day" style="width:60px">
+ <option value="" >วัน</option>
+ <option value="01" >01</option>
+ <option value="02" >02</option>
+ <option value="03" >03</option>
+ <option value="04" >04</option>
+ <option value="05" >05</option>
+ <option value="06" >06</option>
+ <option value="07" >07</option>
+ <option value="08" >08</option>
+ <option value="09" >09</option>
+ <option value="10" >10</option>
+ <option value="11" >11</option>
+ <option value="12" >12</option>
+ <option value="13" >13</option>
+ <option value="14" >14</option>
+ <option value="15" >15</option>
+ <option value="16" >16</option>
+ <option value="17" >17</option>
+ <option value="18" >18</option>
+ <option value="19" >19</option>
+ <option value="20" >20</option>
+ <option value="21" >21</option>
+ <option value="22" >22</option>
+ <option value="23" >23</option>
+ <option value="24" >24</option>
+ <option value="25" >25</option>
+ <option value="26" >26</option>
+ <option value="27" >27</option>
+ <option value="28" >28</option>
+ <option value="29" >29</option>
+ <option value="30" >30</option>
+ <option value="31" >31</option>
+ </select>
+ <select class="general radius redborder borderleftthick_red" id="start_month" name="start_month" style="width:120px">
+ <option value="" = "selected" >เดือน</option>
+ <option value="01" >มกราคม</option>
+ <option value="02" >กุมภาพันธ์</option>
+ <option value="03" >มีนาคม</option>
+ <option value="04" >เมษายน</option>
+ <option value="05" >พฤษภาคม</option>
+ <option value="06" >มิถุนายน</option>
+ <option value="07" >กรกฎาคม</option>
+ <option value="08" >สิงหาคม</option>
+ <option value="09" >กันยายน</option>
+ <option value="10" >ตุลาคม</option>
+ <option value="11" >พฤศจิกายน</option>
+ <option value="12" >ธันวาคม</option>
+ </select>
+ <select class="general radius redborder borderleftthick_red" id="start_year" name="start_year" style="width:75px">
+ <option value="" >ปี</option>
+ <option value="2510" >2510</option>
+ <option value="2511" >2511</option>
+ <option value="2512" >2512</option>
+ <option value="2513" >2513</option>
+ <option value="2514" >2514</option>
+ <option value="2515" >2515</option>
+ <option value="2516" >2516</option>
+ <option value="2517" >2517</option>
+ <option value="2518" >2518</option>
+ <option value="2519" >2519</option>
+ <option value="2520" >2520</option>
+ <option value="2521" >2521</option>
+ <option value="2522" >2522</option>
+ <option value="2523" >2523</option>
+ <option value="2524" >2524</option>
+ <option value="2525" >2525</option>
+ <option value="2526" >2526</option>
+ <option value="2527" >2527</option>
+ <option value="2528" >2528</option>
+ <option value="2529" >2529</option>
+ <option value="2530" >2530</option>
+ <option value="2531" >2531</option>
+ <option value="2532" >2532</option>
+ <option value="2533" >2533</option>
+ <option value="2534" >2534</option>
+ <option value="2535" >2535</option>
+ <option value="2536" >2536</option>
+ <option value="2537" >2537</option>
+ <option value="2538" >2538</option>
+ <option value="2539" >2539</option>
+ <option value="2540" >2540</option>
+ <option value="2541" >2541</option>
+ <option value="2542" >2542</option>
+ <option value="2543" >2543</option>
+ <option value="2544" >2544</option>
+ <option value="2545" >2545</option>
+ <option value="2546" >2546</option>
+ <option value="2547" >2547</option>
+ <option value="2548" >2548</option>
+ <option value="2549" >2549</option>
+ <option value="2550" >2550</option>
+ <option value="2551" >2551</option>
+ <option value="2552" >2552</option>
+ <option value="2553" >2553</option>
+ <option value="2554" >2554</option>
+ <option value="2555" >2555</option>
+ <option value="2556" >2556</option>
+ <option value="2557" >2557</option>
+ <option value="2558" >2558</option>
+ <option value="2559" >2559</option>
+ <option value="2560" >2560</option>
+ <option value="2561" >2561</option>
+ <option value="2562" >2562</option>
+ <option value="2563" >2563</option>
+ <option value="2564" >2564</option>
+ <option value="2565" >2565</option>
+ <option value="2566" >2566</option>
+ <option value="2567" >2567</option>
+ <option value="2568" >2568</option>
+ <option value="2569" >2569</option>
+ <option value="2570" >2570</option>
+ <option value="2571" >2571</option>
+ <option value="2572" >2572</option>
+ <option value="2573" >2573</option>
+ <option value="2574" >2574</option>
+ </select> </td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td valign="top" class="titleinputfill">รหัสผ่านเดิม <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill"><input name="current_psn_pass" type="password" class="general radius grayborder borderleftthick_gray" id="current_psn_pass" style="width:250px" maxlength="12" autocomplete="off" /> </td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td valign="top" class="titleinputfill">รหัสบาร์โค้ด <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill">
+ <input name="psn_barcode" type="text" class="general radius grayborder borderleftthick_gray" id="psn_barcode" style="width:250px" value="" maxlength="13"/>
+ <span class="blue_11_fade"><br>
+ (ตัวเลขเท่านั้น)</span> </td>
+ <td width="180" valign="top" class="titleinputfill" style="padding-left:40px">วันสิ้นสุดการปฏิบัติงาน <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill">
+ <select class="general radius grayborder borderleftthick_gray" id="end_day" name="end_day" style="width:60px">
+ <option value="" >วัน</option>
+ <option value="01" >01</option>
+ <option value="02" >02</option>
+ <option value="03" >03</option>
+ <option value="04" >04</option>
+ <option value="05" >05</option>
+ <option value="06" >06</option>
+ <option value="07" >07</option>
+ <option value="08" >08</option>
+ <option value="09" >09</option>
+ <option value="10" >10</option>
+ <option value="11" >11</option>
+ <option value="12" >12</option>
+ <option value="13" >13</option>
+ <option value="14" >14</option>
+ <option value="15" >15</option>
+ <option value="16" >16</option>
+ <option value="17" >17</option>
+ <option value="18" >18</option>
+ <option value="19" >19</option>
+ <option value="20" >20</option>
+ <option value="21" >21</option>
+ <option value="22" >22</option>
+ <option value="23" >23</option>
+ <option value="24" >24</option>
+ <option value="25" >25</option>
+ <option value="26" >26</option>
+ <option value="27" >27</option>
+ <option value="28" >28</option>
+ <option value="29" >29</option>
+ <option value="30" >30</option>
+ <option value="31" >31</option>
+ </select>
+ <select class="general radius grayborder borderleftthick_gray" id="end_month" name="end_month" style="width:120px">
+ <option value="" = "selected" >เดือน</option>
+ <option value="01" >มกราคม</option>
+ <option value="02" >กุมภาพันธ์</option>
+ <option value="03" >มีนาคม</option>
+ <option value="04" >เมษายน</option>
+ <option value="05" >พฤษภาคม</option>
+ <option value="06" >มิถุนายน</option>
+ <option value="07" >กรกฎาคม</option>
+ <option value="08" >สิงหาคม</option>
+ <option value="09" >กันยายน</option>
+ <option value="10" >ตุลาคม</option>
+ <option value="11" >พฤศจิกายน</option>
+ <option value="12" >ธันวาคม</option>
+ </select>
+ <select class="general radius grayborder borderleftthick_gray" id="end_year" name="end_year" style="width:75px">
+ <option value="" >ปี</option>
+ <option value="2550" >2550</option>
+ <option value="2551" >2551</option>
+ <option value="2552" >2552</option>
+ <option value="2553" >2553</option>
+ <option value="2554" >2554</option>
+ <option value="2555" >2555</option>
+ <option value="2556" >2556</option>
+ <option value="2557" >2557</option>
+ <option value="2558" >2558</option>
+ <option value="2559" >2559</option>
+ <option value="2560" >2560</option>
+ <option value="2561" >2561</option>
+ <option value="2562" >2562</option>
+ <option value="2563" >2563</option>
+ <option value="2564" >2564</option>
+ <option value="2565" >2565</option>
+ <option value="2566" >2566</option>
+ <option value="2567" >2567</option>
+ <option value="2568" >2568</option>
+ <option value="2569" >2569</option>
+ <option value="2570" >2570</option>
+ <option value="2571" >2571</option>
+ <option value="2572" >2572</option>
+ <option value="2573" >2573</option>
+ <option value="2574" >2574</option>
+ <option value="2575" >2575</option>
+ <option value="2576" >2576</option>
+ <option value="2577" >2577</option>
+ <option value="2578" >2578</option>
+ <option value="2579" >2579</option>
+ <option value="2580" >2580</option>
+ <option value="2581" >2581</option>
+ <option value="2582" >2582</option>
+ <option value="2583" >2583</option>
+ <option value="2584" >2584</option>
+ <option value="2585" >2585</option>
+ <option value="2586" >2586</option>
+ <option value="2587" >2587</option>
+ <option value="2588" >2588</option>
+ <option value="2589" >2589</option>
+ <option value="2590" >2590</option>
+ <option value="2591" >2591</option>
+ <option value="2592" >2592</option>
+ <option value="2593" >2593</option>
+ <option value="2594" >2594</option>
+ <option value="2595" >2595</option>
+ <option value="2596" >2596</option>
+ <option value="2597" >2597</option>
+ <option value="2598" >2598</option>
+ <option value="2599" >2599</option>
+ <option value="2600" >2600</option>
+ </select> </td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td width="170" valign="top" class="titleinputfill">ศาสนา <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill"><input name="psn_rel" type="text" class="general radius grayborder borderleftthick_gray" id="psn_rel" style="width:250px" value="" maxlength="50"/></td>
+ <td width="180" valign="top" class="titleinputfill" style="padding-left:40px">หน้าที่พิเศษในงาน/กลุ่มงาน <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill"><input name="psn_work_group" type="text" class="general radius grayborder borderleftthick_gray" id="psn_work_group" style="width:250px" value="" maxlength="50"/></td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td width="170" valign="top" class="titleinputfill">วัน-เดือน-ปีเกิด <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill">
+ <select class="general radius grayborder borderleftthick_gray" id="b_day" name="b_day" style="width:60px">
+ <option value="" >วัน</option>
+ <option value="01" >01</option>
+ <option value="02" >02</option>
+ <option value="03" >03</option>
+ <option value="04" >04</option>
+ <option value="05" >05</option>
+ <option value="06" >06</option>
+ <option value="07" >07</option>
+ <option value="08" >08</option>
+ <option value="09" >09</option>
+ <option value="10" >10</option>
+ <option value="11" >11</option>
+ <option value="12" >12</option>
+ <option value="13" >13</option>
+ <option value="14" >14</option>
+ <option value="15" >15</option>
+ <option value="16" >16</option>
+ <option value="17" >17</option>
+ <option value="18" >18</option>
+ <option value="19" >19</option>
+ <option value="20" >20</option>
+ <option value="21" >21</option>
+ <option value="22" >22</option>
+ <option value="23" >23</option>
+ <option value="24" >24</option>
+ <option value="25" >25</option>
+ <option value="26" >26</option>
+ <option value="27" >27</option>
+ <option value="28" >28</option>
+ <option value="29" >29</option>
+ <option value="30" >30</option>
+ <option value="31" >31</option>
+ </select>
+ <select class="general radius grayborder borderleftthick_gray" id="b_month" name="b_month" style="width:120px">
+ <option value="" = "selected" >เดือน</option>
+ <option value="01" >มกราคม</option>
+ <option value="02" >กุมภาพันธ์</option>
+ <option value="03" >มีนาคม</option>
+ <option value="04" >เมษายน</option>
+ <option value="05" >พฤษภาคม</option>
+ <option value="06" >มิถุนายน</option>
+ <option value="07" >กรกฎาคม</option>
+ <option value="08" >สิงหาคม</option>
+ <option value="09" >กันยายน</option>
+ <option value="10" >ตุลาคม</option>
+ <option value="11" >พฤศจิกายน</option>
+ <option value="12" >ธันวาคม</option>
+ </select>
+ <select class="general radius grayborder borderleftthick_gray" id="b_year" name="b_year" style="width:75px">
+ <option value="" >ปี</option>
+ <option value="2500" >2500</option>
+ <option value="2501" >2501</option>
+ <option value="2502" >2502</option>
+ <option value="2503" >2503</option>
+ <option value="2504" >2504</option>
+ <option value="2505" >2505</option>
+ <option value="2506" >2506</option>
+ <option value="2507" >2507</option>
+ <option value="2508" >2508</option>
+ <option value="2509" >2509</option>
+ <option value="2510" >2510</option>
+ <option value="2511" >2511</option>
+ <option value="2512" >2512</option>
+ <option value="2513" >2513</option>
+ <option value="2514" >2514</option>
+ <option value="2515" >2515</option>
+ <option value="2516" >2516</option>
+ <option value="2517" >2517</option>
+ <option value="2518" >2518</option>
+ <option value="2519" >2519</option>
+ <option value="2520" >2520</option>
+ <option value="2521" >2521</option>
+ <option value="2522" >2522</option>
+ <option value="2523" >2523</option>
+ <option value="2524" >2524</option>
+ <option value="2525" >2525</option>
+ <option value="2526" >2526</option>
+ <option value="2527" >2527</option>
+ <option value="2528" >2528</option>
+ <option value="2529" >2529</option>
+ <option value="2530" >2530</option>
+ <option value="2531" >2531</option>
+ <option value="2532" >2532</option>
+ <option value="2533" >2533</option>
+ <option value="2534" >2534</option>
+ <option value="2535" >2535</option>
+ <option value="2536" >2536</option>
+ <option value="2537" >2537</option>
+ <option value="2538" >2538</option>
+ <option value="2539" >2539</option>
+ <option value="2540" >2540</option>
+ <option value="2541" >2541</option>
+ <option value="2542" >2542</option>
+ <option value="2543" >2543</option>
+ <option value="2544" >2544</option>
+ <option value="2545" >2545</option>
+ <option value="2546" >2546</option>
+ <option value="2547" >2547</option>
+ <option value="2548" >2548</option>
+ <option value="2549" >2549</option>
+ <option value="2550" >2550</option>
+ <option value="2551" >2551</option>
+ <option value="2552" >2552</option>
+ <option value="2553" >2553</option>
+ <option value="2554" >2554</option>
+ <option value="2555" >2555</option>
+ <option value="2556" >2556</option>
+ <option value="2557" >2557</option>
+ <option value="2558" >2558</option>
+ <option value="2559" >2559</option>
+ <option value="2560" >2560</option>
+ <option value="2561" >2561</option>
+ <option value="2562" >2562</option>
+ <option value="2563" >2563</option>
+ <option value="2564" >2564</option>
+ <option value="2565" >2565</option>
+ <option value="2566" >2566</option>
+ <option value="2567" >2567</option>
+ <option value="2568" >2568</option>
+ <option value="2569" >2569</option>
+ <option value="2570" >2570</option>
+ <option value="2571" >2571</option>
+ <option value="2572" >2572</option>
+ <option value="2573" >2573</option>
+ <option value="2574" >2574</option>
+ </select> </td>
+ <td width="180" valign="top" class="titleinputfill" style="padding-left:40px">ตำแหน่งในงานหน้าที่พิเศษ <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill">
+ <input name="psn_gov_type" type="text" class="general radius grayborder borderleftthick_gray" id="psn_gov_type" style="width:250px" value="" maxlength="50"/> </td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td width="170" valign="top" class="titleinputfill">ชื่อคู่สมรส <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill"><input name="psn_spouse" type="text" class="general radius grayborder borderleftthick_gray" id="psn_spouse" style="width:250px" value="" maxlength="100"/></td>
+ <td width="180" valign="top" class="titleinputfill" style="padding-left:40px">ขั้นเงินเดือน <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill">
+ <input name="psn_salary" type="text" class="general radius grayborder borderleftthick_gray" id="psn_salary" style="width:250px" value="" maxlength="50"/> </td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td width="170" valign="top" class="titleinputfill">ชื่อมารดา <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill"><input name="psn_mother" type="text" class="general radius grayborder borderleftthick_gray" id="psn_mother" style="width:250px" value="" maxlength="100"/></td>
+ <td width="180" valign="top" class="titleinputfill" style="padding-left:40px">วันสั่งบรรจุ <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill">
+ <select class="general radius grayborder borderleftthick_gray" id="appoint_day" name="appoint_day" style="width:60px">
+ <option value="" >วัน</option>
+ <option value="01" >01</option>
+ <option value="02" >02</option>
+ <option value="03" >03</option>
+ <option value="04" >04</option>
+ <option value="05" >05</option>
+ <option value="06" >06</option>
+ <option value="07" >07</option>
+ <option value="08" >08</option>
+ <option value="09" >09</option>
+ <option value="10" >10</option>
+ <option value="11" >11</option>
+ <option value="12" >12</option>
+ <option value="13" >13</option>
+ <option value="14" >14</option>
+ <option value="15" >15</option>
+ <option value="16" >16</option>
+ <option value="17" >17</option>
+ <option value="18" >18</option>
+ <option value="19" >19</option>
+ <option value="20" >20</option>
+ <option value="21" >21</option>
+ <option value="22" >22</option>
+ <option value="23" >23</option>
+ <option value="24" >24</option>
+ <option value="25" >25</option>
+ <option value="26" >26</option>
+ <option value="27" >27</option>
+ <option value="28" >28</option>
+ <option value="29" >29</option>
+ <option value="30" >30</option>
+ <option value="31" >31</option>
+ </select>
+ <select class="general radius grayborder borderleftthick_gray" id="appoint_month" name="appoint_month" style="width:120px">
+ <option value="" = "selected" >เดือน</option>
+ <option value="01" >มกราคม</option>
+ <option value="02" >กุมภาพันธ์</option>
+ <option value="03" >มีนาคม</option>
+ <option value="04" >เมษายน</option>
+ <option value="05" >พฤษภาคม</option>
+ <option value="06" >มิถุนายน</option>
+ <option value="07" >กรกฎาคม</option>
+ <option value="08" >สิงหาคม</option>
+ <option value="09" >กันยายน</option>
+ <option value="10" >ตุลาคม</option>
+ <option value="11" >พฤศจิกายน</option>
+ <option value="12" >ธันวาคม</option>
+ </select>
+ <select class="general radius grayborder borderleftthick_gray" id="appoint_year" name="appoint_year" style="width:75px">
+ <option value="" >ปี</option>
+ <option value="2510" >2510</option>
+ <option value="2511" >2511</option>
+ <option value="2512" >2512</option>
+ <option value="2513" >2513</option>
+ <option value="2514" >2514</option>
+ <option value="2515" >2515</option>
+ <option value="2516" >2516</option>
+ <option value="2517" >2517</option>
+ <option value="2518" >2518</option>
+ <option value="2519" >2519</option>
+ <option value="2520" >2520</option>
+ <option value="2521" >2521</option>
+ <option value="2522" >2522</option>
+ <option value="2523" >2523</option>
+ <option value="2524" >2524</option>
+ <option value="2525" >2525</option>
+ <option value="2526" >2526</option>
+ <option value="2527" >2527</option>
+ <option value="2528" >2528</option>
+ <option value="2529" >2529</option>
+ <option value="2530" >2530</option>
+ <option value="2531" >2531</option>
+ <option value="2532" >2532</option>
+ <option value="2533" >2533</option>
+ <option value="2534" >2534</option>
+ <option value="2535" >2535</option>
+ <option value="2536" >2536</option>
+ <option value="2537" >2537</option>
+ <option value="2538" >2538</option>
+ <option value="2539" >2539</option>
+ <option value="2540" >2540</option>
+ <option value="2541" >2541</option>
+ <option value="2542" >2542</option>
+ <option value="2543" >2543</option>
+ <option value="2544" >2544</option>
+ <option value="2545" >2545</option>
+ <option value="2546" >2546</option>
+ <option value="2547" >2547</option>
+ <option value="2548" >2548</option>
+ <option value="2549" >2549</option>
+ <option value="2550" >2550</option>
+ <option value="2551" >2551</option>
+ <option value="2552" >2552</option>
+ <option value="2553" >2553</option>
+ <option value="2554" >2554</option>
+ <option value="2555" >2555</option>
+ <option value="2556" >2556</option>
+ <option value="2557" >2557</option>
+ <option value="2558" >2558</option>
+ <option value="2559" >2559</option>
+ <option value="2560" >2560</option>
+ <option value="2561" >2561</option>
+ <option value="2562" >2562</option>
+ <option value="2563" >2563</option>
+ <option value="2564" >2564</option>
+ <option value="2565" >2565</option>
+ <option value="2566" >2566</option>
+ <option value="2567" >2567</option>
+ <option value="2568" >2568</option>
+ <option value="2569" >2569</option>
+ <option value="2570" >2570</option>
+ <option value="2571" >2571</option>
+ <option value="2572" >2572</option>
+ <option value="2573" >2573</option>
+ <option value="2574" >2574</option>
+ </select> </td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td width="170" valign="top" class="titleinputfill">ชื่อบิดา <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill"><input name="psn_father" type="text" class="general radius grayborder borderleftthick_gray" id="psn_father" style="width:250px" value="" maxlength="100"/></td>
+ <td width="180" valign="top" class="titleinputfill" style="padding-left:40px">วันเริ่มปฏิบัติงาน <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill">
+ <select class="general radius grayborder borderleftthick_gray" id="sduty_day" name="sduty_day" style="width:60px">
+ <option value="" >วัน</option>
+ <option value="01" >01</option>
+ <option value="02" >02</option>
+ <option value="03" >03</option>
+ <option value="04" >04</option>
+ <option value="05" >05</option>
+ <option value="06" >06</option>
+ <option value="07" >07</option>
+ <option value="08" >08</option>
+ <option value="09" >09</option>
+ <option value="10" >10</option>
+ <option value="11" >11</option>
+ <option value="12" >12</option>
+ <option value="13" >13</option>
+ <option value="14" >14</option>
+ <option value="15" >15</option>
+ <option value="16" >16</option>
+ <option value="17" >17</option>
+ <option value="18" >18</option>
+ <option value="19" >19</option>
+ <option value="20" >20</option>
+ <option value="21" >21</option>
+ <option value="22" >22</option>
+ <option value="23" >23</option>
+ <option value="24" >24</option>
+ <option value="25" >25</option>
+ <option value="26" >26</option>
+ <option value="27" >27</option>
+ <option value="28" >28</option>
+ <option value="29" >29</option>
+ <option value="30" >30</option>
+ <option value="31" >31</option>
+ </select>
+ <select class="general radius grayborder borderleftthick_gray" id="sduty_month" name="sduty_month" style="width:120px">
+ <option value="" = "selected" >เดือน</option>
+ <option value="01" >มกราคม</option>
+ <option value="02" >กุมภาพันธ์</option>
+ <option value="03" >มีนาคม</option>
+ <option value="04" >เมษายน</option>
+ <option value="05" >พฤษภาคม</option>
+ <option value="06" >มิถุนายน</option>
+ <option value="07" >กรกฎาคม</option>
+ <option value="08" >สิงหาคม</option>
+ <option value="09" >กันยายน</option>
+ <option value="10" >ตุลาคม</option>
+ <option value="11" >พฤศจิกายน</option>
+ <option value="12" >ธันวาคม</option>
+ </select>
+ <select class="general radius grayborder borderleftthick_gray" id="sduty_year" name="sduty_year" style="width:75px">
+ <option value="" >ปี</option>
+ <option value="2510" >2510</option>
+ <option value="2511" >2511</option>
+ <option value="2512" >2512</option>
+ <option value="2513" >2513</option>
+ <option value="2514" >2514</option>
+ <option value="2515" >2515</option>
+ <option value="2516" >2516</option>
+ <option value="2517" >2517</option>
+ <option value="2518" >2518</option>
+ <option value="2519" >2519</option>
+ <option value="2520" >2520</option>
+ <option value="2521" >2521</option>
+ <option value="2522" >2522</option>
+ <option value="2523" >2523</option>
+ <option value="2524" >2524</option>
+ <option value="2525" >2525</option>
+ <option value="2526" >2526</option>
+ <option value="2527" >2527</option>
+ <option value="2528" >2528</option>
+ <option value="2529" >2529</option>
+ <option value="2530" >2530</option>
+ <option value="2531" >2531</option>
+ <option value="2532" >2532</option>
+ <option value="2533" >2533</option>
+ <option value="2534" >2534</option>
+ <option value="2535" >2535</option>
+ <option value="2536" >2536</option>
+ <option value="2537" >2537</option>
+ <option value="2538" >2538</option>
+ <option value="2539" >2539</option>
+ <option value="2540" >2540</option>
+ <option value="2541" >2541</option>
+ <option value="2542" >2542</option>
+ <option value="2543" >2543</option>
+ <option value="2544" >2544</option>
+ <option value="2545" >2545</option>
+ <option value="2546" >2546</option>
+ <option value="2547" >2547</option>
+ <option value="2548" >2548</option>
+ <option value="2549" >2549</option>
+ <option value="2550" >2550</option>
+ <option value="2551" >2551</option>
+ <option value="2552" >2552</option>
+ <option value="2553" >2553</option>
+ <option value="2554" >2554</option>
+ <option value="2555" >2555</option>
+ <option value="2556" >2556</option>
+ <option value="2557" >2557</option>
+ <option value="2558" >2558</option>
+ <option value="2559" >2559</option>
+ <option value="2560" >2560</option>
+ <option value="2561" >2561</option>
+ <option value="2562" >2562</option>
+ <option value="2563" >2563</option>
+ <option value="2564" >2564</option>
+ <option value="2565" >2565</option>
+ <option value="2566" >2566</option>
+ <option value="2567" >2567</option>
+ <option value="2568" >2568</option>
+ <option value="2569" >2569</option>
+ <option value="2570" >2570</option>
+ <option value="2571" >2571</option>
+ <option value="2572" >2572</option>
+ <option value="2573" >2573</option>
+ <option value="2574" >2574</option>
+ </select> </td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td width="170" rowspan="3" valign="top" class="titleinputfill">ที่อยู่ปัจจุบัน <span class="nowarningfiilsign">:</span></td>
+ <td rowspan="4" valign="top" class="columninputfill">
+ <div style="display:table">
+ <div style="display:table-row">
+ <div style="display:table-cell">
+ <textarea class="general radius grayborder borderleftthick_gray" name="psn_address" id="psn_address" style="width:253px;text-align:left;padding:3px;height:60px"></textarea>
+ </div>
+ </div>
+ </div> </td>
+ <td width="180" valign="top" class="titleinputfill" style="padding-left:40px">วันเกษียณอายุ <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill">
+ <select class="general radius grayborder borderleftthick_gray" id="retire_day" name="retire_day" style="width:60px">
+ <option value="" >วัน</option>
+ <option value="01" >01</option>
+ <option value="02" >02</option>
+ <option value="03" >03</option>
+ <option value="04" >04</option>
+ <option value="05" >05</option>
+ <option value="06" >06</option>
+ <option value="07" >07</option>
+ <option value="08" >08</option>
+ <option value="09" >09</option>
+ <option value="10" >10</option>
+ <option value="11" >11</option>
+ <option value="12" >12</option>
+ <option value="13" >13</option>
+ <option value="14" >14</option>
+ <option value="15" >15</option>
+ <option value="16" >16</option>
+ <option value="17" >17</option>
+ <option value="18" >18</option>
+ <option value="19" >19</option>
+ <option value="20" >20</option>
+ <option value="21" >21</option>
+ <option value="22" >22</option>
+ <option value="23" >23</option>
+ <option value="24" >24</option>
+ <option value="25" >25</option>
+ <option value="26" >26</option>
+ <option value="27" >27</option>
+ <option value="28" >28</option>
+ <option value="29" >29</option>
+ <option value="30" >30</option>
+ <option value="31" >31</option>
+ </select>
+ <select class="general radius grayborder borderleftthick_gray" id="retire_month" name="retire_month" style="width:120px">
+ <option value="" = "selected" >เดือน</option>
+ <option value="01" >มกราคม</option>
+ <option value="02" >กุมภาพันธ์</option>
+ <option value="03" >มีนาคม</option>
+ <option value="04" >เมษายน</option>
+ <option value="05" >พฤษภาคม</option>
+ <option value="06" >มิถุนายน</option>
+ <option value="07" >กรกฎาคม</option>
+ <option value="08" >สิงหาคม</option>
+ <option value="09" >กันยายน</option>
+ <option value="10" >ตุลาคม</option>
+ <option value="11" >พฤศจิกายน</option>
+ <option value="12" >ธันวาคม</option>
+ </select>
+ <select class="general radius grayborder borderleftthick_gray" id="retire_year" name="retire_year" style="width:75px">
+ <option value="" >ปี</option>
+ <option value="2560" >2560</option>
+ <option value="2561" >2561</option>
+ <option value="2562" >2562</option>
+ <option value="2563" >2563</option>
+ <option value="2564" >2564</option>
+ <option value="2565" >2565</option>
+ <option value="2566" >2566</option>
+ <option value="2567" >2567</option>
+ <option value="2568" >2568</option>
+ <option value="2569" >2569</option>
+ <option value="2570" >2570</option>
+ <option value="2571" >2571</option>
+ <option value="2572" >2572</option>
+ <option value="2573" >2573</option>
+ <option value="2574" >2574</option>
+ <option value="2575" >2575</option>
+ <option value="2576" >2576</option>
+ <option value="2577" >2577</option>
+ <option value="2578" >2578</option>
+ <option value="2579" >2579</option>
+ <option value="2580" >2580</option>
+ <option value="2581" >2581</option>
+ <option value="2582" >2582</option>
+ <option value="2583" >2583</option>
+ <option value="2584" >2584</option>
+ <option value="2585" >2585</option>
+ <option value="2586" >2586</option>
+ <option value="2587" >2587</option>
+ <option value="2588" >2588</option>
+ <option value="2589" >2589</option>
+ <option value="2590" >2590</option>
+ <option value="2591" >2591</option>
+ <option value="2592" >2592</option>
+ <option value="2593" >2593</option>
+ <option value="2594" >2594</option>
+ <option value="2595" >2595</option>
+ <option value="2596" >2596</option>
+ <option value="2597" >2597</option>
+ <option value="2598" >2598</option>
+ <option value="2599" >2599</option>
+ <option value="2600" >2600</option>
+ <option value="2601" >2601</option>
+ <option value="2602" >2602</option>
+ <option value="2603" >2603</option>
+ <option value="2604" >2604</option>
+ <option value="2605" >2605</option>
+ <option value="2606" >2606</option>
+ <option value="2607" >2607</option>
+ <option value="2608" >2608</option>
+ <option value="2609" >2609</option>
+ <option value="2610" >2610</option>
+ <option value="2611" >2611</option>
+ <option value="2612" >2612</option>
+ <option value="2613" >2613</option>
+ <option value="2614" >2614</option>
+ <option value="2615" >2615</option>
+ <option value="2616" >2616</option>
+ <option value="2617" >2617</option>
+ <option value="2618" >2618</option>
+ <option value="2619" >2619</option>
+ <option value="2620" >2620</option>
+ <option value="2621" >2621</option>
+ <option value="2622" >2622</option>
+ <option value="2623" >2623</option>
+ <option value="2624" >2624</option>
+ <option value="2625" >2625</option>
+ <option value="2626" >2626</option>
+ <option value="2627" >2627</option>
+ <option value="2628" >2628</option>
+ <option value="2629" >2629</option>
+ </select> </td>
+ </tr>
+ <tr>
+ <td valign="top" class="titleinputfill" style="padding-left:40px">&nbsp;</td>
+ <td valign="top" class="columninputfill">&nbsp;</td>
+ </tr>
+ <tr>
+ <td valign="top" class="titleinputfill" style="padding-left:40px">ประเภทใบอนุญาต <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill">
+ <select name="certificate_type" class="general radius grayborder borderleftthick_gray" id="certificate_type" style="width:263px">
+ <option value="" > ------- กรุณาเลือกประเภทใบอนุญาต --------</option>
+ <option value="1" > ใบอนุญาตประกอบวิชาชีพ</option>
+ <option value="2" > หนังสืออนุญาตให้ประกอบวิชาชีพ</option>
+ </select> </td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td valign="top" class="titleinputfill" style="padding-left:40px">เลขที่ใบอนุญาต <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill"><input name="certificate_number" type="text" class="general radius grayborder borderleftthick_gray" id="certificate_number" style="width:250px" value="" maxlength="30"/></td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td valign="top" class="titleinputfill" style="padding-left:40px">วันที่ออกใบอนุญาต <span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill"><select class="general radius grayborder borderleftthick_gray" id="cer_start_day" name="cer_start_day" style="width:60px">
+ <option value="" >วัน</option>
+ <option value="01" >01</option>
+ <option value="02" >02</option>
+ <option value="03" >03</option>
+ <option value="04" >04</option>
+ <option value="05" >05</option>
+ <option value="06" >06</option>
+ <option value="07" >07</option>
+ <option value="08" >08</option>
+ <option value="09" >09</option>
+ <option value="10" >10</option>
+ <option value="11" >11</option>
+ <option value="12" >12</option>
+ <option value="13" >13</option>
+ <option value="14" >14</option>
+ <option value="15" >15</option>
+ <option value="16" >16</option>
+ <option value="17" >17</option>
+ <option value="18" >18</option>
+ <option value="19" >19</option>
+ <option value="20" >20</option>
+ <option value="21" >21</option>
+ <option value="22" >22</option>
+ <option value="23" >23</option>
+ <option value="24" >24</option>
+ <option value="25" >25</option>
+ <option value="26" >26</option>
+ <option value="27" >27</option>
+ <option value="28" >28</option>
+ <option value="29" >29</option>
+ <option value="30" >30</option>
+ <option value="31" >31</option>
+ </select>
+ <select class="general radius grayborder borderleftthick_gray" id="cer_start_month" name="cer_start_month" style="width:120px">
+ <option value="" = "selected" >เดือน</option>
+ <option value="01" >มกราคม</option>
+ <option value="02" >กุมภาพันธ์</option>
+ <option value="03" >มีนาคม</option>
+ <option value="04" >เมษายน</option>
+ <option value="05" >พฤษภาคม</option>
+ <option value="06" >มิถุนายน</option>
+ <option value="07" >กรกฎาคม</option>
+ <option value="08" >สิงหาคม</option>
+ <option value="09" >กันยายน</option>
+ <option value="10" >ตุลาคม</option>
+ <option value="11" >พฤศจิกายน</option>
+ <option value="12" >ธันวาคม</option>
+ </select>
+ <select class="general radius grayborder borderleftthick_gray" id="cer_start_year" name="cer_start_year" style="width:75px">
+ <option value="" >ปี</option>
+ <option value="2510" >2510</option>
+ <option value="2511" >2511</option>
+ <option value="2512" >2512</option>
+ <option value="2513" >2513</option>
+ <option value="2514" >2514</option>
+ <option value="2515" >2515</option>
+ <option value="2516" >2516</option>
+ <option value="2517" >2517</option>
+ <option value="2518" >2518</option>
+ <option value="2519" >2519</option>
+ <option value="2520" >2520</option>
+ <option value="2521" >2521</option>
+ <option value="2522" >2522</option>
+ <option value="2523" >2523</option>
+ <option value="2524" >2524</option>
+ <option value="2525" >2525</option>
+ <option value="2526" >2526</option>
+ <option value="2527" >2527</option>
+ <option value="2528" >2528</option>
+ <option value="2529" >2529</option>
+ <option value="2530" >2530</option>
+ <option value="2531" >2531</option>
+ <option value="2532" >2532</option>
+ <option value="2533" >2533</option>
+ <option value="2534" >2534</option>
+ <option value="2535" >2535</option>
+ <option value="2536" >2536</option>
+ <option value="2537" >2537</option>
+ <option value="2538" >2538</option>
+ <option value="2539" >2539</option>
+ <option value="2540" >2540</option>
+ <option value="2541" >2541</option>
+ <option value="2542" >2542</option>
+ <option value="2543" >2543</option>
+ <option value="2544" >2544</option>
+ <option value="2545" >2545</option>
+ <option value="2546" >2546</option>
+ <option value="2547" >2547</option>
+ <option value="2548" >2548</option>
+ <option value="2549" >2549</option>
+ <option value="2550" >2550</option>
+ <option value="2551" >2551</option>
+ <option value="2552" >2552</option>
+ <option value="2553" >2553</option>
+ <option value="2554" >2554</option>
+ <option value="2555" >2555</option>
+ <option value="2556" >2556</option>
+ <option value="2557" >2557</option>
+ <option value="2558" >2558</option>
+ <option value="2559" >2559</option>
+ <option value="2560" >2560</option>
+ <option value="2561" >2561</option>
+ <option value="2562" >2562</option>
+ <option value="2563" >2563</option>
+ <option value="2564" >2564</option>
+ <option value="2565" >2565</option>
+ <option value="2566" >2566</option>
+ <option value="2567" >2567</option>
+ <option value="2568" >2568</option>
+ <option value="2569" >2569</option>
+ <option value="2570" >2570</option>
+ <option value="2571" >2571</option>
+ <option value="2572" >2572</option>
+ <option value="2573" >2573</option>
+ <option value="2574" >2574</option>
+ </select> </td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td><input name="psn_id" type="hidden" id="psn_id" value=""></td>
+ <td valign="top" class="titleinputfill" style="padding-left:40px">วันหมดอายุใบอนุญาต<span class="nowarningfiilsign">:</span></td>
+ <td valign="top" class="columninputfill"><select class="general radius grayborder borderleftthick_gray" id="cer_end_day" name="cer_end_day" style="width:60px">
+ <option value="" >วัน</option>
+ <option value="01" >01</option>
+ <option value="02" >02</option>
+ <option value="03" >03</option>
+ <option value="04" >04</option>
+ <option value="05" >05</option>
+ <option value="06" >06</option>
+ <option value="07" >07</option>
+ <option value="08" >08</option>
+ <option value="09" >09</option>
+ <option value="10" >10</option>
+ <option value="11" >11</option>
+ <option value="12" >12</option>
+ <option value="13" >13</option>
+ <option value="14" >14</option>
+ <option value="15" >15</option>
+ <option value="16" >16</option>
+ <option value="17" >17</option>
+ <option value="18" >18</option>
+ <option value="19" >19</option>
+ <option value="20" >20</option>
+ <option value="21" >21</option>
+ <option value="22" >22</option>
+ <option value="23" >23</option>
+ <option value="24" >24</option>
+ <option value="25" >25</option>
+ <option value="26" >26</option>
+ <option value="27" >27</option>
+ <option value="28" >28</option>
+ <option value="29" >29</option>
+ <option value="30" >30</option>
+ <option value="31" >31</option>
+ </select>
+ <select class="general radius grayborder borderleftthick_gray" id="cer_end_month" name="cer_end_month" style="width:120px">
+ <option value="" = "selected" >เดือน</option>
+ <option value="01" >มกราคม</option>
+ <option value="02" >กุมภาพันธ์</option>
+ <option value="03" >มีนาคม</option>
+ <option value="04" >เมษายน</option>
+ <option value="05" >พฤษภาคม</option>
+ <option value="06" >มิถุนายน</option>
+ <option value="07" >กรกฎาคม</option>
+ <option value="08" >สิงหาคม</option>
+ <option value="09" >กันยายน</option>
+ <option value="10" >ตุลาคม</option>
+ <option value="11" >พฤศจิกายน</option>
+ <option value="12" >ธันวาคม</option>
+ </select>
+ <select class="general radius grayborder borderleftthick_gray" id="cer_end_year" name="cer_end_year" style="width:75px">
+ <option value="" >ปี</option>
+ <option value="2510" >2510</option>
+ <option value="2511" >2511</option>
+ <option value="2512" >2512</option>
+ <option value="2513" >2513</option>
+ <option value="2514" >2514</option>
+ <option value="2515" >2515</option>
+ <option value="2516" >2516</option>
+ <option value="2517" >2517</option>
+ <option value="2518" >2518</option>
+ <option value="2519" >2519</option>
+ <option value="2520" >2520</option>
+ <option value="2521" >2521</option>
+ <option value="2522" >2522</option>
+ <option value="2523" >2523</option>
+ <option value="2524" >2524</option>
+ <option value="2525" >2525</option>
+ <option value="2526" >2526</option>
+ <option value="2527" >2527</option>
+ <option value="2528" >2528</option>
+ <option value="2529" >2529</option>
+ <option value="2530" >2530</option>
+ <option value="2531" >2531</option>
+ <option value="2532" >2532</option>
+ <option value="2533" >2533</option>
+ <option value="2534" >2534</option>
+ <option value="2535" >2535</option>
+ <option value="2536" >2536</option>
+ <option value="2537" >2537</option>
+ <option value="2538" >2538</option>
+ <option value="2539" >2539</option>
+ <option value="2540" >2540</option>
+ <option value="2541" >2541</option>
+ <option value="2542" >2542</option>
+ <option value="2543" >2543</option>
+ <option value="2544" >2544</option>
+ <option value="2545" >2545</option>
+ <option value="2546" >2546</option>
+ <option value="2547" >2547</option>
+ <option value="2548" >2548</option>
+ <option value="2549" >2549</option>
+ <option value="2550" >2550</option>
+ <option value="2551" >2551</option>
+ <option value="2552" >2552</option>
+ <option value="2553" >2553</option>
+ <option value="2554" >2554</option>
+ <option value="2555" >2555</option>
+ <option value="2556" >2556</option>
+ <option value="2557" >2557</option>
+ <option value="2558" >2558</option>
+ <option value="2559" >2559</option>
+ <option value="2560" >2560</option>
+ <option value="2561" >2561</option>
+ <option value="2562" >2562</option>
+ <option value="2563" >2563</option>
+ <option value="2564" >2564</option>
+ <option value="2565" >2565</option>
+ <option value="2566" >2566</option>
+ <option value="2567" >2567</option>
+ <option value="2568" >2568</option>
+ <option value="2569" >2569</option>
+ <option value="2570" >2570</option>
+ <option value="2571" >2571</option>
+ <option value="2572" >2572</option>
+ <option value="2573" >2573</option>
+ <option value="2574" >2574</option>
+ <option value="2575" >2575</option>
+ <option value="2576" >2576</option>
+ <option value="2577" >2577</option>
+ <option value="2578" >2578</option>
+ <option value="2579" >2579</option>
+ </select>
+ </td>
+ </tr>
+ </table>
+ </div>
+ </div>
+</div>
+ <div id='tab-2'> <div style="display:table;width:100%;padding:0px 0px 20px 12px">
+ <div style="display:table-row">
+ <div style="display:table-cell;float:left">
+ <h1 style="font-size:28px;margin:10px 0px">ข้อมูลการศึกษาบุคลากร</h1>
+ </div>
+ </div>
+ <div style="display:table-row">
+ <table border="0" cellspacing="0" cellpadding="0" class="black_12">
+ <tr>
+ <td width="23" height="16" align="left" valign="middle" class="blue_12_bold">&nbsp;</td>
+ <td colspan="2" align="left" valign="middle" class="blue_12_bold"><img src="../images/arrowright_hover.gif" border="0"/> สถานศึกษาและที่ตั้ง</td>
+ <td colspan="2" align="left" valign="middle" class="blue_12_bold"><img src="../images/arrowright_hover.gif" border="0"/> ช่วงที่ศึกษา</td>
+ <td colspan="2" align="left" valign="middle" class="blue_12_bold"><img src="../images/arrowright_hover.gif" border="0"/> วุฒิการศึกษา </td>
+ <td colspan="2" align="left" valign="middle" class="blue_12_bold"><img src="../images/arrowright_hover.gif" border="0"/> สาขาวิชาเอก</td>
+ <td align="left" valign="middle" class="blue_12_bold"><img src="../images/arrowright_hover.gif" border="0"/> สาขาวิชาโท</td>
+ </tr>
+ <tr>
+ <td align="left">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td align="left" class="blue_12">1.</td>
+ <td width="202"><span class="blue_12_bold">
+ <input name="aca_school" type="text" class="general radius grayborder borderleftthick_gray" id="aca_school" style="width:200px" value=""/>
+ </span></td>
+ <td width="10">&nbsp;</td>
+ <td width="82"><input name="aca_period" type="text" class="general radius grayborder borderleftthick_gray" id="aca_period" style="width:80px" value="" /></td>
+ <td width="11">&nbsp;</td>
+ <td width="200"><span class="blue_12_bold">
+ <select name="edu_bg_no" class="general radius grayborder borderleftthick_gray" id="edu_bg_no" style="outline:none;width:200px">
+ <option value="" > ---------- วุฒิการศึกษา ---------</option>
+ <option value="5" > การศึกษาบัณฑิต </option>
+ <option value="6" > การศึกษามหาบัณฑิต </option>
+ <option value="3" selected='selected'class='blue_12' > ครุศาสตรบัณฑิต </option>
+ <option value="4" > ครุศาสตร์มหาบัณฑิต </option>
+ <option value="17" > ชั้นประถมศึกษาปีที่ 4 </option>
+ <option value="18" > ชั้นประถมศึกษาปีที่ 6 </option>
+ <option value="23" > ชั้นประถมศึกษาปีที่ 7 </option>
+ <option value="19" > ชั้นมัธยมศึกษาปีที่ 3 </option>
+ <option value="27" > ชั้นมัธยมศึกษาปีที่ 5 </option>
+ <option value="20" > ชั้นมัธยมศึกษาปีที่ 6 </option>
+ <option value="31" > บริหารธุรกิจบัณฑิต </option>
+ <option value="24" > ประกาศนียบัตรวิชาการศึกษา </option>
+ <option value="25" > ประกาศนียบัตรวิชาการศึกษาชั้นสูง </option>
+ <option value="21" > ประกาศนียบัตรวิชาชีพ </option>
+ <option value="28" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="22" > ประกาศนียบัตรวิชาชีพชั้นสูง </option>
+ <option value="33" > ประโยคครูมัธยม </option>
+ <option value="34" > ปริญญาตรี </option>
+ <option value="29" > พัฒนบริหารศาสตรมหาบัณฑิต </option>
+ <option value="35" > รัฐประศาสนศาสตร์บัณฑิต </option>
+ <option value="26" > วิทยาศาสตรบัณฑิต </option>
+ <option value="30" > วิศวกรรมศาสตรบัณฑิต </option>
+ <option value="12" > ศิลปศาสตรมหาบัณฑิต </option>
+ <option value="7" > ศิลปศาสตร์บัณฑิต </option>
+ <option value="1" > ศึกษาศาสตรบัณฑิต </option>
+ <option value="2" > ศึกษาศาสตร์มหาบัณฑิต </option>
+ <option value="32" > อนุปริญญา </option>
+ </select>
+ </span></td>
+ <td width="12">&nbsp;</td>
+ <td width="180"><span class="blue_12_bold">
+ <select name="field_major" class="general radius grayborder borderleftthick_gray" id="field_major" style="outline:none;width:180px">
+ <option value="" > ----- เลือกสาขาวิชาเอก -----</option>
+ <option value="1" > การบริหารการศึกษา </option>
+ <option value="2" selected='selected'class='blue_12'class='blue_12' > สังคมศึกษา </option>
+ <option value="3" > ประวัติศาสตร์ </option>
+ <option value="4" > หลักสูตรการศึกษา </option>
+ <option value="5" > หลักสูตรและการสอน </option>
+ <option value="6" > บรรณารักษ์ศาสตร์ </option>
+ <option value="7" > นวัตกรรมทางการศึกษา </option>
+ <option value="8" > คณิตศาสตร์ </option>
+ <option value="9" > พลศึกษา </option>
+ <option value="10" > สุขศึกษา </option>
+ <option value="11" > วัดผลการศึกษา </option>
+ <option value="12" > ปฐมวัย </option>
+ <option value="13" > ประถมศึกษา </option>
+ <option value="16" > เทคโนโลยีการเกษตร </option>
+ <option value="17" > วิทยาศาสตร์ทั่วไป </option>
+ <option value="18" > อุตสาหกรรมศิลป์ </option>
+ <option value="19" > คหกรรมศาสตร์ </option>
+ <option value="20" > แนะแนว </option>
+ <option value="21" > โภชนาการ </option>
+ <option value="22" > ชีววิทยา </option>
+ <option value="23" > เคมี </option>
+ <option value="24" > ฟิสิกส์ </option>
+ <option value="25" > การวัดและประเมินผล </option>
+ <option value="26" > ภาษาไทย </option>
+ <option value="27" > ภาษาอังกฤษ </option>
+ <option value="28" > คอมพิวเตอร์ </option>
+ <option value="29" > เทคโนโลยีทางการศึกษา </option>
+ <option value="30" > การสหกรณ์ </option>
+ <option value="31" > บัญชี </option>
+ <option value="32" > วิทยาศาสตร์-เกษตร </option>
+ <option value="33" > วิทยาศาสตร์(ชีววิทยา) </option>
+ <option value="34" > การสอนภาษาไทย </option>
+ <option value="35" > สื่อสารมวลชนทั่วไป </option>
+ <option value="36" > บริหารธุรกิจ </option>
+ <option value="37" > การสอนสังคมศึกษา </option>
+ <option value="38" > วิจัยภาษาและวัฒนธรรมญี่ปุ่น </option>
+ <option value="39" > หลักสูตรการสอน </option>
+ <option value="40" > ภาษาญี่ปุ่น </option>
+ <option value="41" > ภาษาจีน </option>
+ <option value="42" > การสอนภาษาจีน </option>
+ <option value="43" > การฝึกและการจัดการกีฬา </option>
+ <option value="44" > ดนตรีสากล </option>
+ <option value="45" > ดนตรีไทย </option>
+ <option value="46" > ศิลปะ </option>
+ <option value="47" > รัฐประศาสนาศาสตร์ </option>
+ <option value="48" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="49" > วิทยาศาสตร์ - คณิตศาสตร์ </option>
+ <option value="50" > ศิลป์สังคม </option>
+ </select>
+ </span></td>
+ <td width="10">&nbsp;</td>
+ <td width="180"><span class="blue_12_bold">
+ <select name="field_minor" class="general radius grayborder borderleftthick_gray" id="field_minor" style="outline:none;width:180px">
+ <option value="" > ----- เลือกสาขาวิชาโท -----</option>
+ <option value="1" > การบริหารการศึกษา </option>
+ <option value="2" > สังคมศึกษา </option>
+ <option value="3" > ประวัติศาสตร์ </option>
+ <option value="4" > หลักสูตรการศึกษา </option>
+ <option value="5" > หลักสูตรและการสอน </option>
+ <option value="6" > บรรณารักษ์ศาสตร์ </option>
+ <option value="7" > นวัตกรรมทางการศึกษา </option>
+ <option value="8" > คณิตศาสตร์ </option>
+ <option value="9" > พลศึกษา </option>
+ <option value="10" > สุขศึกษา </option>
+ <option value="11" > วัดผลการศึกษา </option>
+ <option value="12" > ปฐมวัย </option>
+ <option value="13" > ประถมศึกษา </option>
+ <option value="16" > เทคโนโลยีการเกษตร </option>
+ <option value="17" > วิทยาศาสตร์ทั่วไป </option>
+ <option value="18" > อุตสาหกรรมศิลป์ </option>
+ <option value="19" > คหกรรมศาสตร์ </option>
+ <option value="20" > แนะแนว </option>
+ <option value="21" > โภชนาการ </option>
+ <option value="22" > ชีววิทยา </option>
+ <option value="23" > เคมี </option>
+ <option value="24" > ฟิสิกส์ </option>
+ <option value="25" > การวัดและประเมินผล </option>
+ <option value="26" > ภาษาไทย </option>
+ <option value="27" > ภาษาอังกฤษ </option>
+ <option value="28" > คอมพิวเตอร์ </option>
+ <option value="29" > เทคโนโลยีทางการศึกษา </option>
+ <option value="30" > การสหกรณ์ </option>
+ <option value="31" > บัญชี </option>
+ <option value="32" > วิทยาศาสตร์-เกษตร </option>
+ <option value="33" > วิทยาศาสตร์(ชีววิทยา) </option>
+ <option value="34" > การสอนภาษาไทย </option>
+ <option value="35" > สื่อสารมวลชนทั่วไป </option>
+ <option value="36" > บริหารธุรกิจ </option>
+ <option value="37" > การสอนสังคมศึกษา </option>
+ <option value="38" > วิจัยภาษาและวัฒนธรรมญี่ปุ่น </option>
+ <option value="39" > หลักสูตรการสอน </option>
+ <option value="40" > ภาษาญี่ปุ่น </option>
+ <option value="41" > ภาษาจีน </option>
+ <option value="42" > การสอนภาษาจีน </option>
+ <option value="43" > การฝึกและการจัดการกีฬา </option>
+ <option value="44" > ดนตรีสากล </option>
+ <option value="45" > ดนตรีไทย </option>
+ <option value="46" > ศิลปะ </option>
+ <option value="47" > รัฐประศาสนาศาสตร์ </option>
+ <option value="48" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="49" > วิทยาศาสตร์ - คณิตศาสตร์ </option>
+ <option value="50" > ศิลป์สังคม </option>
+ </select>
+ </span></td>
+ </tr>
+ <tr>
+ <td align="left" class="blue_12">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td align="left" class="blue_12">2.</td>
+ <td colspan="2"><span class="blue_12_bold">
+ <input name="aca_school" type="text" class="general radius grayborder borderleftthick_gray" id="aca_school" style="width:200px" value=""/>
+ </span></td>
+ <td colspan="2"><input name="aca_period" type="text" class="general radius grayborder borderleftthick_gray" id="aca_period" style="width:80px" value="" /></td>
+ <td colspan="2"><span class="blue_12_bold">
+ <select name="edu_bg_no" class="general radius grayborder borderleftthick_gray" id="edu_bg_no" style="outline:none;width:200px">
+ <option value="" > ---------- วุฒิการศึกษา ---------</option>
+ <option value="1" > ศึกษาศาสตรบัณฑิต </option>
+ <option value="2" > ศึกษาศาสตร์มหาบัณฑิต </option>
+ <option value="3" > ครุศาสตรบัณฑิต </option>
+ <option value="4" > ครุศาสตร์มหาบัณฑิต </option>
+ <option value="5" > การศึกษาบัณฑิต </option>
+ <option value="6" > การศึกษามหาบัณฑิต </option>
+ <option value="7" > ศิลปศาสตร์บัณฑิต </option>
+ <option value="17" > ชั้นประถมศึกษาปีที่ 4 </option>
+ <option value="12" > ศิลปศาสตรมหาบัณฑิต </option>
+ <option value="18" > ชั้นประถมศึกษาปีที่ 6 </option>
+ <option value="19" > ชั้นมัธยมศึกษาปีที่ 3 </option>
+ <option value="20" > ชั้นมัธยมศึกษาปีที่ 6 </option>
+ <option value="21" > ประกาศนียบัตรวิชาชีพ </option>
+ <option value="22" > ประกาศนียบัตรวิชาชีพชั้นสูง </option>
+ <option value="23" > ชั้นประถมศึกษาปีที่ 7 </option>
+ <option value="24" > ประกาศนียบัตรวิชาการศึกษา </option>
+ <option value="25" > ประกาศนียบัตรวิชาการศึกษาชั้นสูง </option>
+ <option value="26" > วิทยาศาสตรบัณฑิต </option>
+ <option value="27" > ชั้นมัธยมศึกษาปีที่ 5 </option>
+ <option value="28" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="29" > พัฒนบริหารศาสตรมหาบัณฑิต </option>
+ <option value="30" > วิศวกรรมศาสตรบัณฑิต </option>
+ <option value="31" > บริหารธุรกิจบัณฑิต </option>
+ <option value="32" > อนุปริญญา </option>
+ <option value="33" > ประโยคครูมัธยม </option>
+ <option value="34" > ปริญญาตรี </option>
+ <option value="35" > รัฐประศาสนศาสตร์บัณฑิต </option>
+ </select>
+ </span></td>
+ <td colspan="2"><span class="blue_12_bold">
+ <select name="field_major" class="general radius grayborder borderleftthick_gray" id="field_major" style="outline:none;width:180px">
+ <option value="" > ----- เลือกสาขาวิชาเอก -----</option>
+ <option value="1" > การบริหารการศึกษา </option>
+ <option value="2" > สังคมศึกษา </option>
+ <option value="3" > ประวัติศาสตร์ </option>
+ <option value="4" > หลักสูตรการศึกษา </option>
+ <option value="5" > หลักสูตรและการสอน </option>
+ <option value="6" > บรรณารักษ์ศาสตร์ </option>
+ <option value="7" > นวัตกรรมทางการศึกษา </option>
+ <option value="8" > คณิตศาสตร์ </option>
+ <option value="9" > พลศึกษา </option>
+ <option value="10" > สุขศึกษา </option>
+ <option value="11" > วัดผลการศึกษา </option>
+ <option value="12" > ปฐมวัย </option>
+ <option value="13" > ประถมศึกษา </option>
+ <option value="16" > เทคโนโลยีการเกษตร </option>
+ <option value="17" > วิทยาศาสตร์ทั่วไป </option>
+ <option value="18" > อุตสาหกรรมศิลป์ </option>
+ <option value="19" > คหกรรมศาสตร์ </option>
+ <option value="20" > แนะแนว </option>
+ <option value="21" > โภชนาการ </option>
+ <option value="22" > ชีววิทยา </option>
+ <option value="23" > เคมี </option>
+ <option value="24" > ฟิสิกส์ </option>
+ <option value="25" > การวัดและประเมินผล </option>
+ <option value="26" > ภาษาไทย </option>
+ <option value="27" > ภาษาอังกฤษ </option>
+ <option value="28" > คอมพิวเตอร์ </option>
+ <option value="29" > เทคโนโลยีทางการศึกษา </option>
+ <option value="30" > การสหกรณ์ </option>
+ <option value="31" > บัญชี </option>
+ <option value="32" > วิทยาศาสตร์-เกษตร </option>
+ <option value="33" > วิทยาศาสตร์(ชีววิทยา) </option>
+ <option value="34" > การสอนภาษาไทย </option>
+ <option value="35" > สื่อสารมวลชนทั่วไป </option>
+ <option value="36" > บริหารธุรกิจ </option>
+ <option value="37" > การสอนสังคมศึกษา </option>
+ <option value="38" > วิจัยภาษาและวัฒนธรรมญี่ปุ่น </option>
+ <option value="39" > หลักสูตรการสอน </option>
+ <option value="40" > ภาษาญี่ปุ่น </option>
+ <option value="41" > ภาษาจีน </option>
+ <option value="42" > การสอนภาษาจีน </option>
+ <option value="43" > การฝึกและการจัดการกีฬา </option>
+ <option value="44" > ดนตรีสากล </option>
+ <option value="45" > ดนตรีไทย </option>
+ <option value="46" > ศิลปะ </option>
+ <option value="47" > รัฐประศาสนาศาสตร์ </option>
+ <option value="48" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="49" > วิทยาศาสตร์ - คณิตศาสตร์ </option>
+ <option value="50" > ศิลป์สังคม </option>
+ </select>
+ </span></td>
+ <td><span class="blue_12_bold">
+ <select name="field_minor" class="general radius grayborder borderleftthick_gray" id="field_minor" style="outline:none;width:180px">
+ <option value="" > ----- เลือกสาขาวิชาโท -----</option>
+ <option value="1" > การบริหารการศึกษา </option>
+ <option value="2" > สังคมศึกษา </option>
+ <option value="3" > ประวัติศาสตร์ </option>
+ <option value="4" > หลักสูตรการศึกษา </option>
+ <option value="5" > หลักสูตรและการสอน </option>
+ <option value="6" > บรรณารักษ์ศาสตร์ </option>
+ <option value="7" > นวัตกรรมทางการศึกษา </option>
+ <option value="8" > คณิตศาสตร์ </option>
+ <option value="9" > พลศึกษา </option>
+ <option value="10" > สุขศึกษา </option>
+ <option value="11" > วัดผลการศึกษา </option>
+ <option value="12" > ปฐมวัย </option>
+ <option value="13" > ประถมศึกษา </option>
+ <option value="16" > เทคโนโลยีการเกษตร </option>
+ <option value="17" > วิทยาศาสตร์ทั่วไป </option>
+ <option value="18" > อุตสาหกรรมศิลป์ </option>
+ <option value="19" > คหกรรมศาสตร์ </option>
+ <option value="20" > แนะแนว </option>
+ <option value="21" > โภชนาการ </option>
+ <option value="22" > ชีววิทยา </option>
+ <option value="23" > เคมี </option>
+ <option value="24" > ฟิสิกส์ </option>
+ <option value="25" > การวัดและประเมินผล </option>
+ <option value="26" > ภาษาไทย </option>
+ <option value="27" > ภาษาอังกฤษ </option>
+ <option value="28" > คอมพิวเตอร์ </option>
+ <option value="29" > เทคโนโลยีทางการศึกษา </option>
+ <option value="30" > การสหกรณ์ </option>
+ <option value="31" > บัญชี </option>
+ <option value="32" > วิทยาศาสตร์-เกษตร </option>
+ <option value="33" > วิทยาศาสตร์(ชีววิทยา) </option>
+ <option value="34" > การสอนภาษาไทย </option>
+ <option value="35" > สื่อสารมวลชนทั่วไป </option>
+ <option value="36" > บริหารธุรกิจ </option>
+ <option value="37" > การสอนสังคมศึกษา </option>
+ <option value="38" > วิจัยภาษาและวัฒนธรรมญี่ปุ่น </option>
+ <option value="39" > หลักสูตรการสอน </option>
+ <option value="40" > ภาษาญี่ปุ่น </option>
+ <option value="41" > ภาษาจีน </option>
+ <option value="42" > การสอนภาษาจีน </option>
+ <option value="43" > การฝึกและการจัดการกีฬา </option>
+ <option value="44" > ดนตรีสากล </option>
+ <option value="45" > ดนตรีไทย </option>
+ <option value="46" > ศิลปะ </option>
+ <option value="47" > รัฐประศาสนาศาสตร์ </option>
+ <option value="48" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="49" > วิทยาศาสตร์ - คณิตศาสตร์ </option>
+ <option value="50" > ศิลป์สังคม </option>
+ </select>
+ </span></td>
+ </tr>
+ <tr>
+ <td align="left" class="blue_12">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td align="left" class="blue_12">3.</td>
+ <td colspan="2"><span class="blue_12_bold">
+ <input name="aca_school" type="text" class="general radius grayborder borderleftthick_gray" id="aca_school" style="width:200px" value=""/>
+ </span></td>
+ <td colspan="2"><input name="aca_period" type="text" class="general radius grayborder borderleftthick_gray" id="aca_period" style="width:80px" value="" /></td>
+ <td colspan="2"><span class="blue_12_bold">
+ <select name="edu_bg_no" class="general radius grayborder borderleftthick_gray" id="edu_bg_no" style="outline:none;width:200px">
+ <option value="" > ---------- วุฒิการศึกษา ---------</option>
+ <option value="1" > ศึกษาศาสตรบัณฑิต </option>
+ <option value="2" > ศึกษาศาสตร์มหาบัณฑิต </option>
+ <option value="3" > ครุศาสตรบัณฑิต </option>
+ <option value="4" > ครุศาสตร์มหาบัณฑิต </option>
+ <option value="5" > การศึกษาบัณฑิต </option>
+ <option value="6" > การศึกษามหาบัณฑิต </option>
+ <option value="7" > ศิลปศาสตร์บัณฑิต </option>
+ <option value="17" > ชั้นประถมศึกษาปีที่ 4 </option>
+ <option value="12" > ศิลปศาสตรมหาบัณฑิต </option>
+ <option value="18" > ชั้นประถมศึกษาปีที่ 6 </option>
+ <option value="19" > ชั้นมัธยมศึกษาปีที่ 3 </option>
+ <option value="20" > ชั้นมัธยมศึกษาปีที่ 6 </option>
+ <option value="21" > ประกาศนียบัตรวิชาชีพ </option>
+ <option value="22" > ประกาศนียบัตรวิชาชีพชั้นสูง </option>
+ <option value="23" > ชั้นประถมศึกษาปีที่ 7 </option>
+ <option value="24" > ประกาศนียบัตรวิชาการศึกษา </option>
+ <option value="25" > ประกาศนียบัตรวิชาการศึกษาชั้นสูง </option>
+ <option value="26" > วิทยาศาสตรบัณฑิต </option>
+ <option value="27" > ชั้นมัธยมศึกษาปีที่ 5 </option>
+ <option value="28" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="29" > พัฒนบริหารศาสตรมหาบัณฑิต </option>
+ <option value="30" > วิศวกรรมศาสตรบัณฑิต </option>
+ <option value="31" > บริหารธุรกิจบัณฑิต </option>
+ <option value="32" > อนุปริญญา </option>
+ <option value="33" > ประโยคครูมัธยม </option>
+ <option value="34" > ปริญญาตรี </option>
+ <option value="35" > รัฐประศาสนศาสตร์บัณฑิต </option>
+ </select>
+ </span></td>
+ <td colspan="2"><span class="blue_12_bold">
+ <select name="field_major" class="general radius grayborder borderleftthick_gray" id="field_major" style="outline:none;width:180px">
+ <option value="" > ----- เลือกสาขาวิชาเอก -----</option>
+ <option value="1" > การบริหารการศึกษา </option>
+ <option value="2" > สังคมศึกษา </option>
+ <option value="3" > ประวัติศาสตร์ </option>
+ <option value="4" > หลักสูตรการศึกษา </option>
+ <option value="5" > หลักสูตรและการสอน </option>
+ <option value="6" > บรรณารักษ์ศาสตร์ </option>
+ <option value="7" > นวัตกรรมทางการศึกษา </option>
+ <option value="8" > คณิตศาสตร์ </option>
+ <option value="9" > พลศึกษา </option>
+ <option value="10" > สุขศึกษา </option>
+ <option value="11" > วัดผลการศึกษา </option>
+ <option value="12" > ปฐมวัย </option>
+ <option value="13" > ประถมศึกษา </option>
+ <option value="16" > เทคโนโลยีการเกษตร </option>
+ <option value="17" > วิทยาศาสตร์ทั่วไป </option>
+ <option value="18" > อุตสาหกรรมศิลป์ </option>
+ <option value="19" > คหกรรมศาสตร์ </option>
+ <option value="20" > แนะแนว </option>
+ <option value="21" > โภชนาการ </option>
+ <option value="22" > ชีววิทยา </option>
+ <option value="23" > เคมี </option>
+ <option value="24" > ฟิสิกส์ </option>
+ <option value="25" > การวัดและประเมินผล </option>
+ <option value="26" > ภาษาไทย </option>
+ <option value="27" > ภาษาอังกฤษ </option>
+ <option value="28" > คอมพิวเตอร์ </option>
+ <option value="29" > เทคโนโลยีทางการศึกษา </option>
+ <option value="30" > การสหกรณ์ </option>
+ <option value="31" > บัญชี </option>
+ <option value="32" > วิทยาศาสตร์-เกษตร </option>
+ <option value="33" > วิทยาศาสตร์(ชีววิทยา) </option>
+ <option value="34" > การสอนภาษาไทย </option>
+ <option value="35" > สื่อสารมวลชนทั่วไป </option>
+ <option value="36" > บริหารธุรกิจ </option>
+ <option value="37" > การสอนสังคมศึกษา </option>
+ <option value="38" > วิจัยภาษาและวัฒนธรรมญี่ปุ่น </option>
+ <option value="39" > หลักสูตรการสอน </option>
+ <option value="40" > ภาษาญี่ปุ่น </option>
+ <option value="41" > ภาษาจีน </option>
+ <option value="42" > การสอนภาษาจีน </option>
+ <option value="43" > การฝึกและการจัดการกีฬา </option>
+ <option value="44" > ดนตรีสากล </option>
+ <option value="45" > ดนตรีไทย </option>
+ <option value="46" > ศิลปะ </option>
+ <option value="47" > รัฐประศาสนาศาสตร์ </option>
+ <option value="48" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="49" > วิทยาศาสตร์ - คณิตศาสตร์ </option>
+ <option value="50" > ศิลป์สังคม </option>
+ </select>
+ </span></td>
+ <td><span class="blue_12_bold">
+ <select name="field_minor" class="general radius grayborder borderleftthick_gray" id="field_minor" style="outline:none;width:180px">
+ <option value="" > ----- เลือกสาขาวิชาโท -----</option>
+ <option value="1" > การบริหารการศึกษา </option>
+ <option value="2" > สังคมศึกษา </option>
+ <option value="3" > ประวัติศาสตร์ </option>
+ <option value="4" > หลักสูตรการศึกษา </option>
+ <option value="5" > หลักสูตรและการสอน </option>
+ <option value="6" > บรรณารักษ์ศาสตร์ </option>
+ <option value="7" > นวัตกรรมทางการศึกษา </option>
+ <option value="8" > คณิตศาสตร์ </option>
+ <option value="9" > พลศึกษา </option>
+ <option value="10" > สุขศึกษา </option>
+ <option value="11" > วัดผลการศึกษา </option>
+ <option value="12" > ปฐมวัย </option>
+ <option value="13" > ประถมศึกษา </option>
+ <option value="16" > เทคโนโลยีการเกษตร </option>
+ <option value="17" > วิทยาศาสตร์ทั่วไป </option>
+ <option value="18" > อุตสาหกรรมศิลป์ </option>
+ <option value="19" > คหกรรมศาสตร์ </option>
+ <option value="20" > แนะแนว </option>
+ <option value="21" > โภชนาการ </option>
+ <option value="22" > ชีววิทยา </option>
+ <option value="23" > เคมี </option>
+ <option value="24" > ฟิสิกส์ </option>
+ <option value="25" > การวัดและประเมินผล </option>
+ <option value="26" > ภาษาไทย </option>
+ <option value="27" > ภาษาอังกฤษ </option>
+ <option value="28" > คอมพิวเตอร์ </option>
+ <option value="29" > เทคโนโลยีทางการศึกษา </option>
+ <option value="30" > การสหกรณ์ </option>
+ <option value="31" > บัญชี </option>
+ <option value="32" > วิทยาศาสตร์-เกษตร </option>
+ <option value="33" > วิทยาศาสตร์(ชีววิทยา) </option>
+ <option value="34" > การสอนภาษาไทย </option>
+ <option value="35" > สื่อสารมวลชนทั่วไป </option>
+ <option value="36" > บริหารธุรกิจ </option>
+ <option value="37" > การสอนสังคมศึกษา </option>
+ <option value="38" > วิจัยภาษาและวัฒนธรรมญี่ปุ่น </option>
+ <option value="39" > หลักสูตรการสอน </option>
+ <option value="40" > ภาษาญี่ปุ่น </option>
+ <option value="41" > ภาษาจีน </option>
+ <option value="42" > การสอนภาษาจีน </option>
+ <option value="43" > การฝึกและการจัดการกีฬา </option>
+ <option value="44" > ดนตรีสากล </option>
+ <option value="45" > ดนตรีไทย </option>
+ <option value="46" > ศิลปะ </option>
+ <option value="47" > รัฐประศาสนาศาสตร์ </option>
+ <option value="48" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="49" > วิทยาศาสตร์ - คณิตศาสตร์ </option>
+ <option value="50" > ศิลป์สังคม </option>
+ </select>
+ </span></td>
+ </tr>
+ <tr>
+ <td class="blue_12">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td class="blue_12">4.</td>
+ <td colspan="2"><span class="blue_12_bold">
+ <input name="aca_school" type="text" class="general radius grayborder borderleftthick_gray" id="aca_school" style="width:200px" value=""/>
+ </span></td>
+ <td colspan="2"><input name="aca_period" type="text" class="general radius grayborder borderleftthick_gray" id="aca_period" style="width:80px" value="" /></td>
+ <td colspan="2"><span class="blue_12_bold">
+ <select name="edu_bg_no" class="general radius grayborder borderleftthick_gray" id="edu_bg_no" style="outline:none;width:200px">
+ <option value="" > ---------- วุฒิการศึกษา ---------</option>
+ <option value="1" > ศึกษาศาสตรบัณฑิต </option>
+ <option value="2" > ศึกษาศาสตร์มหาบัณฑิต </option>
+ <option value="3" > ครุศาสตรบัณฑิต </option>
+ <option value="4" > ครุศาสตร์มหาบัณฑิต </option>
+ <option value="5" > การศึกษาบัณฑิต </option>
+ <option value="6" > การศึกษามหาบัณฑิต </option>
+ <option value="7" > ศิลปศาสตร์บัณฑิต </option>
+ <option value="17" > ชั้นประถมศึกษาปีที่ 4 </option>
+ <option value="12" > ศิลปศาสตรมหาบัณฑิต </option>
+ <option value="18" > ชั้นประถมศึกษาปีที่ 6 </option>
+ <option value="19" > ชั้นมัธยมศึกษาปีที่ 3 </option>
+ <option value="20" > ชั้นมัธยมศึกษาปีที่ 6 </option>
+ <option value="21" > ประกาศนียบัตรวิชาชีพ </option>
+ <option value="22" > ประกาศนียบัตรวิชาชีพชั้นสูง </option>
+ <option value="23" > ชั้นประถมศึกษาปีที่ 7 </option>
+ <option value="24" > ประกาศนียบัตรวิชาการศึกษา </option>
+ <option value="25" > ประกาศนียบัตรวิชาการศึกษาชั้นสูง </option>
+ <option value="26" > วิทยาศาสตรบัณฑิต </option>
+ <option value="27" > ชั้นมัธยมศึกษาปีที่ 5 </option>
+ <option value="28" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="29" > พัฒนบริหารศาสตรมหาบัณฑิต </option>
+ <option value="30" > วิศวกรรมศาสตรบัณฑิต </option>
+ <option value="31" > บริหารธุรกิจบัณฑิต </option>
+ <option value="32" > อนุปริญญา </option>
+ <option value="33" > ประโยคครูมัธยม </option>
+ <option value="34" > ปริญญาตรี </option>
+ <option value="35" > รัฐประศาสนศาสตร์บัณฑิต </option>
+ </select>
+ </span></td>
+ <td colspan="2"><span class="blue_12_bold">
+ <select name="field_major" class="general radius grayborder borderleftthick_gray" id="field_major" style="outline:none;width:180px">
+ <option value="" > ----- เลือกสาขาวิชาเอก -----</option>
+ <option value="1" > การบริหารการศึกษา </option>
+ <option value="2" > สังคมศึกษา </option>
+ <option value="3" > ประวัติศาสตร์ </option>
+ <option value="4" > หลักสูตรการศึกษา </option>
+ <option value="5" > หลักสูตรและการสอน </option>
+ <option value="6" > บรรณารักษ์ศาสตร์ </option>
+ <option value="7" > นวัตกรรมทางการศึกษา </option>
+ <option value="8" > คณิตศาสตร์ </option>
+ <option value="9" > พลศึกษา </option>
+ <option value="10" > สุขศึกษา </option>
+ <option value="11" > วัดผลการศึกษา </option>
+ <option value="12" > ปฐมวัย </option>
+ <option value="13" > ประถมศึกษา </option>
+ <option value="16" > เทคโนโลยีการเกษตร </option>
+ <option value="17" > วิทยาศาสตร์ทั่วไป </option>
+ <option value="18" > อุตสาหกรรมศิลป์ </option>
+ <option value="19" > คหกรรมศาสตร์ </option>
+ <option value="20" > แนะแนว </option>
+ <option value="21" > โภชนาการ </option>
+ <option value="22" > ชีววิทยา </option>
+ <option value="23" > เคมี </option>
+ <option value="24" > ฟิสิกส์ </option>
+ <option value="25" > การวัดและประเมินผล </option>
+ <option value="26" > ภาษาไทย </option>
+ <option value="27" > ภาษาอังกฤษ </option>
+ <option value="28" > คอมพิวเตอร์ </option>
+ <option value="29" > เทคโนโลยีทางการศึกษา </option>
+ <option value="30" > การสหกรณ์ </option>
+ <option value="31" > บัญชี </option>
+ <option value="32" > วิทยาศาสตร์-เกษตร </option>
+ <option value="33" > วิทยาศาสตร์(ชีววิทยา) </option>
+ <option value="34" > การสอนภาษาไทย </option>
+ <option value="35" > สื่อสารมวลชนทั่วไป </option>
+ <option value="36" > บริหารธุรกิจ </option>
+ <option value="37" > การสอนสังคมศึกษา </option>
+ <option value="38" > วิจัยภาษาและวัฒนธรรมญี่ปุ่น </option>
+ <option value="39" > หลักสูตรการสอน </option>
+ <option value="40" > ภาษาญี่ปุ่น </option>
+ <option value="41" > ภาษาจีน </option>
+ <option value="42" > การสอนภาษาจีน </option>
+ <option value="43" > การฝึกและการจัดการกีฬา </option>
+ <option value="44" > ดนตรีสากล </option>
+ <option value="45" > ดนตรีไทย </option>
+ <option value="46" > ศิลปะ </option>
+ <option value="47" > รัฐประศาสนาศาสตร์ </option>
+ <option value="48" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="49" > วิทยาศาสตร์ - คณิตศาสตร์ </option>
+ <option value="50" > ศิลป์สังคม </option>
+ </select>
+ </span></td>
+ <td><span class="blue_12_bold">
+ <select name="field_minor" class="general radius grayborder borderleftthick_gray" id="field_minor" style="outline:none;width:180px">
+ <option value="" > ----- เลือกสาขาวิชาโท -----</option>
+ <option value="1" > การบริหารการศึกษา </option>
+ <option value="2" > สังคมศึกษา </option>
+ <option value="3" > ประวัติศาสตร์ </option>
+ <option value="4" > หลักสูตรการศึกษา </option>
+ <option value="5" > หลักสูตรและการสอน </option>
+ <option value="6" > บรรณารักษ์ศาสตร์ </option>
+ <option value="7" > นวัตกรรมทางการศึกษา </option>
+ <option value="8" > คณิตศาสตร์ </option>
+ <option value="9" > พลศึกษา </option>
+ <option value="10" > สุขศึกษา </option>
+ <option value="11" > วัดผลการศึกษา </option>
+ <option value="12" > ปฐมวัย </option>
+ <option value="13" > ประถมศึกษา </option>
+ <option value="16" > เทคโนโลยีการเกษตร </option>
+ <option value="17" > วิทยาศาสตร์ทั่วไป </option>
+ <option value="18" > อุตสาหกรรมศิลป์ </option>
+ <option value="19" > คหกรรมศาสตร์ </option>
+ <option value="20" > แนะแนว </option>
+ <option value="21" > โภชนาการ </option>
+ <option value="22" > ชีววิทยา </option>
+ <option value="23" > เคมี </option>
+ <option value="24" > ฟิสิกส์ </option>
+ <option value="25" > การวัดและประเมินผล </option>
+ <option value="26" > ภาษาไทย </option>
+ <option value="27" > ภาษาอังกฤษ </option>
+ <option value="28" > คอมพิวเตอร์ </option>
+ <option value="29" > เทคโนโลยีทางการศึกษา </option>
+ <option value="30" > การสหกรณ์ </option>
+ <option value="31" > บัญชี </option>
+ <option value="32" > วิทยาศาสตร์-เกษตร </option>
+ <option value="33" > วิทยาศาสตร์(ชีววิทยา) </option>
+ <option value="34" > การสอนภาษาไทย </option>
+ <option value="35" > สื่อสารมวลชนทั่วไป </option>
+ <option value="36" > บริหารธุรกิจ </option>
+ <option value="37" > การสอนสังคมศึกษา </option>
+ <option value="38" > วิจัยภาษาและวัฒนธรรมญี่ปุ่น </option>
+ <option value="39" > หลักสูตรการสอน </option>
+ <option value="40" > ภาษาญี่ปุ่น </option>
+ <option value="41" > ภาษาจีน </option>
+ <option value="42" > การสอนภาษาจีน </option>
+ <option value="43" > การฝึกและการจัดการกีฬา </option>
+ <option value="44" > ดนตรีสากล </option>
+ <option value="45" > ดนตรีไทย </option>
+ <option value="46" > ศิลปะ </option>
+ <option value="47" > รัฐประศาสนาศาสตร์ </option>
+ <option value="48" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="49" > วิทยาศาสตร์ - คณิตศาสตร์ </option>
+ <option value="50" > ศิลป์สังคม </option>
+ </select>
+ </span></td>
+ </tr>
+ <tr>
+ <td class="blue_12">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td class="blue_12">5.</td>
+ <td colspan="2"><span class="blue_12_bold">
+ <input name="aca_school" type="text" class="general radius grayborder borderleftthick_gray" id="aca_school" style="width:200px" value=""/>
+ </span></td>
+ <td colspan="2"><input name="aca_period" type="text" class="general radius grayborder borderleftthick_gray" id="aca_period" style="width:80px" value="" /></td>
+ <td colspan="2"><span class="blue_12_bold">
+ <select name="edu_bg_no" class="general radius grayborder borderleftthick_gray" id="edu_bg_no" style="outline:none;width:200px">
+ <option value="" > ---------- วุฒิการศึกษา ---------</option>
+ <option value="1" > ศึกษาศาสตรบัณฑิต </option>
+ <option value="2" > ศึกษาศาสตร์มหาบัณฑิต </option>
+ <option value="3" > ครุศาสตรบัณฑิต </option>
+ <option value="4" > ครุศาสตร์มหาบัณฑิต </option>
+ <option value="5" > การศึกษาบัณฑิต </option>
+ <option value="6" > การศึกษามหาบัณฑิต </option>
+ <option value="7" > ศิลปศาสตร์บัณฑิต </option>
+ <option value="17" > ชั้นประถมศึกษาปีที่ 4 </option>
+ <option value="12" > ศิลปศาสตรมหาบัณฑิต </option>
+ <option value="18" > ชั้นประถมศึกษาปีที่ 6 </option>
+ <option value="19" > ชั้นมัธยมศึกษาปีที่ 3 </option>
+ <option value="20" > ชั้นมัธยมศึกษาปีที่ 6 </option>
+ <option value="21" > ประกาศนียบัตรวิชาชีพ </option>
+ <option value="22" > ประกาศนียบัตรวิชาชีพชั้นสูง </option>
+ <option value="23" > ชั้นประถมศึกษาปีที่ 7 </option>
+ <option value="24" > ประกาศนียบัตรวิชาการศึกษา </option>
+ <option value="25" > ประกาศนียบัตรวิชาการศึกษาชั้นสูง </option>
+ <option value="26" > วิทยาศาสตรบัณฑิต </option>
+ <option value="27" > ชั้นมัธยมศึกษาปีที่ 5 </option>
+ <option value="28" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="29" > พัฒนบริหารศาสตรมหาบัณฑิต </option>
+ <option value="30" > วิศวกรรมศาสตรบัณฑิต </option>
+ <option value="31" > บริหารธุรกิจบัณฑิต </option>
+ <option value="32" > อนุปริญญา </option>
+ <option value="33" > ประโยคครูมัธยม </option>
+ <option value="34" > ปริญญาตรี </option>
+ <option value="35" > รัฐประศาสนศาสตร์บัณฑิต </option>
+ </select>
+ </span></td>
+ <td colspan="2"><span class="blue_12_bold">
+ <select name="field_major" class="general radius grayborder borderleftthick_gray" id="field_major" style="outline:none;width:180px">
+ <option value="" > ----- เลือกสาขาวิชาเอก -----</option>
+ <option value="1" > การบริหารการศึกษา </option>
+ <option value="2" > สังคมศึกษา </option>
+ <option value="3" > ประวัติศาสตร์ </option>
+ <option value="4" > หลักสูตรการศึกษา </option>
+ <option value="5" > หลักสูตรและการสอน </option>
+ <option value="6" > บรรณารักษ์ศาสตร์ </option>
+ <option value="7" > นวัตกรรมทางการศึกษา </option>
+ <option value="8" > คณิตศาสตร์ </option>
+ <option value="9" > พลศึกษา </option>
+ <option value="10" > สุขศึกษา </option>
+ <option value="11" > วัดผลการศึกษา </option>
+ <option value="12" > ปฐมวัย </option>
+ <option value="13" > ประถมศึกษา </option>
+ <option value="16" > เทคโนโลยีการเกษตร </option>
+ <option value="17" > วิทยาศาสตร์ทั่วไป </option>
+ <option value="18" > อุตสาหกรรมศิลป์ </option>
+ <option value="19" > คหกรรมศาสตร์ </option>
+ <option value="20" > แนะแนว </option>
+ <option value="21" > โภชนาการ </option>
+ <option value="22" > ชีววิทยา </option>
+ <option value="23" > เคมี </option>
+ <option value="24" > ฟิสิกส์ </option>
+ <option value="25" > การวัดและประเมินผล </option>
+ <option value="26" > ภาษาไทย </option>
+ <option value="27" > ภาษาอังกฤษ </option>
+ <option value="28" > คอมพิวเตอร์ </option>
+ <option value="29" > เทคโนโลยีทางการศึกษา </option>
+ <option value="30" > การสหกรณ์ </option>
+ <option value="31" > บัญชี </option>
+ <option value="32" > วิทยาศาสตร์-เกษตร </option>
+ <option value="33" > วิทยาศาสตร์(ชีววิทยา) </option>
+ <option value="34" > การสอนภาษาไทย </option>
+ <option value="35" > สื่อสารมวลชนทั่วไป </option>
+ <option value="36" > บริหารธุรกิจ </option>
+ <option value="37" > การสอนสังคมศึกษา </option>
+ <option value="38" > วิจัยภาษาและวัฒนธรรมญี่ปุ่น </option>
+ <option value="39" > หลักสูตรการสอน </option>
+ <option value="40" > ภาษาญี่ปุ่น </option>
+ <option value="41" > ภาษาจีน </option>
+ <option value="42" > การสอนภาษาจีน </option>
+ <option value="43" > การฝึกและการจัดการกีฬา </option>
+ <option value="44" > ดนตรีสากล </option>
+ <option value="45" > ดนตรีไทย </option>
+ <option value="46" > ศิลปะ </option>
+ <option value="47" > รัฐประศาสนาศาสตร์ </option>
+ <option value="48" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="49" > วิทยาศาสตร์ - คณิตศาสตร์ </option>
+ <option value="50" > ศิลป์สังคม </option>
+ </select>
+ </span></td>
+ <td><span class="blue_12_bold">
+ <select name="field_minor" class="general radius grayborder borderleftthick_gray" id="field_minor" style="outline:none;width:180px">
+ <option value="" > ----- เลือกสาขาวิชาโท -----</option>
+ <option value="1" > การบริหารการศึกษา </option>
+ <option value="2" > สังคมศึกษา </option>
+ <option value="3" > ประวัติศาสตร์ </option>
+ <option value="4" > หลักสูตรการศึกษา </option>
+ <option value="5" > หลักสูตรและการสอน </option>
+ <option value="6" > บรรณารักษ์ศาสตร์ </option>
+ <option value="7" > นวัตกรรมทางการศึกษา </option>
+ <option value="8" > คณิตศาสตร์ </option>
+ <option value="9" > พลศึกษา </option>
+ <option value="10" > สุขศึกษา </option>
+ <option value="11" > วัดผลการศึกษา </option>
+ <option value="12" > ปฐมวัย </option>
+ <option value="13" > ประถมศึกษา </option>
+ <option value="16" > เทคโนโลยีการเกษตร </option>
+ <option value="17" > วิทยาศาสตร์ทั่วไป </option>
+ <option value="18" > อุตสาหกรรมศิลป์ </option>
+ <option value="19" > คหกรรมศาสตร์ </option>
+ <option value="20" > แนะแนว </option>
+ <option value="21" > โภชนาการ </option>
+ <option value="22" > ชีววิทยา </option>
+ <option value="23" > เคมี </option>
+ <option value="24" > ฟิสิกส์ </option>
+ <option value="25" > การวัดและประเมินผล </option>
+ <option value="26" > ภาษาไทย </option>
+ <option value="27" > ภาษาอังกฤษ </option>
+ <option value="28" > คอมพิวเตอร์ </option>
+ <option value="29" > เทคโนโลยีทางการศึกษา </option>
+ <option value="30" > การสหกรณ์ </option>
+ <option value="31" > บัญชี </option>
+ <option value="32" > วิทยาศาสตร์-เกษตร </option>
+ <option value="33" > วิทยาศาสตร์(ชีววิทยา) </option>
+ <option value="34" > การสอนภาษาไทย </option>
+ <option value="35" > สื่อสารมวลชนทั่วไป </option>
+ <option value="36" > บริหารธุรกิจ </option>
+ <option value="37" > การสอนสังคมศึกษา </option>
+ <option value="38" > วิจัยภาษาและวัฒนธรรมญี่ปุ่น </option>
+ <option value="39" > หลักสูตรการสอน </option>
+ <option value="40" > ภาษาญี่ปุ่น </option>
+ <option value="41" > ภาษาจีน </option>
+ <option value="42" > การสอนภาษาจีน </option>
+ <option value="43" > การฝึกและการจัดการกีฬา </option>
+ <option value="44" > ดนตรีสากล </option>
+ <option value="45" > ดนตรีไทย </option>
+ <option value="46" > ศิลปะ </option>
+ <option value="47" > รัฐประศาสนาศาสตร์ </option>
+ <option value="48" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="49" > วิทยาศาสตร์ - คณิตศาสตร์ </option>
+ <option value="50" > ศิลป์สังคม </option>
+ </select>
+ </span></td>
+ </tr>
+ <tr>
+ <td class="blue_12">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td class="blue_12">6.</td>
+ <td colspan="2"><span class="blue_12_bold">
+ <input name="aca_school" type="text" class="general radius grayborder borderleftthick_gray" id="aca_school" style="width:200px" value=""/>
+ </span></td>
+ <td colspan="2"><input name="aca_period" type="text" class="general radius grayborder borderleftthick_gray" id="aca_period" style="width:80px" value="" /></td>
+ <td colspan="2"><span class="blue_12_bold">
+ <select name="edu_bg_no" class="general radius grayborder borderleftthick_gray" id="edu_bg_no" style="outline:none;width:200px">
+ <option value="" > ---------- วุฒิการศึกษา ---------</option>
+ <option value="1" > ศึกษาศาสตรบัณฑิต </option>
+ <option value="2" > ศึกษาศาสตร์มหาบัณฑิต </option>
+ <option value="3" > ครุศาสตรบัณฑิต </option>
+ <option value="4" > ครุศาสตร์มหาบัณฑิต </option>
+ <option value="5" > การศึกษาบัณฑิต </option>
+ <option value="6" > การศึกษามหาบัณฑิต </option>
+ <option value="7" > ศิลปศาสตร์บัณฑิต </option>
+ <option value="17" > ชั้นประถมศึกษาปีที่ 4 </option>
+ <option value="12" > ศิลปศาสตรมหาบัณฑิต </option>
+ <option value="18" > ชั้นประถมศึกษาปีที่ 6 </option>
+ <option value="19" > ชั้นมัธยมศึกษาปีที่ 3 </option>
+ <option value="20" > ชั้นมัธยมศึกษาปีที่ 6 </option>
+ <option value="21" > ประกาศนียบัตรวิชาชีพ </option>
+ <option value="22" > ประกาศนียบัตรวิชาชีพชั้นสูง </option>
+ <option value="23" > ชั้นประถมศึกษาปีที่ 7 </option>
+ <option value="24" > ประกาศนียบัตรวิชาการศึกษา </option>
+ <option value="25" > ประกาศนียบัตรวิชาการศึกษาชั้นสูง </option>
+ <option value="26" > วิทยาศาสตรบัณฑิต </option>
+ <option value="27" > ชั้นมัธยมศึกษาปีที่ 5 </option>
+ <option value="28" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="29" > พัฒนบริหารศาสตรมหาบัณฑิต </option>
+ <option value="30" > วิศวกรรมศาสตรบัณฑิต </option>
+ <option value="31" > บริหารธุรกิจบัณฑิต </option>
+ <option value="32" > อนุปริญญา </option>
+ <option value="33" > ประโยคครูมัธยม </option>
+ <option value="34" > ปริญญาตรี </option>
+ <option value="35" > รัฐประศาสนศาสตร์บัณฑิต </option>
+ </select>
+ </span></td>
+ <td colspan="2"><span class="blue_12_bold">
+ <select name="field_major" class="general radius grayborder borderleftthick_gray" id="field_major" style="outline:none;width:180px">
+ <option value="" > ----- เลือกสาขาวิชาเอก -----</option>
+ <option value="1" > การบริหารการศึกษา </option>
+ <option value="2" > สังคมศึกษา </option>
+ <option value="3" > ประวัติศาสตร์ </option>
+ <option value="4" > หลักสูตรการศึกษา </option>
+ <option value="5" > หลักสูตรและการสอน </option>
+ <option value="6" > บรรณารักษ์ศาสตร์ </option>
+ <option value="7" > นวัตกรรมทางการศึกษา </option>
+ <option value="8" > คณิตศาสตร์ </option>
+ <option value="9" > พลศึกษา </option>
+ <option value="10" > สุขศึกษา </option>
+ <option value="11" > วัดผลการศึกษา </option>
+ <option value="12" > ปฐมวัย </option>
+ <option value="13" > ประถมศึกษา </option>
+ <option value="16" > เทคโนโลยีการเกษตร </option>
+ <option value="17" > วิทยาศาสตร์ทั่วไป </option>
+ <option value="18" > อุตสาหกรรมศิลป์ </option>
+ <option value="19" > คหกรรมศาสตร์ </option>
+ <option value="20" > แนะแนว </option>
+ <option value="21" > โภชนาการ </option>
+ <option value="22" > ชีววิทยา </option>
+ <option value="23" > เคมี </option>
+ <option value="24" > ฟิสิกส์ </option>
+ <option value="25" > การวัดและประเมินผล </option>
+ <option value="26" > ภาษาไทย </option>
+ <option value="27" > ภาษาอังกฤษ </option>
+ <option value="28" > คอมพิวเตอร์ </option>
+ <option value="29" > เทคโนโลยีทางการศึกษา </option>
+ <option value="30" > การสหกรณ์ </option>
+ <option value="31" > บัญชี </option>
+ <option value="32" > วิทยาศาสตร์-เกษตร </option>
+ <option value="33" > วิทยาศาสตร์(ชีววิทยา) </option>
+ <option value="34" > การสอนภาษาไทย </option>
+ <option value="35" > สื่อสารมวลชนทั่วไป </option>
+ <option value="36" > บริหารธุรกิจ </option>
+ <option value="37" > การสอนสังคมศึกษา </option>
+ <option value="38" > วิจัยภาษาและวัฒนธรรมญี่ปุ่น </option>
+ <option value="39" > หลักสูตรการสอน </option>
+ <option value="40" > ภาษาญี่ปุ่น </option>
+ <option value="41" > ภาษาจีน </option>
+ <option value="42" > การสอนภาษาจีน </option>
+ <option value="43" > การฝึกและการจัดการกีฬา </option>
+ <option value="44" > ดนตรีสากล </option>
+ <option value="45" > ดนตรีไทย </option>
+ <option value="46" > ศิลปะ </option>
+ <option value="47" > รัฐประศาสนาศาสตร์ </option>
+ <option value="48" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="49" > วิทยาศาสตร์ - คณิตศาสตร์ </option>
+ <option value="50" > ศิลป์สังคม </option>
+ </select>
+ </span></td>
+ <td><span class="blue_12_bold">
+ <select name="field_minor" class="general radius grayborder borderleftthick_gray" id="field_minor" style="outline:none;width:180px">
+ <option value="" > ----- เลือกสาขาวิชาโท -----</option>
+ <option value="1" > การบริหารการศึกษา </option>
+ <option value="2" > สังคมศึกษา </option>
+ <option value="3" > ประวัติศาสตร์ </option>
+ <option value="4" > หลักสูตรการศึกษา </option>
+ <option value="5" > หลักสูตรและการสอน </option>
+ <option value="6" > บรรณารักษ์ศาสตร์ </option>
+ <option value="7" > นวัตกรรมทางการศึกษา </option>
+ <option value="8" > คณิตศาสตร์ </option>
+ <option value="9" > พลศึกษา </option>
+ <option value="10" > สุขศึกษา </option>
+ <option value="11" > วัดผลการศึกษา </option>
+ <option value="12" > ปฐมวัย </option>
+ <option value="13" > ประถมศึกษา </option>
+ <option value="16" > เทคโนโลยีการเกษตร </option>
+ <option value="17" > วิทยาศาสตร์ทั่วไป </option>
+ <option value="18" > อุตสาหกรรมศิลป์ </option>
+ <option value="19" > คหกรรมศาสตร์ </option>
+ <option value="20" > แนะแนว </option>
+ <option value="21" > โภชนาการ </option>
+ <option value="22" > ชีววิทยา </option>
+ <option value="23" > เคมี </option>
+ <option value="24" > ฟิสิกส์ </option>
+ <option value="25" > การวัดและประเมินผล </option>
+ <option value="26" > ภาษาไทย </option>
+ <option value="27" > ภาษาอังกฤษ </option>
+ <option value="28" > คอมพิวเตอร์ </option>
+ <option value="29" > เทคโนโลยีทางการศึกษา </option>
+ <option value="30" > การสหกรณ์ </option>
+ <option value="31" > บัญชี </option>
+ <option value="32" > วิทยาศาสตร์-เกษตร </option>
+ <option value="33" > วิทยาศาสตร์(ชีววิทยา) </option>
+ <option value="34" > การสอนภาษาไทย </option>
+ <option value="35" > สื่อสารมวลชนทั่วไป </option>
+ <option value="36" > บริหารธุรกิจ </option>
+ <option value="37" > การสอนสังคมศึกษา </option>
+ <option value="38" > วิจัยภาษาและวัฒนธรรมญี่ปุ่น </option>
+ <option value="39" > หลักสูตรการสอน </option>
+ <option value="40" > ภาษาญี่ปุ่น </option>
+ <option value="41" > ภาษาจีน </option>
+ <option value="42" > การสอนภาษาจีน </option>
+ <option value="43" > การฝึกและการจัดการกีฬา </option>
+ <option value="44" > ดนตรีสากล </option>
+ <option value="45" > ดนตรีไทย </option>
+ <option value="46" > ศิลปะ </option>
+ <option value="47" > รัฐประศาสนาศาสตร์ </option>
+ <option value="48" > ประกาศนียบัตรวิชาชีพครู </option>
+ <option value="49" > วิทยาศาสตร์ - คณิตศาสตร์ </option>
+ <option value="50" > ศิลป์สังคม </option>
+ </select>
+ </span></td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td colspan="9"><u>หมายเหตุ</u> เรียงลำดับระดับการศึกษาจากบนลงล่าง โดยระบุการศึกษาสูงสุดไว้ในลำดับที่ 1</td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ <td>&nbsp;</td>
+ <td colspan="2">
+ <input name="school" type="hidden" id="school" />
+ <input name="period" type="hidden" id="period" />
+ <input name="edu_bg" type="hidden" id="edu_bg" />
+ <input name="major" type="hidden" id="major" />
+ <input name="minor" type="hidden" id="minor" /> </td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td colspan="2">&nbsp;</td>
+ <td>&nbsp;</td>
+ </tr>
+ </table>
+ </div>
+ </div>
+</div>
+ <div id='tab-3'><link rel="stylesheet" type="text/css" href="../css/infotable.css">
+<script type="text/javascript" src="../scripts/facetooltip.js"></script>
+<div style="display:table;width:100%;padding:0px 0px 20px 12px">
+<div style="display:table-row">
+ <div style="display:table-cell;float:left">
+ <h1 style="font-size:28px;margin-top:10px">ประวัติการฝึกอบรมและดูงาน</h1>
+ </div>
+ <div style="display:table-cell;float:right;margin-right:12px">
+ <a href="javascript:void(0);" onclick="GetToolTip('mod_01_main/option_personel_regist/assign_training.php?module=profile&option=&PsnId=');" border="0" style="float:right"><img src="../icon_tools/in_add_icon.png" alt="เพิ่มประวัติการฝึกอบรมและดูงาน" border="0" /></a>
+ </div>
+ </div>
+</div></div>
+ <div id='tab-4'><link rel="stylesheet" type="text/css" href="../css/infotable.css">
+<script type="text/javascript" src="../scripts/facetooltip.js"></script>
+<div style="display:table;width:100%;padding:0px 0px 20px 12px">
+<div style="display:table-row">
+ <div style="display:table-cell;float:left">
+ <h1 style="font-size:28px;margin-top:10px">ประวัติตำแหน่งและอัตราเงินเดือน</h1>
+ </div>
+ <div style="display:table-cell;float:right;margin-right:12px">
+ <a href="javascript:void(0);" onclick="GetToolTip('mod_01_main/option_personel_regist/assign_salary.php?module=profile&option=&PsnId={{UIDNUM}}');" border="0" style="float:right"><img src="../icon_tools/in_add_icon.png" alt="เพิ่มประวัติตำแหน่งและอัตราเงินเดือน" border="0" /></a>
+ </div>
+</div>
+</div></div>
+ <div id='tab-5'><link rel="stylesheet" type="text/css" href="../css/infotable.css">
+<script type="text/javascript" src="../scripts/facetooltip.js"></script>
+<div style="display:table;width:100%;padding:0px 0px 20px 12px">
+<div style="display:table-row">
+ <div style="display:table-cell;float:left">
+ <h1 style="font-size:28px;margin-top:10px">ประวัติการรับเครื่องราชอิสริยาภรณ์</h1>
+ </div>
+ <div style="display:table-cell;float:right;margin-right:12px">
+ <a href="javascript:void(0);" onclick="GetToolTip('mod_01_main/option_personel_regist/assign_insignia.php?module=profile&option=&PsnId={{UIDNUM}}');" border="0" style="float:right"><img src="../icon_tools/in_add_icon.png" alt="เพิ่มประวัติการรับเครื่องราชอิสริยาภรณ์" border="0" /></a>
+ </div>
+</div>
+<div style="display:table-row">
+ <div class="table-row">
+ <div class="titlenav" style="width:920px">
+ <span style="float:left;white-space:nowrap">
+ <span id="Listtitle">&nbsp;</span>
+ <h1 style="font-size:23px;width:910px">การรับเครื่องราชอิสริยาภรณ์</h1>
+ </span>
+ </div>
+</div> <table border="0" cellpadding="0" cellspacing="0" class="infotable" style="width:934px" align="center">
+ <thead>
+ <tr>
+ <th width="24" class="nosort"><h3>#</h3></th>
+ <th width="80" class="nosort"><h3>วันที่ได้รับ</h3></th>
+ <th class="nosort"><h3>เครื่องราชอิสริยาภรณ์/เหรียญตรา</h3></th>
+ <th class="nosort"><h3>ลำดับที่</h3></th>
+ <th class="nosort"><h3>เล่มที่</h3></th>
+ <th class="nosort"><h3>เล่ม</h3></th>
+ <th class="nosort"><h3>ตอน</h3></th>
+ <th class="nosort"><h3>หน้า</h3></th>
+ <th width="80" class="nosort"><h3>ลงวันที่</h3></th>
+ <th width="60" class="nosort"><h3></h3></th>
+ </tr>
+ </thead>
+ <tbody>{{TBODY0}}</tbody>
+ </table>
+</div>
+</div></div>
+ <div id='tab-6'><link rel="stylesheet" type="text/css" href="../css/infotable.css">
+<script type="text/javascript" src="../scripts/facetooltip.js"></script>
+<div style="display:table;width:100%;padding:0px 0px 20px 12px">
+<div style="display:table-row">
+ <div style="display:table-cell;float:left">
+ <h1 style="font-size:28px;margin-top:10px">ประวัติผลงานต่าง ๆ และความสำเร็จ</h1>
+ </div>
+ <div style="display:table-cell;float:right;margin-right:12px">
+ <a href="javascript:void(0);" onclick="GetToolTip('mod_01_main/option_personel_regist/assign_success.php?module=profile&option=&PsnId={{UIDNUM}}');" border="0" style="float:right"><img src="../icon_tools/in_add_icon.png" alt="เพิ่มประวัติผลงานต่าง ๆ และความสำเร็จ" border="0" /></a>
+ </div>
+</div>
+<div style="display:table-row">
+ <div class="table-row">
+ <div class="titlenav" style="width:920px">
+ <span style="float:left;white-space:nowrap">
+ <span id="Listtitle">&nbsp;</span>
+ <h1 style="font-size:23px;width:910px">ผลงานต่าง ๆ และความสำเร็จ</h1>
+ </span>
+ </div>
+</div> <table border="0" cellpadding="0" cellspacing="0" class="infotable" style="width:934px" align="center">
+ <thead>
+ <tr>
+ <th width="24" class="nosort"><h3>#</h3></th>
+ <th class="nosort"><h3>พ.ศ.</h3></th>
+ <th class="nosort"><h3>ชื่อผลงาน</h3></th>
+ <th width="60" class="nosort"><h3></h3></th>
+ </tr>
+ </thead>
+ <tbody>{{TBODY1}}</tbody>
+ </table>
+</div>
+</div></div>
+ </div>
+ </div>
+ <div class="formframefooter" style="width:970px">
+ <div style="padding-top:4px;float:right;padding-right:5px">
+ <span style="float:left;width:70px">
+ <a href="javascript:onclick=chknull()" id="Savebtns"><img src="../icon_tools/vec_add_white.png" border="0" height="18" style="margin-top:-5px"/> บันทึก</a>
+ </span>
+ <span style="margin-left:3px;float:left;width:65px">
+ <a href="javascript:onclick=document.forms.operationform.reset();" id="Clearbtns"><img src="../icon_tools/vec_x_white.png" border="0" height="14" style="margin-top:-5px"/> เคลียร์</a>
+ </span>
+ </div>
+ </div>
+ </form>
+ <div>
+ &nbsp;
+ </div>
+</div>
+<script type="text/javascript">
+ $('.tabs_active').tabslet({
+ active: 1,
+ mouseevent: 'click',
+ attribute: 'href',
+ animation: true
+ });
+</script>
+</div>

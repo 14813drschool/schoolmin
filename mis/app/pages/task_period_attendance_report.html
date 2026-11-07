@@ -1,0 +1,167 @@
+<div style="padding-top:5px">
+ <div id="page_topic_blue" style="width:967px">
+ <div style="float:left">
+ <h1 class='title_26' style='font-size:21px;float:left;white-space:nowrap'>&nbsp;งานรับผิดชอบหลัก&nbsp;<img src="../images/white_br_next.png" border="0" style="width:5px"/>&nbsp;งานครูที่ปรึกษา</h1>
+ </div>
+ <div style="float:right">
+ <span style="float:left;margin-top:3px;padding:5px 10px;background-image:url(../icon_tools/menubar_year.png); background-repeat:no-repeat;width:163px;height:22px;font-size:11px;font-weight:normal">แสดงข้อมูล ปีการศึกษา {{YT}}</span>
+ <span style="float:left;margin-top:3px;padding:0px 2px">
+ <a href="../edumain"><img src="../icon_tools/menubar_dashboard.png" border="0" alt="แผงเมนูหลัก" title="แผงเมนูหลัก"/></a>
+ </span>
+ </div>
+ </div>
+ <div id="maindetail" style="width:965px"><table border="0" cellpadding="0" cellspacing="0" style="margin-top:3px;width:967px">
+<tr>
+<td align="left" valign="bottom" style="width:70px;white-space:nowrap">&nbsp;<img src="../icon_tools/icon_setting.png"/></td>
+<td align="left" valign="bottom" style="padding-left:5px;white-space:nowrap">
+<table border="0" cellspacing="0" cellpadding="0">
+ <tr>
+ <td style="white-space:nowrap"><h1 class="header_subtitle" style="font-size:25px;white-space:nowrap">รายงานนักเรียนขาดเรียนรายคาบ </h1></td>
+ </tr>
+ <tr>
+ <td style="white-space:nowrap"><h1 class="blue_secondtitle" style="font-size:23px;white-space:nowrap">รายงานนักเรียนขาดเรียนรายคาบ "รายภาค"</h1></td>
+ </tr>
+</table>
+</td>
+<td align="right" valign="middle" style="white-space:nowrap"><DIV style="float:right"><div style='float:left;margin:0px 2px'> <a href='export_file.php?module=task&option=period_attendance_report&func=ExportDaily&View=daily&startday=00/00/543&endday=06/11/2569' title='' onMouseOver="MM_swapImage('icon_export','','../icon_tools/icon_export.png',1);" onMouseOut="MM_swapImgRestore();"><img id='icon_export' name='icon_export' src='../icon_tools/hicon_export.png' border='0' align='top'/></a> </div><div style='float:left;margin:0px 2px'> <a href='javascript:void(0);' onMouseOver="MM_swapImage('icon_print','','../icon_tools/icon_print.png',1);" onMouseOut="MM_swapImgRestore();" onclick="ReportPortrait('print_portrait.php?module=task&option=period_attendance_report&func=PrintReport&View=daily&startday=00/00/543&endday=06/11/2569');"><img id='icon_print' name='icon_print' src='../icon_tools/hicon_print.png' border='0' title='พิมพ์' align='top'/></a> </div><div style='float:left;margin:0px 2px'> <a href='javascript:void(0);' onMouseOver="MM_swapImage('icon_help','','../icon_tools/icon_help.png',1);" onMouseOut="MM_swapImgRestore();" onclick="OpenHelp('help/?module=task&option=period_attendance_report');"><img id='icon_help' name='icon_help' src='../icon_tools/hicon_help.png' border='0' title='ช่วยเหลือ' align='top'/></a> </div></DIV></td>
+</tr>
+</table>
+</div>
+ </div>
+</div>
+<div style="margin-top:10px;min-height:750px;z-index:100">
+<link rel="stylesheet" type="text/css" href="../css/datepicker.css">
+<link rel="stylesheet" type="text/css" href="../css/tiny_style.css">
+<script type="text/javascript" src="../scripts/datepicker.js"></script>
+<script type="text/javascript" src="../scripts/SorterScripts.js"></script>
+<script type="text/javascript">
+function submit_daily(){
+ var select_start = document.list.start_date.value;
+ var select_end = document.list.end_date.value;
+ if(select_start!="" && select_end!=""){
+ location = "?module=task&option=period_attendance_report&View=daily&startday="+select_start+"&endday="+select_end;
+ }
+}
+</script>
+<script type="text/javascript">
+function select_view(View){
+ if(View!=""){
+ location = "?module=task&option=period_attendance_report&View="+View;
+ }else{
+ location = "?module=task&option=period_attendance_report";
+ }
+}
+function select_week(Week){
+ if(Week!=""){
+ location = "?module=task&option=period_attendance_report&View=daily&Week="+Week;
+ }else{
+ location = "?module=task&option=period_attendance_report&View=daily";
+ }
+}
+function select_month(Month){
+ if(Month!=""){
+ location = "?module=task&option=period_attendance_report&View=daily&Month="+Month;
+ }else{
+ location = "?module=task&option=period_attendance_report&View=daily";
+ }
+}
+function select_semester(Semester){
+ if(Semester!=""){
+ location = "?module=task&option=period_attendance_report&View=daily&Semester="+Semester;
+ }else{
+ location = "?module=task&option=period_attendance_report&View=daily";
+ }
+}
+function select_acayear(Year){
+ if(Year!=""){
+ location = "?module=task&option=period_attendance_report&View=daily&Year="+Year;
+ }else{
+ location = "?module=task&option=period_attendance_report&View=daily";
+ }
+}
+function select_absent_day(Day){
+ if(Day!=""){
+ location = "?module=task&option=period_attendance_report&View=daily&Semester=&Day="+Day;
+ }else{
+ location = "?module=task&option=period_attendance_report&View=daily";
+ }
+}
+function select_absent_period(Period){
+ if(Period!=""){
+ location = "?module=task&option=period_attendance_report&View=daily&Semester=&Period="+Period;
+ }else{
+ location = "?module=task&option=period_attendance_report&View=daily";
+ }
+}
+</script>
+<script type="text/javascript">
+ $(document).ready(function() {
+ $('.submit_on_enter').keydown(function(event) {
+ if (event.keyCode == 13) {
+ this.form.submit();
+ return false;
+ }
+ });
+ });
+</script>
+<style>
+ table.tinytable th {
+ vertical-align:top;
+ height:35px;
+ }
+ table.tinytable td {
+ text-align:left;
+ white-space:nowrap;
+ }
+ tr#class_row td {
+ font-weight:bold!important;
+ background-color:#EAF0FF!important;
+ }
+ tr#level_row td {
+ font-weight:bold!important;
+ background-color:#FFECEC!important;
+ }
+ tr#school_row td {
+ font-weight:bold!important;
+ background-color:#E2E2E2!important;
+ }
+</style>
+<form id="list" name="list" method="post">
+<table id="mainList" border="0" cellspacing="0" cellpadding="0">
+<tr id="searchList">
+ <td>
+ <span class="search">
+ <table name="colsearch" border="0" cellspacing="0" cellpadding="0">
+ <tr>
+ <td>
+ <select name="attendance_persent" class="general radius searchborder" id="attendance_persent" style="height:25px;width:110px" onChange="select_view(this.value);">
+ <optgroup label="เลือกดูข้อมูล"></optgroup>
+ <option value="daily" selected='selected'>ช่วงวันที่</option>
+ <option value="week" >รายสัปดาห์</option> 
+ <option value="month" >รายเดือน</option>
+ <option value="semester" >รายภาค</option> 
+ </select>
+ </td>
+ <td style="padding-left:5px"><select id="columns" onchange="sorter.search('query')" class="general radius searchborder" style="height:25px;width:200px"></select></td>
+ <td style="padding-left:5px"><input type="text" class="general radius searchborder" id="query" style="width:150px;height:19px;padding-top:2px;padding-bottom:2px;" onkeyup="sorter.search('query')"/></td>
+ </tr>
+ </table>
+ </span>
+ <span style="float:right">
+ <span class="search">
+ <table border="0" cellspacing="0" cellpadding="0" style="width:350px">
+ <tr>
+ <td>
+ <input name="start_date" type="text" class="w16em dateformat-d-sl-m-sl-Y general radius searchborder" id="start_date" style="width:90px;height:19px;padding-top:2px;padding-bottom:2px;" placeholder="เลือกวันที่" value="00/00/543" readonly="readonly"/>
+ &nbsp;ถึงวันที่&nbsp;
+ <input name="end_date" type="text" class="w16em dateformat-d-sl-m-sl-Y general radius searchborder" id="end_date" style="width:90px;height:19px;padding-top:2px;padding-bottom:2px;" placeholder="เลือกวันที่" value="06/11/2569" readonly="readonly"/>
+ </td>
+ <td><img src="../icon_tools/vec_scope_dark.png" rel="../icon_tools/vec_scope_gray.png" class="overlay" onclick="submit_daily()"/></td>
+ </tr>
+ </table>
+ </span>
+ </span>
+ </td>
+</tr>
+</table>
+</form></div>

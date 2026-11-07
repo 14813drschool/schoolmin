@@ -1,0 +1,238 @@
+<div style="padding-top:5px">
+ <div id="page_topic_blue" style="width:967px">
+ <div style="float:left">
+ <h1 class='title_26' style='font-size:21px;float:left;white-space:nowrap'>&nbsp;ทะเบียนและข้อมูลหลัก&nbsp;<img src="../images/white_br_next.png" border="0" style="width:5px"/>&nbsp;ทะเบียนนักเรียน</h1>
+ </div>
+ <div style="float:right">
+ <span style="float:left;margin-top:3px;padding:5px 10px;background-image:url(../icon_tools/menubar_year.png); background-repeat:no-repeat;width:163px;height:22px;font-size:11px;font-weight:normal">แสดงข้อมูล ปีการศึกษา {{YT}}</span>
+ <span style="float:left;margin-top:3px;padding:0px 2px">
+ <a href="../edumain"><img src="../icon_tools/menubar_dashboard.png" border="0" alt="แผงเมนูหลัก" title="แผงเมนูหลัก"/></a>
+ </span>
+ </div>
+ </div>
+ <div id="maindetail" style="width:965px"><table border="0" cellpadding="0" cellspacing="0" style="margin-top:3px;width:967px">
+<tr>
+<td align="left" valign="bottom" style="width:70px;white-space:nowrap">&nbsp;<img src="../icon_tools/icon_main.png"/></td>
+<td align="left" valign="bottom" style="padding-left:5px;white-space:nowrap">
+<table border="0" cellspacing="0" cellpadding="0">
+ <tr>
+ <td style="white-space:nowrap"><h1 class="header_subtitle" style="font-size:25px;white-space:nowrap">ทะเบียนนักเรียนปัจจุบัน</h1></td>
+ </tr>
+ <tr>
+ <td style="white-space:nowrap"><h1 class="blue_secondtitle" style="font-size:23px;white-space:nowrap">ทะเบียนนักเรียนปัจจุบัน</h1></td>
+ </tr>
+</table>
+</td>
+<td align="right" valign="middle" style="white-space:nowrap"><DIV style="float:right"><div style='float:left;margin:0px 2px'> <a href='javascript:void(0);' onclick="ReportPortrait('print_pdf.php?module=main&option=student_regist&func=PrintPdfCard&RoomNum=2101');" onMouseOver="MM_swapImage('icon_stu_card_front','','../icon_tools/icon_stu_card_front.png',1);" onMouseOut="MM_swapImgRestore();"><img id='icon_stu_card_front' name='icon_stu_card_front' src='../icon_tools/hicon_stu_card_front.png' border='0' align='top'/></a> </div><div style='float:left;margin:0px 2px'> <a href='javascript:void(0);' onMouseOver="MM_swapImage('icon_help','','../icon_tools/icon_help.png',1);" onMouseOut="MM_swapImgRestore();" onclick="OpenHelp('help/?module=main&option=student_regist');"><img id='icon_help' name='icon_help' src='../icon_tools/hicon_help.png' border='0' title='ช่วยเหลือ' align='top'/></a> </div></DIV></td>
+</tr>
+</table>
+</div>
+ </div>
+</div>
+<div style="margin-top:10px;min-height:750px;z-index:100">
+<link rel="stylesheet" type="text/css" href="../css/tiny_style.css">
+<style>
+.green_capsule {
+ background-color:#44c767;
+ -moz-border-radius:28px;
+ -webkit-border-radius:28px;
+ border-radius:28px;
+ border:1px solid #18ab29;
+ display:inline-block;
+ cursor:pointer;
+ color:#ffffff!important;
+ font-family:Arial;
+ font-size:13px;
+ font-weight:normal;
+ padding:5px 15px;
+ text-decoration:none;
+ text-shadow:0px 1px 0px #2f6627;
+}
+.green_capsule:hover {
+ background-color:#5cbf2a;
+}
+.green_capsule:active {
+ position:relative;
+ top:1px;
+}
+</style>
+<link rel="stylesheet" type="text/css" href="../css/jquery.sBubble-0.1.1.css"/>
+<script type="text/javascript" src="../scripts/SorterScripts.js"></script>
+<script type="text/javascript" src="../scripts/jquery.tipsy.js"></script>
+<script type="text/javascript" src="../scripts/jquery.sBubble-0.1.1.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+ $('.icontooltip').tipsy({ html:false , gravity: 's'});
+});
+</script>
+<script type="text/javascript">
+function select_room(RoomNum){
+ if(RoomNum!=""){
+ location = "?module=main&option=student_regist&RoomNum="+RoomNum;
+ }else{
+ location = "?module=main&option=student_regist";
+ }
+}
+</script>
+<script type="text/javascript">
+function select_class(ClassNum){
+ if(ClassNum!=""){
+ location = "?module=main&option=student_regist&ClassNum="+ClassNum;
+ }else{
+ location = "?module=main&option=student_regist";
+ }
+}
+</script>
+<script type="text/javascript">
+function studentsearch(){
+ document.forms.list.submit();
+}
+</script>
+<script type="text/javascript">
+ $(document).ready(function() {
+ $('.submit_on_enter').keydown(function(event) {
+ if (event.keyCode == 13) {
+ this.form.submit();
+ return false;
+ }
+ });
+ });
+</script>
+<form id="list" name="list" method="post" action="?module=main&option=student_regist">
+<table id="mainList" border="0" cellspacing="0" cellpadding="0">
+<tr id="searchList">
+ <td>
+ <span class="search">
+ <table name="colsearch" border="0" cellspacing="0" cellpadding="0">
+ <tr>
+ <td>
+ <select name="c_no" class="general radius searchborder" id="c_no" style="height:25px;width:80px" onChange="select_class(this.value);">
+ <option value="">ระดับชั้น</option>
+ <option value="all" >ทุกระดับชั้น</option>
+ <option value="201" >ต.อ.1 </option>
+ <option value="301" >อ.1 </option>
+ <option value="302" >อ.2 </option>
+ <option value="303" >อ.3 </option>
+ <option value="401" >ป.1 </option>
+ <option value="402" >ป.2 </option>
+ <option value="403" >ป.3 </option>
+ <option value="404" >ป.4 </option>
+ <option value="405" >ป.5 </option>
+ <option value="406" >ป.6 </option>
+ <option value="501" >ม.1 </option>
+ <option value="502" >ม.2 </option>
+ <option value="503" >ม.3 </option>
+ <option value="604" >ม.4 </option>
+ <option value="605" >ม.5 </option>
+ <option value="606" >ม.6 </option>
+ </select> </td>
+ <td style="padding-left:5px">
+ <select name="r_no" class="general radius searchborder" id="r_no" style="height:25px;width:80px" onChange="select_room(this.value);">
+ <option value="" >ห้องเรียน</option>
+ <option value="2101" selected='selected' >ต.อ.1/1 </option>
+ <option value="2102" >ต.อ.1/2 </option>
+ </select> </td>
+ <td style="padding-left:5px" ><select id="columns" onchange="sorter.search('query')" class="general radius searchborder" style="height:25px;width:170px"></select></td>
+ <td style="padding-left:5px"><input type="text" class="general radius searchborder" id="query" style="width:100px;height:19px;padding-top:2px;padding-bottom:2px;" onkeyup="sorter.search('query')"/></td>
+ </tr>
+ </table>
+ </span>
+ <span style="float:right">
+ <span class="search">
+ <table border="0" cellspacing="0" cellpadding="0" style="width:145px">
+ <tr>
+ <td>
+ <input type="text" name="student_search" class="general radius searchborder submit_on_enter" style="width:100px;height:19px;padding-top:2px;padding-bottom:2px;" value="" placeholder="ค้นหานักเรียน"/> </td>
+ <td><img src="../icon_tools/vec_scope_dark.png" onclick="studentsearch();"/></td>
+ </tr>
+ </table>
+ </span> </span>
+ <span style="float:right;margin:10px 5px 0px 5px;display:none">
+ <a href="export_file.php?module=main&option=student_regist&func=ExportAmphoe" border="0" class="green_capsule"><i class="fa fa-print" style="font-size:16px"></i> อำเภอ</a>
+ <a href="export_file.php?module=main&option=student_regist&func=ExportDistrict" border="0" class="green_capsule"><i class="fa fa-print" style="font-size:16px"></i> ตำบล</a>
+ <a href="export_file.php?module=main&option=student_regist&func=ExportPaJob" border="0" class="green_capsule"><i class="fa fa-print" style="font-size:16px"></i> อาชีพผปค.</a> </span> </td>
+</tr>
+<tr id="titleList">
+ <td>
+ <div class="titlenav" style="width:969px">
+ <span style="float:left;white-space:nowrap">
+ <span id="Listtitle">&nbsp;</span>
+ <h1 style="font-size:23px; white-space:nowrap">รายการทะเบียนนักเรียนปัจจุบัน ประจำภาคเรียนที่ {{T}} ปีการศึกษา {{Y}}</h1>
+ </span>
+ <span style="float:right;margin-top:5px;white-space:nowrap">
+ แสดงรายการที่&nbsp;<span id="startrecord"></span>-<span id="endrecord"></span>&nbsp;จากทั้งหมด&nbsp;<span id="totalrecords"></span>&nbsp;รายการ</span></span>
+ </span>
+ </div>
+ </td>
+</tr><tr id="contentList">
+ <td><table border="0" cellpadding="0" cellspacing="0" class="tinytable" id="table" align="left" style="width:983px">
+ <thead>
+ <tr>
+ <th width="24" class="nosort"><h3>#</h3></th>
+ <th><h3>รหัสนร.</h3></th>
+ <th><h3>รหัสประจำตัวปชช.</h3></th>
+ <th><h3>ชื่อ</h3></th>
+ <th><h3>นามสกุล</h3></th>
+ <th><h3>รูปภาพ</h3></th>
+ <th style="display:none"><h3>ประเภท</h3></th>
+ <th><h3>หน้าที่</h3></th>
+ <th><h3>ปัจจุบันอยู่ชั้น</h3></th>
+ <th><h3>เลขที่</h3></th>
+ <th style="display:none"><h3>วิธีเข้าเรียน</h3></th>
+ <th class="nosort">
+ <h3>&nbsp;</h3>
+</th> </tr>
+ </thead>
+ <tbody>{{TBODY0}}</tbody>
+ </table> <span id="tablewrapper"></span></td>
+</tr>
+<tr id="PaginationList">
+<td align="top">
+<div class="pagenav" style="width:969px">
+ <span id="tablecurrentpage">หน้าปัจจุบัน <span id="currentpage"></span>/<span id="totalpages"></span></span>
+ <span id="tablepagenav" style="width:533px">
+ <img src="../images/first_page.png" alt="First Page" border="0" id="firstpagenav" onclick="move_to(-1,true)"/><img src="../images/previous_page.png" alt="Previous Page" border="0" id="prevnextpagenav" onclick="move_to(-1)"/><img src="../images/next_page.png" alt="Next Page" border="0" id="prevnextpagenav" onclick="move_to(1)"/><img src="../images/last_page.png" alt="Last Page" border="0" id="lastpagenav" onclick="move_to(1,true)"/>
+ </span>
+ <span id="tableselectsize">
+ แสดง&nbsp;
+ <select name="this_size" onchange="curr_size(this.value);" style="padding:1px;height:22px;width:50px;font-size:11px" class="sizeradius">
+ <option value="2" >2</option>
+ <option value="5" >5</option>
+ <option value="10" >10</option>
+ <option value="25" >25</option>
+ <option value="60" >60</option>
+ <option value="100" >100</option>
+ <option value="120" selected>120</option>
+ <option value="150" >150</option>
+ <option value="200" >200</option>
+ <option value="300" >300</option>
+ </select>
+ &nbsp;รายการ/หน้า
+ </span>
+ </div>
+</td>
+</tr><script type="text/javascript" src="../scripts/Tinyscript.js"></script>
+<script type="text/javascript">
+var sorter = new TINY.table.sorter('sorter','table',{
+ headclass:'head',
+ ascclass:'asc',
+ descclass:'desc',
+ evenclass:'evenrow',
+ oddclass:'oddrow',
+ evenselclass:'evenselected',
+ oddselclass:'oddselected',
+ paginate:true,
+ size:120,
+ colddid:'columns',
+ currentid:'currentpage',
+ totalid:'totalpages',
+ startingrecid:'startrecord',
+ endingrecid:'endrecord',
+ totalrecid:'totalrecords',
+ navid:'tablepagenav',
+ init:true
+});
+ sorter.size(getCookie("currentsize"));
+</script>
+</table>
+</form></div>

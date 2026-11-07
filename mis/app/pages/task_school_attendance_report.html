@@ -1,0 +1,167 @@
+<div style="padding-top:5px">
+ <div id="page_topic_blue" style="width:967px">
+ <div style="float:left">
+ <h1 class='title_26' style='font-size:21px;float:left;white-space:nowrap'>&nbsp;งานรับผิดชอบหลัก&nbsp;<img src="../images/white_br_next.png" border="0" style="width:5px"/>&nbsp;งานครูที่ปรึกษา</h1>
+ </div>
+ <div style="float:right">
+ <span style="float:left;margin-top:3px;padding:5px 10px;background-image:url(../icon_tools/menubar_year.png); background-repeat:no-repeat;width:163px;height:22px;font-size:11px;font-weight:normal">แสดงข้อมูล ปีการศึกษา {{YT}}</span>
+ <span style="float:left;margin-top:3px;padding:0px 2px">
+ <a href="../edumain"><img src="../icon_tools/menubar_dashboard.png" border="0" alt="แผงเมนูหลัก" title="แผงเมนูหลัก"/></a>
+ </span>
+ </div>
+ </div>
+ <div id="maindetail" style="width:965px"><table border="0" cellpadding="0" cellspacing="0" style="margin-top:3px;width:967px">
+<tr>
+<td align="left" valign="bottom" style="width:70px;white-space:nowrap">&nbsp;<img src="../icon_tools/icon_setting.png"/></td>
+<td align="left" valign="bottom" style="padding-left:5px;white-space:nowrap">
+<table border="0" cellspacing="0" cellpadding="0">
+ <tr>
+ <td style="white-space:nowrap"><h1 class="header_subtitle" style="font-size:25px;white-space:nowrap">รายงานการมาโรงเรียนของนักเรียน</h1></td>
+ </tr>
+ <tr>
+ <td style="white-space:nowrap"><h1 class="blue_secondtitle" style="font-size:23px;white-space:nowrap">รายงานการมาโรงเรียนของนักเรียน รายวัน</h1></td>
+ </tr>
+</table>
+</td>
+<td align="right" valign="middle" style="white-space:nowrap"><DIV style="float:right"><div style='float:left;margin:0px 2px'> <a href='javascript:void(0);' onMouseOver="MM_swapImage('icon_help','','../icon_tools/icon_help.png',1);" onMouseOut="MM_swapImgRestore();" onclick="OpenHelp('help/?module=task&option=school_attendance_report');"><img id='icon_help' name='icon_help' src='../icon_tools/hicon_help.png' border='0' title='ช่วยเหลือ' align='top'/></a> </div></DIV></td>
+</tr>
+</table>
+</div>
+ </div>
+</div>
+<div style="margin-top:10px;min-height:750px;z-index:100">
+<link rel="stylesheet" type="text/css" href="../css/datepicker.css">
+<link rel="stylesheet" type="text/css" href="../css/tiny_style.css">
+<script type="text/javascript" src="../scripts/datepicker.js"></script>
+<script type="text/javascript" src="../scripts/SorterScripts.js?1794068651"></script>
+<script type="text/javascript">
+function submit_daily(){
+ var select_daily = document.list.attendance_date.value;
+ if(select_daily!=""){
+ location = "?module=task&option=school_attendance_report&View=daily&actday="+select_daily;
+ }
+}
+</script>
+<script type="text/javascript">
+function select_view(View){
+ if(View!=""){
+ location = "?module=task&option=school_attendance_report&View="+View;
+ }else{
+ location = "?module=task&option=school_attendance_report";
+ }
+}
+function select_month(Month){
+ if(Month!=""){
+ location = "?module=task&option=school_attendance_report&View=&Month="+Month;
+ }else{
+ location = "?module=task&option=school_attendance_report&View=";
+ }
+}
+function select_semester(Semester){
+ if(Semester!=""){
+ location = "?module=task&option=school_attendance_report&View=&Semester="+Semester;
+ }else{
+ location = "?module=task&option=school_attendance_report&View=";
+ }
+}
+</script>
+<script type="text/javascript">
+ $(document).ready(function() {
+ $('.submit_on_enter').keydown(function(event) {
+ if (event.keyCode == 13) {
+ this.form.submit();
+ return false;
+ }
+ });
+ });
+</script>
+<style>
+ table.tinytable th {
+ vertical-align:middle;
+ text-align:center;font-size:13px;height:35px;
+ background-color:#EAF0FF!important;
+ box-shadow:none;
+ }
+ table.tinytable th > h3 {
+ font-size:13px
+ }
+ table.tinytable th span {
+ line-height:13px;
+ }
+ table.tinytable td {
+ text-align:center;
+ white-space:nowrap;
+ background:#fff;
+ font-size:13px;
+ padding:8px 0px;
+ }
+ tr#class_row td {
+ font-weight:bold!important;
+ background-color:#DDFFDD;
+ padding:8px 0px;
+ }
+ tr#level_row td {
+ font-weight:bold!important;
+ background-color:#FFFFCC;
+ border-bottom:1px double #cee2f3;
+ padding:8px 0px;
+ }
+ tr#school_row td {
+ font-weight:bold!important;
+ background-color:#E2E2E2;
+ padding:8px 0px;
+ }
+ tr#empty_row td {
+ line-height:10px;
+ background-color:#f7f7f7;
+ padding:8px 0px;
+ }
+ tr#sums_row td {
+ font-weight:bold!important;
+ text-align:center;font-size:13px;
+ background-color:#EAF0FF;
+ vertical-align:middle;
+ padding:8px 0px;
+ }
+ tr.sum_bold td {
+ font-weight:bold;
+ padding:8px 0px;
+ }
+</style>
+<form id="list" name="list" method="post">
+<table id="mainList" border="0" cellspacing="0" cellpadding="0">
+<tr id="searchList">
+ <td>
+ <span class="search">
+ <h1 class="text-green"><i class="fa fa-calendar"></i> วันศุกร์ ที่ 06 พฤศจิกายน 2569</h1>
+ </span>
+ <span class="search" style="display:none">
+ <table name="colsearch" border="0" cellspacing="0" cellpadding="0">
+ <tr>
+ <td>
+ <select name="attendance_persent" class="general radius searchborder" id="attendance_persent" style="height:25px;width:170px" onChange="select_view(this.value);">
+ <optgroup label="เลือกดูข้อมูล"></optgroup>
+ <option value="daily" selected='selected'>รายวัน</option>
+ <option value="month" >รายเดือน</option>
+ <option value="semester" >รายภาค</option> 
+ </select>
+ </td>
+ </tr>
+ </table>
+ </span>
+ <span style="float:right">
+ <span class="search">
+ <table border="0" cellspacing="0" cellpadding="0" style="width:240px">
+ <tr>
+ <td>
+ <input name="attendance_date" type="text" class="w16em dateformat-d-sl-m-sl-Y general radius searchborder" id="attendance_date" style="width:160px;height:19px;padding-top:2px;padding-bottom:2px;" placeholder="เลือกวันที่" value="06/11/2569" readonly="readonly"/>
+ </td>
+ <td><img src="../icon_tools/vec_scope_dark.png" class="overlay" rel="../icon_tools/vec_scope_gray.png" onclick="submit_daily()" style="cursor:pointer"/></td>
+ </tr>
+ </table>
+ </span>
+ </span>
+ </td>
+</tr>
+</table>
+</form></div>

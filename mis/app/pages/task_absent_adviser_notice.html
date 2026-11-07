@@ -1,0 +1,67 @@
+<div style="padding-top:5px">
+ <div id="page_topic_blue" style="width:967px">
+ <div style="float:left">
+ <h1 class='title_26' style='font-size:21px;float:left;white-space:nowrap'>&nbsp;งานรับผิดชอบหลัก&nbsp;<img src="../images/white_br_next.png" border="0" style="width:5px"/>&nbsp;งานครูที่ปรึกษา</h1>
+ </div>
+ <div style="float:right">
+ <span style="float:left;margin-top:3px;padding:5px 10px;background-image:url(../icon_tools/menubar_year.png); background-repeat:no-repeat;width:163px;height:22px;font-size:11px;font-weight:normal">แสดงข้อมูล ปีการศึกษา {{YT}}</span>
+ <span style="float:left;margin-top:3px;padding:0px 2px">
+ <a href="../edumain"><img src="../icon_tools/menubar_dashboard.png" border="0" alt="แผงเมนูหลัก" title="แผงเมนูหลัก"/></a>
+ </span>
+ </div>
+ </div>
+ <div id="maindetail" style="width:965px"><table border="0" cellpadding="0" cellspacing="0" style="margin-top:3px;width:967px">
+<tr>
+<td align="left" valign="bottom" style="width:70px;white-space:nowrap">&nbsp;<img src="../icon_tools/icon_setting.png"/></td>
+<td align="left" valign="bottom" style="padding-left:5px;white-space:nowrap">
+<table border="0" cellspacing="0" cellpadding="0">
+ <tr>
+ <td style="white-space:nowrap"><h1 class="header_subtitle" style="font-size:25px;white-space:nowrap">ติดตามนักเรียนขาดเรียนรายวิชา</h1></td>
+ </tr>
+ <tr>
+ <td style="white-space:nowrap"><h1 class="blue_secondtitle" style="font-size:23px;white-space:nowrap">รายชื่อนักเรียนในที่ปรึกษาขาดเรียน</h1></td>
+ </tr>
+</table>
+</td>
+<td align="right" valign="middle" style="white-space:nowrap"><DIV style="float:right"><div style='float:left;margin:0px 2px'> <a href='javascript:void(0);' onMouseOver="MM_swapImage('icon_print','','../icon_tools/icon_print.png',1);" onMouseOut="MM_swapImgRestore();" onclick="ReportPortrait('print_portrait.php?module=task&option=absent_adviser_notice&func=PrintAbsent3');"><img id='icon_print' name='icon_print' src='../icon_tools/hicon_print.png' border='0' title='พิมพ์' align='top'/></a> </div><div style='float:left;margin:0px 2px'> <a href='javascript:void(0);' onMouseOver="MM_swapImage('icon_help','','../icon_tools/icon_help.png',1);" onMouseOut="MM_swapImgRestore();" onclick="OpenHelp('help/?module=task&option=absent_adviser_notice');"><img id='icon_help' name='icon_help' src='../icon_tools/hicon_help.png' border='0' title='ช่วยเหลือ' align='top'/></a> </div></DIV></td>
+</tr>
+</table>
+</div>
+ </div>
+</div>
+<div style="margin-top:10px;min-height:750px;z-index:100">
+<link rel="stylesheet" type="text/css" href="../css/faceform.css">
+<link rel="stylesheet" type="text/css" href="../css/tiny_style.css">
+<link rel="stylesheet" type="text/css" href="../css/jquery.sBubble-0.1.1.css"/>
+<script type="text/javascript" src="../scripts/jquery.tipsy.js"></script>
+<script type="text/javascript" src="../scripts/jquery.sBubble-0.1.1.js"></script>
+<script type="text/javascript" src="../scripts/SorterScripts.js"></script>
+<script type="text/javascript" src="../scripts/faceform.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+ $('.icontooltip').tipsy({ html:false , gravity: 's'});
+});
+</script>
+<script>
+function select_absent(Percent){
+ if(Percent!=""){
+ location = "?module=task&option=absent_adviser_notice&Percent="+Percent;
+ }else{
+ location = "?module=task&option=absent_adviser_notice";
+ }
+}
+</script>
+<script type="text/javascript">
+ $(document).ready(function() {
+ $('.submit_on_enter').keydown(function(event) {
+ if (event.keyCode == 13) {
+ this.form.submit();
+ return false;
+ }
+ });
+ });
+</script>
+<form id="list" name="list" method="post">
+<table id="mainList" border="0" cellspacing="0" cellpadding="0">
+</table>
+</form></div>

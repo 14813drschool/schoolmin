@@ -9,11 +9,11 @@ namespace Attendance\Sheet;
 
 class Model extends \Kotchasan\Model
 {
-    /** สถานะที่บันทึกได้ */
-    const STATUSES = ['present', 'late', 'leave', 'sick', 'absent'];
+    /** สถานะที่บันทึกได้ (ตามประเภทการเข้าเรียนของระบบเดิม: มาเรียน มาสาย ลากิจ ลาป่วย ขาดเรียน กิจกรรม หนี ซ่อมเสริม) */
+    const STATUSES = ['present', 'late', 'leave', 'sick', 'absent', 'activity', 'skip', 'remedial'];
 
     /** สถานะที่นับเป็นเวลาเรียน */
-    const PRESENT = ['present', 'late'];
+    const PRESENT = ['present', 'late', 'activity', 'remedial'];
 
     /**
      * สร้างตารางให้ไซต์ที่ติดตั้งไว้ก่อนมีโมดูลนี้ (ตรวจครั้งเดียวต่อเครื่อง)

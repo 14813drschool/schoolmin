@@ -1,0 +1,224 @@
+<div style="padding-top:5px">
+ <div id="page_topic_blue" style="width:967px">
+ <div style="float:left">
+ <h1 class='title_26' style='font-size:21px;float:left;white-space:nowrap'>&nbsp;ทะเบียนและข้อมูลหลัก&nbsp;<img src="../images/white_br_next.png" border="0" style="width:5px"/>&nbsp;ทะเบียนนักเรียน</h1>
+ </div>
+ <div style="float:right">
+ <span style="float:left;margin-top:3px;padding:5px 10px;background-image:url(../icon_tools/menubar_year.png); background-repeat:no-repeat;width:163px;height:22px;font-size:11px;font-weight:normal">แสดงข้อมูล ปีการศึกษา {{YT}}</span>
+ <span style="float:left;margin-top:3px;padding:0px 2px">
+ <a href="../edumain"><img src="../icon_tools/menubar_dashboard.png" border="0" alt="แผงเมนูหลัก" title="แผงเมนูหลัก"/></a>
+ </span>
+ </div>
+ </div>
+ <div id="maindetail" style="width:965px"><table border="0" cellpadding="0" cellspacing="0" style="margin-top:3px;width:967px">
+<tr>
+<td align="left" valign="bottom" style="width:70px;white-space:nowrap">&nbsp;<img src="../icon_tools/icon_main.png"/></td>
+<td align="left" valign="bottom" style="padding-left:5px;white-space:nowrap">
+<table border="0" cellspacing="0" cellpadding="0">
+ <tr>
+ <td style="white-space:nowrap"><h1 class="header_subtitle" style="font-size:25px;white-space:nowrap">สถิตินักเรียน</h1></td>
+ </tr>
+ <tr>
+ <td style="white-space:nowrap"><h1 class="blue_secondtitle" style="font-size:23px;white-space:nowrap">แสดงรายละเอียดสถิตินักเรียน</h1></td>
+ </tr>
+</table>
+</td>
+<td align="right" valign="middle" style="white-space:nowrap"><DIV style="float:right"><div style='float:left;margin:0px 2px'> <a href='javascript:void(0);' onMouseOver="MM_swapImage('icon_help','','../icon_tools/icon_help.png',1);" onMouseOut="MM_swapImgRestore();" onclick="OpenHelp('help/?module=main&option=student_stat');"><img id='icon_help' name='icon_help' src='../icon_tools/hicon_help.png' border='0' title='ช่วยเหลือ' align='top'/></a> </div></DIV></td>
+</tr>
+</table>
+</div>
+ </div>
+</div>
+<div style="margin-top:10px;min-height:750px;z-index:100">
+<link rel="stylesheet" type="text/css" href="../css/tiny_style.css">
+<link rel="stylesheet" type="text/css" href="../css/faceform.css">
+<script type="text/javascript" src="../scripts/faceform.js"></script>
+<script type="text/javascript" src="../scripts/SorterScripts.js"></script>
+<form id="list" name="list" method="post">
+<table id="mainList" border="0" cellspacing="0" cellpadding="0">
+<tr id="titleList">
+ <td>
+ <div class="titlenav" style="width:969px">
+ <span style="float:left;white-space:nowrap">
+ <span id="Listtitle">&nbsp;</span>
+ <h1 style="font-size:23px; white-space:nowrap">จำนวนนักเรียนทั้งหมด ประจำปีการศึกษา {{Y}}</h1>
+ </span>
+ </div>
+ </td>
+</tr><tr id="contentList">
+ <td>
+ <span id="tablewrapper">
+ <span id="tableheader">
+ <table border="0" cellpadding="0" cellspacing="0" class="tinytable" id="table_total" align="left" style="width:983px">
+ <thead>
+ <tr>
+ <th class="nosort"><h3>จำนวนนักเรียนทั้งหมด</h3></th>
+ <th class="nosort"><h3>จำนวนนักเรียนชาย</h3></th>
+ <th class="nosort"><h3>จำนวนนักเรียนหญิง</h3></th>
+ <th class="nosort"><h3>จำนวนนักเรียนพักการเรียน/แขวนลอย</h3></th>
+ <th class="nosort"><h3>จำนวนนักเรียนออกกลางคัน</h3></th>
+ </tr>
+ </thead>
+ <tbody>{{TBODY0}}</tbody>
+ </table>
+ </span>
+ </span>
+ </td>
+</tr>
+<tr id="PaginationList">
+<td align="top">
+<div class="pagenav" style="width:969px">
+ </div>
+</td>
+</tr><script type="text/javascript" src="../scripts/Tinyscript.js"></script>
+<script type="text/javascript">
+var sorter = new TINY.table.sorter('sorter','table_total',{
+ headclass:'head',
+ ascclass:'asc',
+ descclass:'desc',
+ evenclass:'evenrow',
+ oddclass:'oddrow',
+ init:true
+});
+</script>
+<tr id="titleList">
+ <td>
+ <div class="titlenav" style="width:969px">
+ <span style="float:left;white-space:nowrap">
+ <span id="Listtitle">&nbsp;</span>
+ <h1 style="font-size:23px; white-space:nowrap">จำนวนนักเรียนทั้งหมดแบ่งตามระดับชั้น ประจำปีการศึกษา {{Y}}</h1>
+ </span>
+ </div>
+ </td>
+</tr><tr id="contentList">
+ <td>
+ <span id="tablewrapper">
+ <span id="tableheader">
+ <table border="0" cellpadding="0" cellspacing="0" class="tinytable" id="table_class" align="left" style="width:983px">
+ <thead>
+ <tr>
+ <th class="nosort"><h3>ระดับชั้น</h3></th>
+ <th width="150" class="nosort"><h3>จำนวนนักเรียนทั้งหมด</h3></th>
+ <th width="150" class="nosort"><h3>นักเรียนชาย</h3></th>
+ <th width="150" class="nosort"><h3>นักเรียนหญิง</h3></th>
+ <th width="150" class="nosort"><h3>พักการเรียน/แขวนลอย</h3></th>
+ <th class="nosort"><h3>จำนวนนักเรียนออกกลางคัน</h3></th>
+ </tr>
+ </thead>
+ <tbody>{{TBODY1}}</tbody>
+ </table>
+ </span>
+ </span>
+ </td>
+</tr>
+<tr id="PaginationList">
+<td align="top">
+<div class="pagenav" style="width:969px">
+ </div>
+</td>
+</tr><script type="text/javascript" src="../scripts/Tinyscript.js"></script>
+<script type="text/javascript">
+var sorter = new TINY.table.sorter('sorter','table_class',{
+ headclass:'head',
+ ascclass:'asc',
+ descclass:'desc',
+ evenclass:'evenrow',
+ oddclass:'oddrow',
+ init:true
+});
+</script>
+<tr id="titleList">
+ <td>
+ <div class="titlenav" style="width:969px">
+ <span style="float:left;white-space:nowrap">
+ <span id="Listtitle">&nbsp;</span>
+ <h1 style="font-size:23px; white-space:nowrap">จำนวนนักเรียนทั้งหมดแบ่งตามห้องเรียน ประจำปีการศึกษา {{Y}}</h1>
+ </span>
+ </div>
+ </td>
+</tr><tr id="contentList">
+ <td>
+ <span id="tablewrapper">
+ <span id="tableheader">
+ <table border="0" cellpadding="0" cellspacing="0" class="tinytable" id="table_room" align="left" style="width:983px">
+ <thead>
+ <tr>
+ <th class="nosort"><h3>ห้องเรียน</h3></th>
+ <th width="250" class="nosort"><h3>จำนวนนักเรียนทั้งหมด</h3></th>
+ <th width="150" class="nosort"><h3>นักเรียนชาย</h3></th>
+ <th width="150" class="nosort"><h3>นักเรียนหญิง</h3></th>
+ <th width="150" class="nosort"><h3>พักการเรียน/แขวนลอย</h3></th>
+ <th class="nosort"><h3>จำนวนนักเรียนออกกลางคัน</h3></th>
+ </tr>
+ </thead>
+ <tbody>{{TBODY2}}</tbody>
+ </table>
+ </span>
+ </span>
+ </td>
+</tr>
+<tr id="PaginationList">
+<td align="top">
+<div class="pagenav" style="width:969px">
+ </div>
+</td>
+</tr><script type="text/javascript" src="../scripts/Tinyscript.js"></script>
+<script type="text/javascript">
+var sorter = new TINY.table.sorter('sorter','table_room',{
+ headclass:'head',
+ ascclass:'asc',
+ descclass:'desc',
+ evenclass:'evenrow',
+ oddclass:'oddrow',
+ init:true
+});
+</script>
+<tr id="titleList">
+ <td>
+ <div class="titlenav" style="width:969px">
+ <span style="float:left;white-space:nowrap">
+ <span id="Listtitle">&nbsp;</span>
+ <h1 style="font-size:23px; white-space:nowrap">นักเรียนซ้ำชั้น ประจำปีการศึกษา {{Y}}</h1>
+ </span>
+ </div>
+ </td>
+</tr><tr id="contentList">
+ <td>
+ <span id="tablewrapper">
+ <span id="tableheader">
+ <table border="0" cellpadding="0" cellspacing="0" class="tinytable" id="table_repeat" align="left" style="width:983px">
+ <thead>
+ <tr>
+ <th width="24" class="nosort"><h3>#</h3></th>
+ <th class="nosort"><h3>ระดับชั้น</h3></th>
+ <th width="250"class="nosort"><h3>จำนวนนักเรียนทั้งหมด</h3></th>
+ <th width="250" class="nosort"><h3>จำนวนนักเรียนซ้ำชั้น</h3></th>
+ <th width="250"class="nosort"><h3>จำนวนร้อยละ</h3></th>
+ </tr>
+ </thead>
+ <tbody>{{TBODY3}}</tbody>
+ </table>
+ </span>
+ </span>
+ </td>
+</tr>
+<tr id="PaginationList">
+<td align="top">
+<div class="pagenav" style="width:969px">
+ </div>
+</td>
+</tr><script type="text/javascript" src="../scripts/Tinyscript.js"></script>
+<script type="text/javascript">
+var sorter = new TINY.table.sorter('sorter','table_repeat',{
+ headclass:'head',
+ ascclass:'asc',
+ descclass:'desc',
+ evenclass:'evenrow',
+ oddclass:'oddrow',
+ init:true
+});
+</script>
+<tr><td>&nbsp;</td></tr>
+<tr><td>&nbsp;</td></tr>
+</table>
+</form></div>

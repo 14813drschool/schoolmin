@@ -1,0 +1,81 @@
+<div style="padding-top:5px">
+ <div id="page_topic_blue" style="width:967px">
+ <div style="float:left">
+ <h1 class='title_26' style='font-size:21px;float:left;white-space:nowrap'>&nbsp;บริหารงานวิชาการ&nbsp;<img src="../images/white_br_next.png" border="0" style="width:5px"/>&nbsp;ตารางสอน</h1>
+ </div>
+ <div style="float:right">
+ <span style="float:left;margin-top:3px;padding:5px 10px;background-image:url(../icon_tools/menubar_year.png); background-repeat:no-repeat;width:163px;height:22px;font-size:11px;font-weight:normal">แสดงข้อมูล ปีการศึกษา {{YT}}</span>
+ <span style="float:left;margin-top:3px;padding:0px 2px">
+ <a href="../edumain"><img src="../icon_tools/menubar_dashboard.png" border="0" alt="แผงเมนูหลัก" title="แผงเมนูหลัก"/></a>
+ </span>
+ </div>
+ </div>
+ <div id="maindetail" style="width:965px"><table border="0" cellpadding="0" cellspacing="0" style="margin-top:3px;width:967px">
+<tr>
+<td align="left" valign="bottom" style="width:70px;white-space:nowrap">&nbsp;<img src="../icon_tools/icon_main.png"/></td>
+<td align="left" valign="bottom" style="padding-left:5px;white-space:nowrap">
+<table border="0" cellspacing="0" cellpadding="0">
+ <tr>
+ <td style="white-space:nowrap"><h1 class="header_subtitle" style="font-size:25px;white-space:nowrap">ปฏิทินการเรียนการสอน</h1></td>
+ </tr>
+ <tr>
+ <td style="white-space:nowrap"><h1 class="blue_secondtitle" style="font-size:23px;white-space:nowrap">ปฏิทินการเรียนการสอน</h1></td>
+ </tr>
+</table>
+</td>
+<td align="right" valign="middle" style="white-space:nowrap"><DIV style="float:right"><div style='float:left;margin:0px 2px'> <a href='javascript:void(0);' onMouseOver="MM_swapImage('icon_help','','../icon_tools/icon_help.png',1);" onMouseOut="MM_swapImgRestore();" onclick="OpenHelp('help/?module=academic&option=academic_calendar');"><img id='icon_help' name='icon_help' src='../icon_tools/hicon_help.png' border='0' title='ช่วยเหลือ' align='top'/></a> </div></DIV></td>
+</tr>
+</table>
+</div>
+ </div>
+</div>
+<div style="margin-top:10px;min-height:750px;z-index:100">
+<link rel="stylesheet" type="text/css" href="../css/faceform.css">
+<link rel="stylesheet" type="text/css" href="../css/datepicker.css"/>
+<link rel="stylesheet" type="text/css" href="../css/calendar_style.css"/>
+<link rel="stylesheet" type="text/css" href="../css/tiny_style.css">
+<script type="text/javascript" src="../scripts/faceform.js"></script>
+<script type="text/javascript" src="../scripts/datepicker.js"></script>
+<script type="text/javascript" src="../scripts/jquery.tipsy.js"></script>
+<script type="text/javascript" src="../scripts/jquery.sBubble-0.1.1.js"></script>
+<script type="text/javascript" src="../scripts/SorterScripts.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+ $('.icontooltip').tipsy({ html:false , gravity: 'e'});
+});
+</script>
+<script>
+function chknull(){
+ if(document.operationform.start_term.value==""){
+ AlertBox.alert("<br>กรุณาเลือกปีการศึกษา","start_term");
+ }else{
+ document.forms.operationform.submit()
+ }
+}
+</script>
+<div class="form_content">
+ <form id="operationform" name="operationform" method="post" action="?module=academic&option=academic_calendar&func=Save" style="width:964px">
+ <div class="formframeheader" style="width:970px">
+ <div class="content_edit"><h1 style="margin-left:25px;margin-top:-3px">ปฏิทินการเรียนการสอน ประจำภาคเรียนที่ {{T}} ปีการศึกษา {{Y}}</h1></div>
+ </div>
+ <div class="formframe" id="formframe" style="width:970px">
+ <table width="900" border="0" cellpadding="0" cellspacing="0" class="black_12">
+ <tr>
+ <td>&nbsp;</td>
+ </tr>
+ <tr>
+ </tr>
+ <tr>
+ <td colspan="3">&nbsp;</td>
+ </tr>
+ </table>
+ </div>
+ <div class="formframefooter" style="width:970px">
+ &nbsp;
+ </div>
+ </form>
+ <div>
+ &nbsp;
+ </div>
+</div>
+</div>

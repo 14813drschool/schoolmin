@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>{{TITLE}}</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"  />
+<link rel="shortcut icon" href="../images/favicon.ico">
+<link rel="stylesheet" type="text/css" href="../css/main.css?{{V}}" />
+<link rel="stylesheet" type="text/css" href="../root/css/icons.css" />
+<link rel="stylesheet" type="text/css" href="../root/css/font-awesome.css" />
+<link rel="stylesheet" type="text/css" href="../css/thaisansbold.css">
+<script type="text/javascript" src="../scripts/jquery-1.6.4.js"></script>
+<script type="text/javascript" src="../scripts/jquery-ui.min.js"></script>
+<script type="text/javascript" src="../scripts/sexyalertbox.v1.2.jquery.js"></script>
+<script type="text/javascript" src="../scripts/menu_roundies-min.js"></script>
+<script type="text/javascript" src="../scripts/jquery-menu-roundies.js"></script>
+<script type="text/javascript" src="../scripts/functionObj.js"></script>
+<script type="text/javascript">
+if (navigator.userAgent.toLowerCase().indexOf("chrome") >= 0) {
+    $(window).load(function(){
+        $('input:-webkit-autofill').each(function(){
+            var text = $(this).val();
+            var name = $(this).attr('name');
+            $(this).after(this.outerHTML).remove();
+            $('input[name=' + name + ']').val(text);
+        });
+    });
+}
+</script>
+<script>            
+$(document).ready(function() {
+
+	$('input').attr('autocomplete','new-password');
+
+	var offset = 220;
+	var duration = 300;
+	$(window).scroll(function() {
+		if ($(this).scrollTop() > offset) {
+			$('.back-to-top').fadeIn(duration);
+		} else {
+			$('.back-to-top').fadeOut(duration);
+		}
+	});
+	
+	$('.back-to-top').click(function(event) {
+		event.preventDefault();
+		$('html, body').animate({scrollTop: 0}, duration);
+		return false;
+	});
+	
+});
+</script>
+<style type="text/css">
+body {
+	border-top	 : solid 3px #008de8;
+	height		: 50px;
+	overflow-y:scroll;
+	overflow-x:hidden;
+	overflow-x: auto;
+	font-family:tahoma;
+	font-size:12px;
+}
+</style>
+</head>

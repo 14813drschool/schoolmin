@@ -1,0 +1,201 @@
+.button{
+	font:15px Calibri, Arial, sans-serif;
+
+	/* A semi-transparent text shadow */
+	text-shadow:0px 0px 0 rgba(255,255,255,0.4);
+	-webkit-text-shadow:0px 0px 0 rgba(255,255,255,0.4);
+	-moz-text-shadow:0px 0px 0 rgba(255,255,255,0.4);
+	
+	/* Overriding the default underline styling of the links */
+	text-decoration:none !important;
+	white-space:nowrap;
+	
+	display:inline-block;
+	vertical-align:baseline;
+	position:relative;
+	cursor:pointer;
+	padding:5px 25px 2px 25px;
+	
+	background-repeat:no-repeat;
+
+	/* The following two rules are fallbacks, in case
+	   the browser does not support multiple backgrounds. */
+
+	background-position:bottom left;
+	background-image:url('../images/tabs_bgs.png');
+	
+	/* Multiple backgrounds version. The background images
+	   are defined individually in color classes */
+	
+	background-position:bottom left, top right, 0 0, 0 0;
+	background-clip:border-box;
+	
+	/* Applying a default border raidus of 8px */
+	
+	-moz-border-top-left-radius:4px;
+	-webkit-border-top-left-radius:4px;
+	border-top-left-radius:4px;
+	
+	-moz-border-top-right-radius:4px;
+	-webkit-border-top-right-radius:4px;
+	border-top-right-radius:4px;
+	
+	/* A 1px highlight inside of the button */
+
+	
+	/* Animating the background positions with CSS3 */
+	/* Currently works only in Safari/Chrome */
+	
+	-webkit-transition:background-position 1s;
+	-moz-transition:background-position 1s;
+	transition:background-position 1s;
+}
+
+.button:hover{
+	
+	background-position:top left;
+	background-position:top left, bottom right, 0 0, 0 0;
+}
+
+.button:active{
+	bottom:-1px;
+}
+
+/* The three buttons sizes */
+
+.button.big		{ font-size:30px;}
+.button.medium	{ font-size:18px;}
+.button.small	{ font-size:13px;}
+
+/* A more rounded button */
+
+.button.rounded{
+	-moz-border-radius:4px;
+	-webkit-border-radius:4px;
+	border-radius:4px;
+}
+
+
+/* Defining four button colors */
+
+
+/* BlueButton */
+
+.blue.button{
+	color:#0f4b6d !important;
+	border:1px solid #84acc3 !important;
+	background-color: #48b5f2;
+
+	background-image:	url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png'),
+						-moz-radial-gradient(	center bottom, circle,rgba(89,208,244,1) 0,rgba(89,208,244,0) 100px),
+						-moz-linear-gradient(#4fbbf7, #3faeeb);
+
+	background-image:	url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png'),
+						-webkit-gradient(	radial, 50% 100%, 0, 50% 100%, 100,from(rgba(89,208,244,1)), to(rgba(89,208,244,0))),
+						-webkit-gradient(linear, 0% 0%, 0% 100%, from(#4fbbf7), to(#3faeeb));
+}
+
+.blue.button:hover{
+	background-color:#63c7fe;
+	
+	background-image:	url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png'),
+						-moz-radial-gradient(	center bottom, circle,
+												rgba(109,217,250,1) 0,rgba(109,217,250,0) 100px),
+						-moz-linear-gradient(#63c7fe, #58bef7);
+						
+	background-image:	url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png'),
+						-webkit-gradient(	radial, 50% 100%, 0, 50% 100%, 100,
+											from(rgba(109,217,250,1)), to(rgba(109,217,250,0))),
+						-webkit-gradient(linear, 0% 0%, 0% 100%, from(#63c7fe), to(#58bef7));
+}
+
+/* Green Button */
+
+.green.button{
+	color:#fff !important;
+	border:0px solid #00AAAA !important;	
+	background-color: #00BBBB;
+	
+	background-image:url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png')
+}
+
+.green.button:hover{
+	color:#fff;
+	background-color:#00AAAA;
+	
+	background-image:url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png')
+}
+
+/* Orange Button */
+
+.darkgreen.button{
+	color:#fff !important;
+	border:0px solid #009999 !important;
+	background-color: #00AAAA;
+	
+	background-image:url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png'), -moz-radial-gradient(center bottom, circle, rgba(232,189,45,1) 0,rgba(232,189,45,0) 100px),-moz-linear-gradient(#f1982f, #d4821f);
+	background-image:url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png'), -webkit-gradient(radial, 50% 100%, 0, 50% 100%, 100, from(rgba(232,189,45,1)), to(rgba(232,189,45,0))),-webkit-gradient(linear, 0% 0%, 0% 100%, from(#f1982f), to(#d4821f));
+}
+
+.darkgreen.button:hover{
+	color:#fff;
+	background-color:#009999;
+	
+	background-image:url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png'), -moz-radial-gradient(center bottom, circle, rgba(241,192,52,1) 0,rgba(241,192,52,0) 100px),-moz-linear-gradient(#f9a746, #e18f2b);
+	background-image:url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png'), -webkit-gradient(radial, 50% 100%, 0, 50% 100%, 100, from(rgba(241,192,52,1)), to(rgba(241,192,52,0))),-webkit-gradient(linear, 0% 0%, 0% 100%, from(#f9a746), to(#e18f2b));
+}
+
+.gray.button{
+	color:#fff !important;
+	border:0px solid #c1c1c1 !important;
+	background-color: #C4C8CC;
+	
+	background-image:url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png'), -moz-radial-gradient(center bottom, circle, rgba(222,225,228,1) 0,rgba(222,225,228,0) 100px),-moz-linear-gradient(#C4C8CC, #A8ADB0);
+	background-image:url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png'), -webkit-gradient(radial, 50% 100%, 0, 50% 100%, 100, from(rgba(222,225,228,1)), to(rgba(222,225,228,0))),-webkit-gradient(linear, 0% 0%, 0% 100%, from(#A8ADB0), to(#A8ADB0));
+}
+
+.gray.button:hover{
+	background-color:#9A9A9A;
+	
+	background-image:url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png'), -moz-radial-gradient(center bottom, circle, rgba(222,225,228,1) 0,rgba(222,225,228,0) 100px),-moz-linear-gradient(#d1d3d6, #9fa5a9);
+	background-image:url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png'), -webkit-gradient(radial, 50% 100%, 0, 50% 100%, 100, from(rgba(222,225,228,1)), to(rgba(222,225,228,0))),-webkit-gradient(linear, 0% 0%, 0% 100%, from(#d1d3d6), to(#9fa5a9));
+}
+
+
+.yellow.button{
+	color:#fff !important;
+	border:0px solid #FFBF00 !important;
+	background-color: #FFCA28;
+	
+}
+
+.yellow.button:hover{
+	color:#fff !important;
+	border:0px solid #FFBF00 !important;
+	background-color: #FFCA28;
+	
+	background-image:url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png')
+}
+
+.yellow.button:active{
+	color:#fff !important;
+	border:0px solid #FFBF00 !important;
+	background-color: #FFC004;
+	
+	background-image:url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png')
+}
+
+.gray.button{
+	color:#fff !important;
+	border:0px solid #00AAAA !important;
+	background-color: #9F9F9F;
+	
+	background-image:url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png')
+}
+
+.gray.button:hover{
+	color:#fff;
+	background-color:#7F7F7F;
+	
+	background-image:url('../images/tabs_bgs.png'), url('../images/tabs_bgs.png')
+}

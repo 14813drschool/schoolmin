@@ -1,0 +1,132 @@
+/**
+ * BlankPlate | Yet another HTML5 Starter Kit
+ *
+ * BlankPlate Main stylesheet
+ *
+ * @copyright	Copyright 2012, Dimitris Krestos
+ * @license		Apache License, Version 2.0 (http://www.opensource.org/licenses/apache2.0.php)
+ * @link		http://vdw.staytuned.gr/html5-starter-kit-blankplate/
+ * @package		BlankPlate
+ * @version		v1.2.3
+ */
+
+/**
+ * WORLD
+ *
+ * -------------------------------------------------------------------------------------------------
+ */
+
+/* Clear fix */
+.clear {
+	clear: both;
+	display: block;
+	float: none;
+	font-size: 1px;
+	height: 0px;
+	line-height: 0
+}
+
+/**
+ * HEADER
+ * Your header rules
+ * -------------------------------------------------------------------------------------------------
+ */
+
+/**
+ * TABS
+ *
+ * -------------------------------------------------------------------------------------------------
+ */
+.tabs > DIV {
+	border-top: 3px solid #00CCCC;
+	margin-right:10px;
+	background-color: none !important;
+	border-bottom: 0px solid #00CCCC !important;
+	border-radius:0px 0px 4px 4px;
+	width:100%;
+}
+
+.tabs > DIV H4 {
+	border-bottom: 3px solid #00CCCC !important;
+	color: #ccc !important;
+	font-weight: 300;
+	line-height: 186px !important;
+}
+
+.tabs LI {
+	background-color:#b6bbc0;
+	
+	box-shadow: inset 0px 0px 1px #fff;
+	-moz-box-shadow: inset 0px 0px 1px #fff;
+	-webkit-box-shadow: inset 0px 0px 1px #fff;
+	
+	border-bottom: 0px solid #00CCCC !important;
+	
+	border-top-left-radius:4px;
+	border-top-right-radius:4px;
+	color:#fff !important;
+	cursor:pointer!important;
+}
+
+.tabs A {
+	color: #fff;
+	display: block;
+	font-size: 12px;
+	padding: 5px 10px;
+	text-decoration: none;
+	margin:0px;
+}
+
+.tabs LI:hover {
+	color:#fff;
+
+	background-color:#00CCCC;
+
+	background-image:url('../images/tabs_bg.png'), url('../images/tabs_bg.png'), -moz-radial-gradient(center bottom, circle, rgba(183,229,45,1) 0,rgba(183,229,45,0) 100px),-moz-linear-gradient(#90de31, #7fc01e);
+	background-image:url('../images/tabs_bg.png'), url('../images/tabs_bg.png'), -webkit-gradient(radial, 50% 100%, 0, 50% 100%, 100, from(rgba(183,229,45,1)), to(rgba(183,229,45,0))),-webkit-gradient(linear, 0% 0%, 0% 100%, from(#90de31), to(#7fc01e));
+}
+
+.tabs LI:hover A {
+	color: #fff;
+	background-color:#00CCCC;
+	border-top-left-radius:4px;
+	border-top-right-radius:4px;
+}
+
+.active {
+	background-color:#00CCCC!important;
+	
+	box-shadow: inset 0px 0px 0px #fff;
+	-moz-box-shadow: inset 0px 0px 0px #fff;
+	-webkit-box-shadow: inset 0px 0px 0px #fff;
+	
+	border-bottom: 3px solid #00CCCC !important;
+}
+
+.active A {
+	color: #fff;
+	background-color:#00CCCC;
+	border-top-left-radius:4px;
+	border-top-right-radius:4px;
+}
+
+.button {
+	border-bottom: 3px solid #00CCCC;
+	color: #FFFFFF;
+	display: block;
+	float: left;
+	font-size: 12px;
+	letter-spacing: 2px;
+	margin-top: 20px;
+	margin-right: 26px;
+	padding: 15px 20px;
+	text-align: center;
+	width: 150px;
+
+}
+
+.button:hover {
+	background-color: #93b7ae;
+	color: #FFF;
+	text-decoration: none;
+}

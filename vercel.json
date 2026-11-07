@@ -1,5 +1,8 @@
 {
-  "regions": ["sin1"],
+  "framework": null,
+  "regions": [
+    "sin1"
+  ],
   "functions": {
     "api/index.php": {
       "runtime": "vercel-php@0.7.4",
@@ -8,13 +11,36 @@
     }
   },
   "routes": [
-    { "src": "^/(settings|vercel|datas|language|install)(/.*)?$", "dest": "/api/index.php" },
-    { "src": "^/api/(.*)$", "dest": "/api/index.php" },
-    { "src": "^/(.*\\.php)(/.*)?$", "dest": "/api/index.php" },
-    { "src": "^/(.*/)?\\.[^/]*$", "dest": "/api/index.php" },
-    { "src": "^/(.*\\.(md|sql|sqlite|sqlite3|log|bak|orig|dist|cache|gz))$", "dest": "/api/index.php" },
-    { "src": "^/((?:[^/]*/)*[^/.]*)$", "dest": "/api/index.php" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/api/index.php" }
+    {
+      "src": "^/(settings|vercel|datas|language|install)(/.*)?$",
+      "dest": "/api/index.php"
+    },
+    {
+      "src": "^/api/(.*)$",
+      "dest": "/api/index.php"
+    },
+    {
+      "src": "^/(.*\\.php)(/.*)?$",
+      "dest": "/api/index.php"
+    },
+    {
+      "src": "^/(.*/)?\\.[^/]*$",
+      "dest": "/api/index.php"
+    },
+    {
+      "src": "^/(.*\\.(md|sql|sqlite|sqlite3|log|bak|orig|dist|cache|gz))$",
+      "dest": "/api/index.php"
+    },
+    {
+      "src": "^/((?:[^/]*/)*[^/.]*)$",
+      "dest": "/api/index.php"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.php"
+    }
   ]
 }

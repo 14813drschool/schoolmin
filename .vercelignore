@@ -1,2 +1,5 @@
 node_modules/
 .git/
+# ไฟล์สำหรับ build Now.js (มีไฟล์ที่ build แล้วใน Now/dist อยู่แล้ว) — ไม่ส่งขึ้น Vercel เพื่อไม่ให้ถูกมองเป็นโปรเจกต์ Vite
+/package.json
+/vite.config.js

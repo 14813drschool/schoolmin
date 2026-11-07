@@ -61,6 +61,9 @@ function run_page(): void
     $tpl = (string) file_get_contents($file);
     $vars = page_vars();
     $provider = 'rows_'.$key;
+    if ($func !== '' && strpos($key, $func) === false && function_exists('rows_'.$key.'_'.$func)) {
+        $provider = 'rows_'.$key.'_'.$func;
+    }
     $data = function_exists($provider) ? $provider() : [];
     if (is_string($data)) {
         $data = ['TBODY0' => $data];

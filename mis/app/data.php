@@ -368,7 +368,7 @@ function rows_academic_teacher_timetable()
     foreach (personnel_rows() as $p) {
         [$pre, $first, $last] = split_name($p['name']);
         $o .= "\n <tr onclick=\"SelecteachRow(event,\$(this))\">\n <td>".++$i."</td>\n <td>".h($p['username'])."</td>\n <td><span style='float:left;min-width: 80px'>".h($pre.$first)."</span><span style='float:left;padding-left:10px'>".h($last)."</span></td>\n <td>".h(cat('position', $p['position'], ''))."</td>\n <td width=\"50\" style=\"text-align:center;padding:5px 5px; vertical-align:middle\">\n "
-            .icon_link('?module=task&option=teacher_timetable', 'พิมพ์ตารางสอน', 'print')."\n</td> </tr>";
+            .icon_link('?module=task&option=teacher_timetable&TeacherId='.(int) $p['id'], 'พิมพ์ตารางสอน', 'print')."\n</td> </tr>";
     }
     return $o;
 }
@@ -381,7 +381,7 @@ function rows_academic_student_timetable()
     foreach (rooms_by_class() as $cid => $rooms) {
         foreach ($rooms as $rid => $rname) {
             $a = $adv[$rid] ?? [];
-            $o .= "\n <tr onclick=\"SelecteachRow(event,\$(this))\">\n <td>".++$i."</td>\n <td>".h($cid ? cat('class', $cid).'/'.preg_replace('/^\d+\//', '', $rname) : $rname)."</td>\n <td>".name_nbsp($a[0] ?? '')."</td>\n <td>".name_nbsp($a[1] ?? '')."</td>\n <td>ปกติ</td>\n <td style=\"white-space:nowrap\">\n ว่าง </td>\n <td width=\"130\" style=\"text-align:center;padding:5px 5px; vertical-align:middle\">\n <a href=\"javascript:void(0);\" border=\"0\" id=\"pinkgreenbtns\"><img src=\"../icon_tools/vec_print_white.png\" border=\"0\" height=\"18\"/> พิมพ์ตารางเรียน</a>\n</td> </tr>";
+            $o .= "\n <tr onclick=\"SelecteachRow(event,\$(this))\">\n <td>".++$i."</td>\n <td>".h($cid ? cat('class', $cid).'/'.preg_replace('/^\d+\//', '', $rname) : $rname)."</td>\n <td>".name_nbsp($a[0] ?? '')."</td>\n <td>".name_nbsp($a[1] ?? '')."</td>\n <td>ปกติ</td>\n <td style=\"white-space:nowrap\">\n ว่าง </td>\n <td width=\"130\" style=\"text-align:center;padding:5px 5px; vertical-align:middle\">\n <a href=\"?module=academic&option=student_timetable&func=RoomTable&RoomNum=".(int) $rid."\" border=\"0\" id=\"pinkgreenbtns\"><img src=\"../icon_tools/vec_print_white.png\" border=\"0\" height=\"18\"/> พิมพ์ตารางเรียน</a>\n</td> </tr>";
         }
     }
     return $o;

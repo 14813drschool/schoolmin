@@ -13,4 +13,5 @@ Kotchasan::createWebApplication('Gcms\Config');
 
 require MIS_APP.'helpers.php';
 require MIS_APP.'data.php';
+require MIS_APP.'data2.php';
 require MIS_APP.'pages.php';

@@ -143,6 +143,24 @@ function d_info(array $c, string $level, string $right): string
         .'<div style="text-align:right"><div class="yt">ภาคเรียนที่ '.(int) $c['term'].' ปีการศึกษา '.(int) $c['year'].'</div>'.$right.'</div></div>';
 }
 
+/** สไตล์หน้าบันทึกผลการเรียน (ใช้ร่วมกับหน้าบันทึกผลการเรียนรายบุคคลของผู้ดูแล) */
+function rec_css(): string
+{
+    return '<style>.rec-bar{border:1px solid #d3d3d3;border-radius:4px 4px 0 0;background:linear-gradient(#fff,#f3f3f3);padding:6px 10px;display:flex;align-items:center;justify-content:space-between}'
+        .'.rec-bar h2{font-family:thaisansbold;font-weight:normal;font-size:24px;margin:0;color:#333}.rec-bar h2 i{color:#F7941D;margin-right:8px}.rec-bar+.dz-info{border-top:none!important;border-radius:0 0 4px 4px}'
+        .'.rec-tabs{margin-top:4px}.rec-tab{display:inline-block;background:#A9A9A9;color:#fff;font-family:thaisansbold;font-size:17px;padding:5px 10px 3px;border-radius:3px 3px 0 0;cursor:pointer;margin-right:3px}.rec-tab.on{background:#17B4B4}'
+        .'.rec-line{border-top:3px solid #17B4B4}.rec-pane{display:none}.rec-pane.on{display:block}'
+        .'table.rec{border-collapse:collapse;width:100%;font:13px Tahoma}table.rec th{background:#FDE5DA;border:1px solid #9CCFD6;font-family:"TH Sarabun New","TH SarabunPSK",sans-serif;font-weight:bold;font-size:20px;color:#222;padding:3px 4px;text-align:center!important;vertical-align:middle}'
+        .'table.rec th.b{background:#EDEDED}table.rec.u th{background:#EDFCBE}table.rec.u th.b,table.rec.u th.vt{background:#EDEDED}'
+        .'table.rec th.vt{height:240px;vertical-align:bottom;padding:6px 2px;width:46px}table.rec th.vt div{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;margin:0 auto;font-size:18px;max-height:230px;overflow:hidden}'
+        .'table.rec td{border:1px solid #9CCFD6;padding:4px 5px;height:26px;color:#000}table.rec .c{text-align:center}table.rec .sum{background:#F3F5FF}table.rec .fix{background:#FFFDE8}table.rec .u-sum{background:#F8FDE8}'
+        .'table.rec tr.max td{background:#F7F7F7;text-align:center;font-size:14px}table.rec b.ok{color:#1BA826}table.rec b.bad{color:#E00}'
+        .'table.rec th.big{font-size:24px}body.no-sarabun table.rec th{font-size:14px}body.no-sarabun table.rec th.big{font-size:16px}body.no-sarabun table.rec th.vt div{font-size:13px}.rec-in{width:40px;height:20px;text-align:center;border:1px solid #ccc;border-radius:3px;font:13px Tahoma}.rec-in.ok{border-color:#B1D2A4;background:#ECFFEC}.rec-in.bad{border-color:#EEB9B9;background:#FFFAF2;color:#E00}.rec-in.err{border-color:#e00;background:#ffecec}'
+        .'.rec-fix{width:37px;height:20px;border:1px solid #B1D2A4;background:#ECFFEC;text-align:center;cursor:pointer;font:13px Tahoma}'
+        .'.rec-save{text-align:right;padding:8px 0;border:1px solid #ddd;border-top:none;background:#fafafa;padding:6px 6px}.rec-save a{display:inline-block;color:#fff!important;text-decoration:none;font:13px Tahoma;padding:5px 12px;border-radius:3px;margin-left:5px}'
+        .'.rec-save .sv{background:#3EA2E8;border:1px solid #2f8fd3;min-width:200px;text-align:center}.rec-save .cl{background:#F7B331;border:1px solid #e09a16}</style>';
+}
+
 function d_css(): string
 {
     return '<style>.dz{width:983px;margin:0 auto;text-align:left;font-family:Tahoma}'
@@ -620,19 +638,7 @@ function rows_task_study_record_Record()
     $rn = room_short($room);
     $level = 'ระดับชั้น'.cat('class', $c['class']).($room ? '/'.(strpos($rn, '/') !== false ? substr($rn, strrpos($rn, '/') + 1) : $rn) : '');
     [$r1, $r2, $r3] = score_ratio();
-    $style = '<style>.rec-bar{border:1px solid #d3d3d3;border-radius:4px 4px 0 0;background:linear-gradient(#fff,#f3f3f3);padding:6px 10px;display:flex;align-items:center;justify-content:space-between}'
-        .'.rec-bar h2{font-family:thaisansbold;font-weight:normal;font-size:24px;margin:0;color:#333}.rec-bar h2 i{color:#F7941D;margin-right:8px}.rec-bar+.dz-info{border-top:none!important;border-radius:0 0 4px 4px}'
-        .'.rec-tabs{margin-top:4px}.rec-tab{display:inline-block;background:#A9A9A9;color:#fff;font-family:thaisansbold;font-size:17px;padding:5px 10px 3px;border-radius:3px 3px 0 0;cursor:pointer;margin-right:3px}.rec-tab.on{background:#17B4B4}'
-        .'.rec-line{border-top:3px solid #17B4B4}.rec-pane{display:none}.rec-pane.on{display:block}'
-        .'table.rec{border-collapse:collapse;width:100%;font:13px Tahoma}table.rec th{background:#FDE5DA;border:1px solid #9CCFD6;font-family:"TH Sarabun New","TH SarabunPSK",sans-serif;font-weight:bold;font-size:20px;color:#222;padding:3px 4px;text-align:center!important;vertical-align:middle}'
-        .'table.rec th.b{background:#EDEDED}table.rec.u th{background:#EDFCBE}table.rec.u th.b,table.rec.u th.vt{background:#EDEDED}'
-        .'table.rec th.vt{height:240px;vertical-align:bottom;padding:6px 2px;width:46px}table.rec th.vt div{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;margin:0 auto;font-size:18px;max-height:230px;overflow:hidden}'
-        .'table.rec td{border:1px solid #9CCFD6;padding:4px 5px;height:26px;color:#000}table.rec .c{text-align:center}table.rec .sum{background:#F3F5FF}table.rec .fix{background:#FFFDE8}table.rec .u-sum{background:#F8FDE8}'
-        .'table.rec tr.max td{background:#F7F7F7;text-align:center;font-size:14px}table.rec b.ok{color:#1BA826}table.rec b.bad{color:#E00}'
-        .'table.rec th.big{font-size:24px}body.no-sarabun table.rec th{font-size:14px}body.no-sarabun table.rec th.big{font-size:16px}body.no-sarabun table.rec th.vt div{font-size:13px}.rec-in{width:40px;height:20px;text-align:center;border:1px solid #ccc;border-radius:3px;font:13px Tahoma}.rec-in.ok{border-color:#B1D2A4;background:#ECFFEC}.rec-in.bad{border-color:#EEB9B9;background:#FFFAF2;color:#E00}.rec-in.err{border-color:#e00;background:#ffecec}'
-        .'.rec-fix{width:37px;height:20px;border:1px solid #B1D2A4;background:#ECFFEC;text-align:center;cursor:pointer;font:13px Tahoma}'
-        .'.rec-save{text-align:right;padding:8px 0;border:1px solid #ddd;border-top:none;background:#fafafa;padding:6px 6px}.rec-save a{display:inline-block;color:#fff!important;text-decoration:none;font:13px Tahoma;padding:5px 12px;border-radius:3px;margin-left:5px}'
-        .'.rec-save .sv{background:#3EA2E8;border:1px solid #2f8fd3;min-width:200px;text-align:center}.rec-save .cl{background:#F7B331;border:1px solid #e09a16}</style>';
+    $style = rec_css();
     $lockMsg = $locked ? msg_box(md_get('approved', (int) $c['id']) !== null ? 'ผลการเรียนได้รับการอนุมัติแล้ว ไม่สามารถแก้ไขได้ หากต้องการแก้ไขให้แจ้งแอดมินยกเลิกการอนุมัติ'
         : 'ยืนยันผลการเรียนแล้ว (รออนุมัติ) ไม่สามารถแก้ไขข้อมูลได้ จนกว่าจะยกเลิกการยืนยันที่หน้ารายงานผลการเรียน', false) : '';
     $body = d_css().$style.saved_msg().$lockMsg.'<div class="dz"><div class="rec-bar"><h2><i class="fa fa-list-ul"></i>โอนคะแนนและผลการเรียน</h2><select onchange="location.href=this.value" style="height:24px;min-width:160px">'.$opts.'</select></div>'

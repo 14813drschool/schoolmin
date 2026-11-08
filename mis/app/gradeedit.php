@@ -154,33 +154,60 @@ function adm_grade_edit(bool $post)
         admin_done('grade_edit', '&student='.$sid.'&yt='.rawurlencode($ytk));
     }
     $gs = q('SELECT G.*, C.`course_code`, C.`course_name`, C.`credit`, C.`type` ctype, C.`class` cclass, C.`year`, C.`term` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE G.`student_id`=? AND C.`year`=? AND C.`term`=? ORDER BY C.`type`=9, C.`course_code`', [$sid, $y, $t]);
+    $base = a_url('grade_edit', '&student='.$sid.'&yt='.rawurlencode($ytk));
     $rows = '';
+    $midMaxAll = $finMaxAll = null;
     foreach ($gs as $i => $g) {
         $gid = (int) $g['id'];
         $blank = (string) $g['grade'] === '' && (int) $g['midterm'] === 0 && (int) $g['final'] === 0;
         $finMax = function_exists('d_exam') ? (float) (d_exam($g, 'final')['mark'] ?? score_ratio()[2]) : 20.0;
-        $num = fn($k, $v, $mx) => '<input type="text" name="g['.$gid.']['.$k.']" value="'.($blank ? '' : h((string) $v)).'" data-max="'.h((string) $mx).'" class="general radius ge-n" style="width:52px;text-align:center" inputmode="decimal" autocomplete="off"/>';
+        $midMaxAll ??= 100 - $finMax;
+        $finMaxAll ??= $finMax;
+        $num = fn($k, $v, $mx) => '<input type="text" name="g['.$gid.']['.$k.']" value="'.($blank ? '' : h((string) $v)).'" data-max="'.h((string) $mx).'" class="rec-in ge-n" inputmode="decimal" autocomplete="off"/>';
         $gt = (string) $g['grade'];
-        $rows .= zrow([$i + 1, h($g['course_code']), ['<div style="text-align:left">'.h($g['course_name']).'</div>', ''], [h(COURSE_TYPES[(int) $g['ctype']] ?? ''), ' align="center"'], [h((string) $g['credit']), ' align="center"'],
-            [$num('mid', $g['midterm'], 100 - $finMax), ' align="center"'], [$num('fin', $g['final'], $finMax), ' align="center"'], ['<span class="ge-t">'.($blank ? '-' : (int) $g['midterm'] + (int) $g['final']).'</span>', ' align="center"'],
-            ['<b class="ge-g" data-type="'.(int) $g['ctype'].'" style="font-size:14px;color:'.(in_array($gt, ['0', 'ร', 'มส', 'มผ'], true) ? '#C0392B' : '#1F618D').'">'.($gt === '' ? '-' : h($gt)).'</b>', ' align="center"'],
-            ['<label title="ลบรายวิชานี้ออกจากผลการเรียนของนักเรียน"><input type="checkbox" name="g['.$gid.'][del]" value="1"/> ลบ</label>', ' align="center"']], $i);
+        $tot = (int) $g['midterm'] + (int) $g['final'];
+        $bad = in_array($gt, ['0', 'ร', 'มส', 'มผ'], true);
+        $rows .= '<tr><td class="c">'.($i + 1).'</td><td class="c">'.h($g['course_code']).'</td><td>'.h($g['course_name']).'</td><td class="c">'.h(COURSE_TYPES[(int) $g['ctype']] ?? '').'</td><td class="c">'.h((string) $g['credit']).'</td>'
+            .'<td class="c">'.$num('mid', $g['midterm'], 100 - $finMax).'</td><td class="c">'.$num('fin', $g['final'], $finMax).'</td>'
+            .'<td class="c sum"><b class="ge-t '.($tot < PASS_SCORE ? 'bad' : 'ok').'">'.($blank ? '' : $tot).'</b></td>'
+            .'<td class="c sum"><b class="ge-g '.($bad ? 'bad' : 'ok').'" data-type="'.(int) $g['ctype'].'">'.h($gt).'</b></td>'
+            .'<td class="c fix"><label title="ลบรายวิชานี้ออกจากผลการเรียนของนักเรียน" style="font:12px Tahoma;cursor:pointer"><input type="checkbox" name="g['.$gid.'][del]" value="1"/> ลบ</label></td></tr>';
     }
     $gpa = gpa_of(array_filter($gs, fn($g) => (int) $g['ctype'] !== 9));
-    $all = student_grades($sid);
-    $lv = gpax_levels($all);
-    $gx = implode(' &nbsp; ', array_map(fn($k, $v) => 'GPAX '.($k !== '' ? LEVEL_SHORT[$k] : '').' <b>'.number_format($v, 2).'</b>', array_keys($lv), $lv));
-    $head = '<div style="width:983px;margin:0 auto 8px;text-align:left"><b style="font-size:15px">'.h($s['name']).'</b> รหัส '.h($s['student_id']).' ชั้นปัจจุบัน '.h(class_room_short($s['class'], $s['room']))
-        .' — '.h($terms[$ytk]).' &nbsp; GPA ภาคเรียนนี้ <b>'.($gpa === null ? '-' : number_format($gpa, 2)).'</b> &nbsp; '.$gx.'<span style="float:right">'.btn('ดูผลการเรียนทุกภาคเรียน', a_url('grade_person', '&student='.$sid), 'student').'</span></div>';
-    $table = '<form method="post" action="'.h(a_url('grade_edit', '&student='.$sid.'&yt='.rawurlencode($ytk).'&act=save')).'">'
-        .list_table('ผลการเรียน '.h($terms[$ytk]), ['#', 'รหัสวิชา', 'รายวิชา', 'ประเภท', 'หน่วยกิต', 'ระหว่างภาค', 'ปลายภาค', 'รวม', 'ผลการเรียน', ''], $rows ?: '<tr><td colspan="10" align="center" class="gray_12" style="padding:12px">ยังไม่มีรายวิชาในภาคเรียนนี้ — เพิ่มรายวิชาได้ด้านล่าง</td></tr>', count($gs).' รายวิชา',
-            $rows ? '<input type="submit" value="บันทึกผลการเรียน" class="general radius" style="height:26px;font-weight:bold"/>' : '').'</form>'
+    $lv = gpax_levels(student_grades($sid));
+    $gx = implode('', array_map(fn($k, $v) => '<div class="t4"><span style="width:250px">ผลการเรียนเฉลี่ยสะสม (GPAX)'.($k !== '' ? ' '.LEVEL_SHORT[$k] : '').'</span><span style="width:70px">'.number_format($v, 2).'</span></div>', array_keys($lv), $lv));
+    // แถบหัว: เลือกนักเรียน / ภาคเรียน (เหมือนแถบเลือกรายวิชาในหน้าบันทึกผลการเรียนของครู)
+    $stOpt = '';
+    foreach (student_options() as $k => $v) {
+        $stOpt .= '<option value="'.h(a_url('grade_edit', '&student='.$k.'&yt='.rawurlencode($ytk))).'"'.((int) $k === $sid ? ' selected' : '').'>'.h($v).'</option>';
+    }
+    $ytOpt = '';
+    foreach ($terms as $k => $v) {
+        $ytOpt .= '<option value="'.h(a_url('grade_edit', '&student='.$sid.'&yt='.rawurlencode($k))).'"'.($k === $ytk ? ' selected' : '').'>'.h($v).'</option>';
+    }
+    [$r1, $r2, $r3] = score_ratio();
+    $info = '<div class="dz-info"><div style="display:flex"><img src="'.h(avatar_url($sid)).'" alt=""/><div><div class="t1">นักเรียน : '.h($s['name']).'</div><div class="t2">ระดับชั้น'.h(cat('class', $s['class'])).' ('.h(class_room_short($s['class'], $s['room'])).' เลขที่ '.(int) $s['number'].')</div>'
+        .'<div class="t3">รหัสประจำตัวนักเรียน '.h($s['student_id']).'</div><div class="t4"><span style="width:250px">ผลการเรียนเฉลี่ยภาคเรียนนี้ (GPA)</span><span style="width:70px">'.($gpa === null ? '-' : number_format($gpa, 2)).'</span></div>'.$gx.'</div></div>'
+        .'<div style="text-align:right"><div class="yt">ภาคเรียนที่ '.$t.' ปีการศึกษา '.$y.'</div><div class="ratio">อัตราส่วนคะแนนรายวิชา '.$r1.' : '.$r2.' : '.$r3.'</div>'
+        .'<a class="dz-addunit" href="'.h(a_url('grade_person', '&student='.$sid)).'" style="margin-top:14px"><b><i class="fa fa-list-alt"></i>ดูผลการเรียนทุกภาคเรียน</b></a></div></div>';
+    $bar = '<div class="rec-bar"><h2><i class="fa fa-list-ul"></i>บันทึกผลการเรียนรายบุคคล</h2><span><select onchange="location.href=this.value" style="height:24px;max-width:330px">'.$stOpt.'</select> '
+        .'<select onchange="location.href=this.value" style="height:24px">'.$ytOpt.'</select></span></div>';
+    $table = '<form name="ge" method="post" action="'.h($base.'&act=save').'"><div class="rec-tabs"><span class="rec-tab on">ผลการเรียนทุกรายวิชา</span></div><div class="rec-line"></div>'
+        .'<table class="rec"><tr><th rowspan="3" style="width:40px">ที่</th><th rowspan="3" style="width:80px">รหัสวิชา</th><th rowspan="3">รายวิชา</th><th colspan="7" class="big">คะแนนสอบและผลการเรียน ประจำภาคเรียนที่ '.$t.' ปีการศึกษา '.$y.'</th></tr>'
+        .'<tr><th rowspan="2" style="width:62px">ประเภท</th><th rowspan="2" style="width:58px">หน่วยกิต</th><th>ระหว่างภาค</th><th>ปลายภาค</th><th colspan="2">คะแนนรวมและสรุปผล</th><th rowspan="2" style="width:56px">ลบ</th></tr>'
+        .'<tr><th class="b">คะแนน</th><th class="b">คะแนน</th><th class="b">รวม</th><th class="b">เกรด</th></tr>'
+        .'<tr class="max"><td colspan="5" style="background:#FDE5DA"></td><td>'.h((string) ($midMaxAll ?? (100 - $r3))).'</td><td>'.h((string) ($finMaxAll ?? $r3)).'</td><td>100</td><td>4</td><td></td></tr>'
+        .($rows ?: '<tr><td colspan="10" class="c" style="padding:14px;color:#888">ยังไม่มีรายวิชาในภาคเรียนนี้ — เพิ่มรายวิชาได้ด้านล่าง</td></tr>').'</table>'
+        .($rows ? '<div class="rec-save"><a href="javascript:void(0)" class="sv" onclick="geSubmit()">บันทึกผลการเรียน</a><a href="'.h($base).'" class="cl">ยกเลิก</a></div>' : '').'</form>'
         .'<script>var GE_SCALE='.json_encode(grade_scale()).';'
         .'function geMsg(t,done){if(window.AlertBox&&AlertBox.alert){AlertBox.alert(t,"",{onComplete:done})}else{alert(t);done()}}'
-        .'function geGrade(tr){var ins=tr.find(".ge-n"),a=ins.eq(0).val().trim(),b=ins.eq(1).val().trim(),g=tr.find(".ge-g"),t=tr.find(".ge-t");'
-        .'if(a===""&&b===""){t.text("-");g.text("-").css("color","#1F618D");return}var s=Math.round((parseFloat(a)||0)+(parseFloat(b)||0));t.text(s);var r;'
+        .'function geBadVal(i){var v=i.value.trim(),mx=parseFloat($(i).attr("data-max"));return v!==""&&(!/^\\d+(\\.\\d+)?$/.test(v)||(mx>0&&parseFloat(v)>mx))}'
+        .'function geColor(i){var $i=$(i);$i.removeClass("ok bad err");if(i.value.trim()==="")return;$i.addClass(geBadVal(i)?"err":"ok")}'
+        .'function geGrade(tr){var ins=tr.find(".ge-n"),a=ins.eq(0).val().trim(),b=ins.eq(1).val().trim(),g=tr.find(".ge-g"),t=tr.find(".ge-t");ins.each(function(){geColor(this)});'
+        .'if(a===""&&b===""){t.text("");g.text("");return}var s=Math.round((parseFloat(a)||0)+(parseFloat(b)||0));t.text(s).removeClass("ok bad").addClass(s<50?"bad":"ok");var r;'
         .'if(g.attr("data-type")==="9"){r=s>=50?"ผ":"มผ"}else if(s<50){r="0"}else{r="0";for(var k=0;k<GE_SCALE.length;k++){if(s>=GE_SCALE[k][0]){r=GE_SCALE[k][1];break}}}'
-        .'g.text(r).css("color",(r==="0"||r==="มผ")?"#C0392B":"#1F618D")}'
+        .'g.text(r).removeClass("ok bad").addClass(r==="0"||r==="มผ"?"bad":"ok")}'
+        .'function geSubmit(){var bad=$(".ge-n").filter(function(){return geBadVal(this)});if(bad.length){var i=bad.get(0),v=i.value.trim();geMsg(/^\\d+(\\.\\d+)?$/.test(v)?"ไม่อนุญาตให้บันทึกคะแนนมากกว่า "+(Math.round(parseFloat($(i).attr("data-max"))*100)/100)+" คะแนน":"โปรดระบุคะแนนเป็นตัวเลขเท่านั้น",function(){i.focus()});return}document.forms.ge.submit()}'
         // วางคะแนนจาก Excel / Google Sheets: กระจายลงช่อง (ระหว่างภาค, ปลายภาค) ตามแถวและคอลัมน์ เริ่มจากช่องที่วาง
         .'document.addEventListener("paste",function(e){var i=e.target;if(!i.classList||!i.classList.contains("ge-n"))return;var tx=(e.clipboardData||window.clipboardData).getData("text");if(!/[\\t\\n]/.test(tx.trim()))return;e.preventDefault();'
         .'var rows=tx.replace(/\\r/g,"").replace(/\\n+$/,"").split("\\n").map(function(r){return r.split("\\t")});var trs=$(i).closest("table").find("tr").filter(function(){return $(this).find(".ge-n").length>0}).get();'
@@ -188,7 +215,7 @@ function adm_grade_edit(bool $post)
         .'rows.forEach(function(cells,ri){var tr=trs[r0+ri];if(!tr)return;var ins=$(tr).find(".ge-n");cells.forEach(function(v,ci){var x=ins.get(c0+ci);if(!x)return;v=v.trim();'
         .'if(v!==""&&!/^\\d+(\\.\\d+)?$/.test(v)){bad.push(v);x.value="";return}var mx=parseFloat($(x).attr("data-max"));if(v!==""&&mx>0&&parseFloat(v)>mx){over.push(v);x.value="";return}x.value=v});geGrade($(tr))});'
         .'if(bad.length){geMsg("โปรดระบุคะแนนเป็นตัวเลขเท่านั้น",function(){})}else if(over.length){geMsg("มีคะแนนเกินคะแนนเต็ม "+over.length+" ช่อง ระบบเว้นว่างไว้ให้",function(){})}});'
-        .'$(function(){$(".ge-n").bind("keyup change",function(){geGrade($(this).closest("tr"))}).bind("blur",function(){var i=this,v=i.value.trim(),mx=parseFloat($(i).attr("data-max"));'
+        .'$(function(){$(".ge-n").each(function(){geColor(this)}).bind("keyup change",function(){geGrade($(this).closest("tr"))}).bind("blur",function(){var i=this,v=i.value.trim(),mx=parseFloat($(i).attr("data-max"));'
         .'if(v!==""&&!/^\\d+(\\.\\d+)?$/.test(v)){geMsg("โปรดระบุคะแนนเป็นตัวเลขเท่านั้น",function(){i.value="";geGrade($(i).closest("tr"));i.focus()});return}'
         .'if(v!==""&&mx>0&&parseFloat(v)>mx){geMsg("ไม่อนุญาตให้บันทึกคะแนนมากกว่า "+(Math.round(mx*100)/100)+" คะแนน",function(){i.value="";geGrade($(i).closest("tr"));i.focus()})}})});</script>';
     // เพิ่มรายวิชา
@@ -199,12 +226,12 @@ function adm_grade_edit(bool $post)
             $co[(int) $c['id']] = $c['course_code'].' '.$c['course_name'].' ('.class_short($c['class']).')';
         }
     }
-    $add = '<form method="post" action="'.h(a_url('grade_edit', '&student='.$sid.'&yt='.rawurlencode($ytk).'&act=add')).'" style="width:983px;box-sizing:border-box;margin:10px auto;text-align:left;background:#fff;border:1px solid #ddd;border-radius:4px;padding:10px 14px">'
-        .'<b>เพิ่มรายวิชาให้นักเรียน</b><br>'.sel('course', $co, '', 'style="width:520px;height:25px"').' <input type="submit" value="เพิ่ม" class="general radius" style="height:25px"/>'
-        .'<div class="gray_12" style="margin:8px 0 4px">หรือ ถ้ายังไม่มีรายวิชาในภาคเรียนนี้ (บันทึกย้อนหลัง) กรอกเพื่อสร้างรายวิชาใหม่:</div>'
-        .'รหัสวิชา '.inp('code', '', 90).' ชื่อวิชา '.inp('name', '', 220).' หน่วยกิต '.inp('credit', '1.0', 40).' ประเภท '.sel('type', COURSE_TYPES, 1, 'style="height:22px"')
+    $add = '<form method="post" action="'.h($base.'&act=add').'" class="dz-info" style="display:block;margin-top:14px;font:13px Tahoma">'
+        .'<div class="t3" style="margin-bottom:6px"><i class="fa fa-plus-circle" style="color:#27AE60"></i> เพิ่มรายวิชาให้นักเรียน</div>'.sel('course', $co, '', 'style="width:520px;height:25px"').' <input type="submit" value="เพิ่ม" class="general radius" style="height:25px"/>'
+        .'<div class="gray_12" style="margin:10px 0 4px">หรือ ถ้ายังไม่มีรายวิชาในภาคเรียนนี้ (บันทึกย้อนหลัง) กรอกเพื่อสร้างรายวิชาใหม่:</div>'
+        .'รหัสวิชา '.inp('code', '', 90).' ชื่อวิชา '.inp('name', '', 200).' หน่วยกิต '.inp('credit', '1.0', 40).' ประเภท '.sel('type', COURSE_TYPES, 1, 'style="height:22px"')
         .' ระดับชั้น '.sel('class', cats('class'), (int) $s['class'], 'style="height:22px"').' <input type="submit" value="สร้างและเพิ่ม" class="general radius" style="height:25px"/></form>';
-    return $f.$note.$head.$table.$add;
+    return d_css().rec_css().'<div class="dz">'.$bar.$info.$table.$add.'<p class="gray_12" style="margin-top:8px">ระบบคิดผลการเรียนให้อัตโนมัติจากคะแนนรวมเหมือนหน้าบันทึกผลการเรียนของครู (รวมต่ำกว่า 50 = 0, กิจกรรม = ผ/มผ) วางคะแนนจาก Excel ได้ — รายวิชาที่ไม่ได้แก้คะแนนจะคงผลการเรียนเดิม (เช่น ร, มส, ผลสอบแก้ตัว)</p></div>';
 }
 
 /** ผลการเรียนอัตโนมัติจากคะแนน (เหมือนหน้าบันทึกผลการเรียนของครู) */

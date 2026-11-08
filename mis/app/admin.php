@@ -7,7 +7,7 @@
  */
 defined('MIS') or exit;
 
-const MODULE_KEYS = ['main', 'academic', 'affairs', 'personnel', 'general', 'finance', 'settings'];
+const MODULE_KEYS = ['main', 'academic', 'affairs', 'personnel', 'general', 'finance', 'stusys', 'settings'];
 
 /** โมดูลที่ผู้ใช้มีสิทธิ์ (ผู้ดูแลระบบสูงสุด = ทุกโมดูล; ที่กำหนดในหน้ากำหนดผู้ดูแลระบบ; ถ้ายังไม่กำหนดใช้สิทธิ์เดิมของ SMS) */
 function user_modules(?array $u = null): array
@@ -61,6 +61,7 @@ function admin_modules(): array
         'personnel' => ['บริหารงานบุคลากร', 'personnel', personnel_menu()],
         'general' => ['บริหารงานทั่วไป', 'general', general_menu()],
         'finance' => ['รับชำระเงินค่าบำรุงการศึกษา', 'finance', finance_menu(), 'รับชำระเงิน'],
+        'stusys' => ['ระบบนักเรียน (Student System)', 'stusys', stusys_menu(), 'ระบบนักเรียน'],
         'settings' => ['การตั้งค่า', 'settings', [
             'กำหนดค่าเริ่มต้นของระบบ' => ['school' => 'ข้อมูลโรงเรียน', 'admins' => 'กำหนดผู้ดูแลระบบและสิทธิ์โมดูล', 'csv_import' => 'นำเข้าข้อมูลจากไฟล์ CSV', 'users' => 'บัญชีผู้ใช้', 'password' => 'เปลี่ยนรหัสผ่าน', 'teacher_view' => 'ไปหน้าครูผู้สอน'],
         ]],

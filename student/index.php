@@ -1,13 +1,15 @@
 <?php
 /**
  * student/index.php
- * ระบบสารสนเทศสำหรับผู้ปกครองและนักเรียน (/student)
+ * ระบบนักเรียน (Student System) — หน้าตาและเมนูแบบระบบนักเรียน CRMS ข้อมูลเชื่อมกับระบบสารสนเทศของโรงเรียน
  * - เข้าสู่ระบบด้วยเลขประจำตัวนักเรียน + เลขประจำตัวประชาชน 13 หลัก (หรือรหัสผ่านของบัญชี)
- * - ใช้ได้เฉพาะนักเรียน ครู/ผู้ดูแลระบบใช้หน้านี้ไม่ได้
- * ?p= home | profile | sdq | cap | analyze | eq | att | grade | fund | club | logout
+ * - ใช้ได้เฉพาะนักเรียน ครู/ผู้ดูแลระบบใช้หน้านี้ไม่ได้ (ตั้งค่าได้ที่โมดูล "ระบบนักเรียน" ในระบบสารสนเทศ)
+ * ?p= home | (หน้าในเมนู ST_MENU) | logout
  */
 require dirname(__DIR__).'/mis/app/boot.php';
+require __DIR__.'/layout.php';
 require __DIR__.'/forms.php';
+require __DIR__.'/pages.php';
 
 $p = preg_replace('/[^a-z0-9_]/', '', (string) ($_GET['p'] ?? 'home'));
 $err = '';
@@ -79,11 +81,14 @@ if (!is_student($me)) {
 }
 
 $sid = (int) $me['id'];
-$S = q1('SELECT S.*, U.`name`, U.`phone`, U.`sex`, U.`birthday` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`id`=?', [$sid]);
+$S = q1('SELECT S.*, U.`name`, U.`phone`, U.`sex`, U.`birthday`, U.`id_card` uic FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`id`=?', [$sid]);
+if (empty($S['id_card']) && !empty($S['uic'])) {
+    $S['id_card'] = $S['uic'];
+}
 $pages = st_pages();
-if (!isset($pages[$p]) && $p !== 'home') {
+if ($p !== 'home' && (!isset($pages[$p]) || in_array($p, st_menu_off(), true) || !function_exists('st_'.$p))) {
     $p = 'home';
 }
 $post = ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST';
-$body = $p === 'home' ? st_home() : ('st_'.$p)($S, $post);
-st_layout($p === 'home' ? '' : $pages[$p][0], $body, $S);
+$body = ('st_'.$p)($S, $post);
+st_layout($p, $p === 'home' ? '' : $pages[$p], $body, $S);

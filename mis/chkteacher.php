@@ -19,4 +19,7 @@ mis_auth_cookie('auth_token', $result['token'], \Index\Auth\Model::TOKEN_EXPIRY)
 if (!empty($result['refresh_token'])) {
     mis_auth_cookie('refresh_token', $result['refresh_token'], \Index\Auth\Model::REFRESH_TOKEN_EXPIRY);
 }
+foreach (['mis_term', 'mis_teacher_view', 'mis_adv_room'] as $c) {
+    setcookie($c, '', ['expires' => time() - 3600, 'path' => '/mis/']);
+}
 redirect('edumain/index.php');

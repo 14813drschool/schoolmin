@@ -648,11 +648,19 @@ function rows_task_study_record_Record()
         .'tabs.forEach(function(t){t.addEventListener("click",function(){show(t.dataset.p)})});var m=location.search.match(/[?&]tab=(p\d+)/);show(m&&document.getElementById(m[1])?m[1]:tabs[tabs.length-1].dataset.p);'
         .'document.querySelectorAll(".rec-in").forEach(function(i){i.addEventListener("input",function(){recColor(i);recMax(i)})});recColor();'
         // กดบันทึก: ถ้ายังมีช่องที่เกินคะแนนเต็ม แจ้งเตือนและไม่บันทึก
-        .'var f=document.forms.rec;if(f){var sub=f.submit;f.submit=function(){var bad=[].slice.call(f.querySelectorAll(".rec-in")).filter(function(i){return recOver(i)});if(bad.length){recMax(bad[0]);return}sub.call(f)}}})();'
+        .'var f=document.forms.rec;if(f){var sub=f.submit;f.submit=function(){var bad=[].slice.call(f.querySelectorAll(".rec-in")).filter(function(i){return recOver(i)||recNaN(i)});if(bad.length){recMax(bad[0]);return}sub.call(f)}}})();'
         // ระบบเดิม: "ไม่อนุญาตให้บันทึกคะแนนมากกว่า N คะแนน" แล้วล้างช่องนั้น
         .'function recOver(i){var mx=parseFloat(i.dataset.max),v=parseFloat(i.value);return i.value!==""&&mx>0&&!isNaN(v)&&v>mx}'
         .'function recMsg(t,done){if(window.AlertBox&&AlertBox.alert){AlertBox.alert(t,"",{onComplete:done})}else{alert(t);done()}}'
-        .'function recMax(i){if(!recOver(i))return;var mx=parseFloat(i.dataset.max);i.blur();recMsg("ไม่อนุญาตให้บันทึกคะแนนมากกว่า "+(Math.round(mx*100)/100)+" คะแนน",function(){i.value="";recColor(i);i.focus()})}'
+        .'function recNaN(i){return i.value.trim()!==""&&!/^\\d+(\\.\\d+)?$/.test(i.value.trim())}'
+        .'function recBad(i){if(recNaN(i)){i.blur();recMsg("โปรดระบุคะแนนเป็นตัวเลขเท่านั้น",function(){i.value="";recColor(i);i.focus()});return true}return false}'
+        // วางคะแนนจาก Excel / Google Sheets: กระจายลงช่องตามแถวและคอลัมน์ เริ่มจากช่องที่วาง
+        .'document.addEventListener("paste",function(e){var i=e.target;if(!i.classList||!i.classList.contains("rec-in"))return;var t=(e.clipboardData||window.clipboardData).getData("text");if(!/[\\t\\n]/.test(t.trim()))return;e.preventDefault();'
+        .'var rows=t.replace(/\\r/g,"").replace(/\\n+$/,"").split("\\n").map(function(r){return r.split("\\t")});var tb=i.closest("table"),trs=[].slice.call(tb.querySelectorAll("tr")).filter(function(r){return r.querySelector(".rec-in")});'
+        .'var r0=trs.indexOf(i.closest("tr")),c0=[].slice.call(i.closest("tr").querySelectorAll(".rec-in")).indexOf(i),first=null;'
+        .'rows.forEach(function(cols,ri){var tr=trs[r0+ri];if(!tr)return;var ins=tr.querySelectorAll(".rec-in");cols.forEach(function(v,ci){var x=ins[c0+ci];if(!x)return;x.value=v.trim();recColor(x);if(!first&&(recNaN(x)||recOver(x)))first=x})});'
+        .'if(first){recBad(first)||recMax(first)}});'
+        .'function recMax(i){if(recBad(i))return;if(!recOver(i))return;var mx=parseFloat(i.dataset.max);i.blur();recMsg("ไม่อนุญาตให้บันทึกคะแนนมากกว่า "+(Math.round(mx*100)/100)+" คะแนน",function(){i.value="";recColor(i);i.focus()})}'
         // สีช่องคะแนน: ได้ตั้งแต่ครึ่งหนึ่งของคะแนนเต็ม = เขียว, ต่ำกว่า = แดง, เกินคะแนนเต็ม/ไม่ใช่ตัวเลข = ผิดพลาด
         .'function recColor(one){(one?[one]:document.querySelectorAll(".rec-in")).forEach(function(i){var mx=parseFloat(i.dataset.max),v=parseFloat(i.value),e=i.value!==""&&(isNaN(v)||v<0||(mx>0&&v>mx));'
         .'i.classList.toggle("err",e);i.classList.toggle("ok",!e&&i.value!==""&&mx>0&&v>=mx/2);i.classList.toggle("bad",!e&&i.value!==""&&mx>0&&v<mx/2)})}'

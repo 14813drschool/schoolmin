@@ -1230,7 +1230,6 @@ function adm_password(bool $post)
 function rows_index_()
 {
     $top = admin_news_box();
-    $top .= '<div style="width:983px;margin:0 auto 6px;text-align:right">'.btn('พิมพ์ใบเกรด / ใบคะแนน', 'index.php?module=print', 'print').'</div>';
     if (is_admin()) {
         $top .= '<div style="width:983px;margin:0 auto 6px;text-align:right">'.btn('กลับหน้าผู้ดูแลระบบ', 'index.php?admin=1', 'cog').'</div>';
     }

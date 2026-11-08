@@ -214,10 +214,11 @@ function adm_term(bool $post)
         $cur = $k === $curKey;
         $rows .= zrow([++$i, h($y), h($t).($cur ? cur_badge() : ''), !empty($d['start']) ? th_date($d['start'], ' ') : '-', !empty($d['end']) ? th_date($d['end'], ' ') : '-',
             [($cur ? '' : del_link(a_url('term', '&del='.rawurlencode($k))).' ').edit_link(a_url('term', '&func=Edit&id='.rawurlencode($k))).' '
-                .($cur ? '<i class="fa fa-thumb-tack" style="color:#ccc;font-size:16px" title="ภาคเรียนปัจจุบัน"></i>' : '<a href="'.a_url('term', '&pin='.rawurlencode($k)).'" title="กำหนดเป็นภาคเรียนปัจจุบัน" onclick="return confirm(\'กำหนดภาคเรียน '.$t.'/'.$y.' เป็นภาคเรียนปัจจุบัน?\')"><i class="fa fa-thumb-tack" style="color:#333;font-size:16px"></i></a>'),
+                .($cur ? '<i class="fa fa-thumb-tack" style="color:#ccc;font-size:16px" title="ภาคเรียนปัจจุบัน"></i>' : '<a href="javascript:void(0)" title="กำหนดเป็นภาคเรียนปัจจุบัน" onclick="pinTerm(\''.h(a_url('term', '&pin='.rawurlencode($k))).'\',\''.$t.'/'.$y.'\')"><i class="fa fa-thumb-tack" style="color:#333;font-size:16px"></i></a>'),
                 ' align="center" width="80"']], $i);
     }
-    $help = '<div style="width:983px;margin:0 auto 10px;text-align:left" class="gray_12">คลิกไอคอน <i class="fa fa-thumb-tack"></i> ในภาคเรียนที่ต้องการ เพื่อกำหนดให้ภาคเรียนนั้นเป็นภาคเรียนปัจจุบัน เมื่อผู้ใช้เข้าสู่ระบบ ภาคเรียน/ปีการศึกษาปัจจุบันจะถูกกำหนดตามที่ปักหมุดไว้เสมอ<br>'
+    $help = '<script>function pinTerm(u,t){var go=function(r){if(r)location.href=u};if(window.AlertBox&&AlertBox.confirm){AlertBox.confirm("<br>กำหนดภาคเรียน "+t+" เป็นภาคเรียนปัจจุบัน?","",{onComplete:go})}else{go(confirm("กำหนดภาคเรียน "+t+" เป็นภาคเรียนปัจจุบัน?"))}}</script>'
+        .'<div style="width:983px;margin:0 auto 10px;text-align:left" class="gray_12">คลิกไอคอน <i class="fa fa-thumb-tack"></i> ในภาคเรียนที่ต้องการ เพื่อกำหนดให้ภาคเรียนนั้นเป็นภาคเรียนปัจจุบัน เมื่อผู้ใช้เข้าสู่ระบบ ภาคเรียน/ปีการศึกษาปัจจุบันจะถูกกำหนดตามที่ปักหมุดไว้เสมอ<br>'
         .'ผู้ใช้ยังเลือกดูข้อมูลย้อนหลังได้จาก "ปีการศึกษา" ด้านบนของหน้าจอ (เป็นการเรียกดูชั่วคราว ภาคเรียนปัจจุบันยังเป็นภาคเรียนที่ปักหมุดไว้เช่นเดิม)</div>';
     return ['กำหนดภาคเรียนปัจจุบัน', $help.list_table('รายการภาคเรียน', ['#', 'ปีการศึกษา', 'ภาคเรียน', 'วันเปิดภาคเรียน', 'วันปิดภาคเรียน', ['', ' style="width:80px"']], $rows, 'ทั้งหมด '.$i.' รายการ',
         btn('เพิ่มภาคเรียน', a_url('term', '&func=Edit'), 'add')), head_btn('เพิ่ม', a_url('term', '&func=Edit'), 'add')];

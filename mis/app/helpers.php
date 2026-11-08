@@ -240,14 +240,14 @@ function year_options(): string
 /** ผู้ใช้ออนไลน์ใน 15 นาที: [ครู, นักเรียน] (รายการ id) */
 function online_users(): array
 {
-    $rows = q('SELECT DISTINCT S.`member_id`, (ST.`id` IS NOT NULL) is_student FROM {user_session} S'
-        .' LEFT JOIN {student} ST ON ST.`id`=S.`member_id`'
+    $rows = q('SELECT DISTINCT S.`member_id`, (ST.`id` IS NOT NULL) is_student, U.`status` FROM {user_session} S'
+        .' LEFT JOIN {student} ST ON ST.`id`=S.`member_id` LEFT JOIN {user} U ON U.`id`=S.`member_id`'
         .' WHERE S.`expires_at`>? AND S.`last_seen`>=DATE_SUB(NOW(), INTERVAL 15 MINUTE)', [time()]);
     $t = $s = [];
     foreach ($rows as $r) {
         if ((int) $r['is_student']) {
             $s[] = (int) $r['member_id'];
-        } else {
+        } elseif ((int) $r['status'] !== 1) {
             $t[] = (int) $r['member_id'];
         }
     }

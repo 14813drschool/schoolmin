@@ -57,7 +57,7 @@ function st_head(string $title, string $wrap = ''): string
 {
     return '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>'.h($title).'</title>'
         .'<link rel="shortcut icon" href="/mis/images/favicon.ico"><link rel="stylesheet" href="/mis/css/thaisansbold.css"><link rel="stylesheet" href="/mis/root/css/font-awesome.css">'.st_css().'</head><body><div class="wrap"'.($wrap ? ' style="width:'.$wrap.'"' : '').'>'
-        .'<div class="brand"><a href="/mis/"><img src="/mis/gallery/logo/school_logo.png" alt="logo"></a><div><h1>'.h(cfg('school_name', 'โรงเรียนดรุณราษฎร์วิทยา')).'</h1><small>DAROONRAJWITTAYA SCHOOL</small></div></div>';
+        .'<div class="brand"><a href="/mis/"><img src="'.h(school_logo_abs()).'" alt="logo"></a><div><h1>'.h((string) (cfg('school_name') ?: 'โรงเรียนดรุณราษฎร์วิทยา')).'</h1><small>DAROONRAJWITTAYA SCHOOL</small></div></div>';
 }
 
 function st_login_page(string $err, bool $loggedOther = false): void

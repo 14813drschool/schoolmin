@@ -218,7 +218,7 @@ function d_modal(string $id, string $title, int $width, string $action, string $
     return '<div class="dz-ov" id="'.$id.'"><div class="dz-m" style="width:'.$width.'px"><form method="post" action="'.h($action).'">'
         .'<div class="hd"><i class="fa fa-list-ul"></i>'.h($title).'<span class="x" onclick="dzClose(\''.$id.'\')">✕</span></div><div class="bd">'
         .($note !== '' ? '<div class="note"><i class="fa fa-commenting"></i><span>'.h($note).'</span></div>' : '').$body.'</div>'
-        .'<div class="ft">'.($del !== '' ? '<button type="submit" name="del" value="1" class="d" onclick="return confirm(\'ยืนยันการลบ '.h($del).'?\')">✕ ลบ</button>' : '')
+        .'<div class="ft">'.($del !== '' ? '<button type="submit" name="del" value="1" class="d" onclick="return misConfirm(this,\'ยืนยันการลบ '.h($del).'?\')">✕ ลบ</button>' : '')
         .'<button type="submit" class="s">✎ บันทึก</button><button type="reset" class="c">✕ เคลียร์</button></div></form></div></div>';
 }
 

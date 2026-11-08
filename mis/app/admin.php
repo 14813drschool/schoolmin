@@ -247,7 +247,7 @@ function txt(string $name, $value, int $w = 600): string
 
 function del_link(string $href): string
 {
-    return '<a href="'.$href.'" onclick="return confirm(\'ยืนยันการลบ?\')" class="icontooltip" title="ลบ"><img src="../icon_tools/vec_x_dark.png" onerror="this.src=\'../icon_tools/vec_bin_disable.png\'" height="16"/></a>';
+    return '<a href="'.$href.'" onclick="return misConfirm(this,\'ยืนยันการลบ?\')" class="icontooltip" title="ลบ"><img src="../icon_tools/vec_bin_dark.png" height="16"/></a>';
 }
 
 function edit_link(string $href): string
@@ -935,7 +935,7 @@ function adm_enroll(bool $post)
     $f = '<form method="get" style="width:983px;margin:0 auto 10px;text-align:left"><input type="hidden" name="module" value="admin"/><input type="hidden" name="option" value="enroll"/><span class="search">รายวิชา '
         .sel('course', $copts ?: ['' => '- ยังไม่มีรายวิชา -'], $cid, 'onchange="this.form.submit()" style="width:400px;height:25px"').'</span><div style="clear:both"></div></form>';
     $add = '<span style="float:left">เพิ่มนักเรียนทั้งห้อง '.sel('room', ['0' => '- เลือกห้อง -'] + cats('room'), 0).' <input type="submit" name="add_room" value="เพิ่ม" class="general radius" style="height:25px"/></span>'
-        .'<input type="submit" name="remove_btn" value="ลบนักเรียนที่เลือก" class="general radius" style="height:25px" onclick="return confirm(\'ลบนักเรียนที่เลือกออกจากรายวิชา?\')"/>';
+        .'<input type="submit" name="remove_btn" value="ลบนักเรียนที่เลือก" class="general radius" style="height:25px" onclick="return misConfirm(this,\'ลบนักเรียนที่เลือกออกจากรายวิชา?\')"/>';
     return ['ลงทะเบียนนักเรียนเข้ารายวิชา', $f.'<form method="post" action="'.h(a_url('enroll', '&course='.$cid)).'">'.list_table('นักเรียนที่ลงทะเบียน', ['#', 'รหัสนร.', 'ชื่อ-นามสกุล', 'ห้อง', 'เลขที่', ['เลือกลบ', ' style="text-align:center"']], $rows, '', $add).'</form>'];
 }
 
@@ -1106,6 +1106,13 @@ function school_logo(): string
     return '../gallery/logo/school_logo.png';
 }
 
+/** โลโก้โรงเรียนแบบ URL เต็ม (ใช้ในหน้านอก /mis/edumain/ เช่น หน้าแรก /mis, /student, /schoolpayment) */
+function school_logo_abs(): string
+{
+    $u = school_logo();
+    return strpos($u, '../') === 0 ? '/mis/'.substr($u, 3) : $u;
+}
+
 /** ชื่อนายทะเบียน */
 function registrar_name(): string
 {
@@ -1206,7 +1213,7 @@ function adm_users(bool $post)
     $rows = '';
     foreach (q($sql) as $i => $u) {
         $rows .= zrow([$i + 1, h($u['username']), name_nbsp($u['name']), (int) $u['status'] === 1 ? 'ผู้ดูแลระบบ' : ($u['sid'] ? 'นักเรียน' : 'บุคลากร'), (int) $u['active'] ? 'ใช้งาน' : '<span style="color:#f00">ระงับ</span>',
-            '<a href="'.a_url('users', '&t='.$type.'&toggle='.(int) $u['id']).'">'.((int) $u['active'] ? 'ระงับ' : 'เปิดใช้').'</a> | <a href="'.a_url('users', '&t='.$type.'&reset='.(int) $u['id']).'" onclick="return confirm(\'ตั้งรหัสผ่านใหม่ให้เท่ากับชื่อผู้ใช้?\')">รีเซ็ตรหัสผ่าน</a>'], $i);
+            '<a href="'.a_url('users', '&t='.$type.'&toggle='.(int) $u['id']).'">'.((int) $u['active'] ? 'ระงับ' : 'เปิดใช้').'</a> | <a href="'.a_url('users', '&t='.$type.'&reset='.(int) $u['id']).'" onclick="return misConfirm(this,\'ตั้งรหัสผ่านใหม่ให้เท่ากับชื่อผู้ใช้?\')">รีเซ็ตรหัสผ่าน</a>'], $i);
     }
     $f = '<div style="width:983px;margin:0 auto 10px;text-align:left"><span class="search">'.($type === 'student' ? '<a href="'.a_url('users', '&t=staff').'">บุคลากร</a> | <b>นักเรียน</b>' : '<b>บุคลากร</b> | <a href="'.a_url('users', '&t=student').'">นักเรียน</a>')
         .'</span><div style="clear:both"></div></div>';

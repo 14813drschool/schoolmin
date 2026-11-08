@@ -27,7 +27,21 @@ if (navigator.userAgent.toLowerCase().indexOf("chrome") >= 0) {
     });
 }
 </script>
-<script>            
+<script>
+/* กล่องยืนยันในเว็บ (AlertBox) แทน confirm ของเบราว์เซอร์: el = ลิงก์/ปุ่ม/ฟอร์มที่กด, fn = ทำงานเมื่อกดตกลง (ถ้าไม่ระบุ จะกดซ้ำ/ส่งฟอร์มเดิม) */
+function misConfirm(el, msg, fn) {
+	if (el && el._misOk) { el._misOk = 0; return true; }
+	var go = function (r) {
+		if (!r) return;
+		if (fn) { fn(); return; }
+		el._misOk = 1;
+		if (el.tagName === 'FORM') { el.submit(); } else { el.click(); }
+	};
+	if (window.AlertBox && AlertBox.confirm) { AlertBox.confirm('<br>' + msg, '', {onComplete: go}); return false; }
+	if (!confirm(msg)) return false;
+	if (fn) { fn(); return false; }
+	return true;
+}
 $(document).ready(function() {
 
 	$('input').attr('autocomplete','new-password');

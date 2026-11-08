@@ -97,7 +97,7 @@ function adm_pay(bool $post)
             [$p ? '<img src="../images/1347351892_yes.png" height="14"/>' : '<input type="checkbox" name="p['.$id.'][on]" value="1"/>', ' align="center"'],
             [$p ? money($p['amount']) : inp('p['.$id.'][amount]', $due, 80), ' align="right"'], [$p ? th_date($p['date'], ' ') : '', ' align="center"'],
             [$p ? h($p['book']) : inp('p['.$id.'][book]', '', 50), ' align="center"'], [$p ? h($p['no']) : inp('p['.$id.'][no]', '', 50), ' align="center"'],
-            [$p ? '<a href="'.a_url('receipt', '&print=1&student='.$id).'" target="_blank">ใบเสร็จ</a> | <a href="'.a_url('pay', '&room='.$room.'&cancel='.$id).'" onclick="return confirm(\'ยกเลิกการชำระเงินรายการนี้?\')">ยกเลิก</a>' : '', ' align="center"']], $i);
+            [$p ? '<a href="'.a_url('receipt', '&print=1&student='.$id).'" target="_blank">ใบเสร็จ</a> | <a href="'.a_url('pay', '&room='.$room.'&cancel='.$id).'" onclick="return misConfirm(this,\'ยกเลิกการชำระเงินรายการนี้?\')">ยกเลิก</a>' : '', ' align="center"']], $i);
     }
     $bar = 'วันที่ชำระ '.d_in('date', date('Y-m-d')).' วิธีชำระ '.sel('method', PAY_METHOD, 'cash').' <a href="javascript:void(0)" onclick="document.forms.payform.submit()" id="pinkgreenbtns"><img src="../icon_tools/vec_add_white.png" height="16"/> บันทึกการรับชำระ</a>';
     return $f.'<form id="payform" method="post" action="'.h(a_url('pay', '&room='.$room)).'">'.list_table('รายการห้องเรียน '.h(room_options()[$room] ?? ''), ['#', 'รหัส', 'ชื่อ-นามสกุล', 'ยอดที่ต้องชำระ', 'ชำระ', 'จำนวนเงิน', 'วันที่ชำระ', 'เล่มที่', 'เลขที่', ''],

@@ -375,7 +375,7 @@ function adm_student(bool $post)
         .inp('q', $f['q'], 220, 'text', 'placeholder="ค้นหานักเรียน (รหัส ชื่อ ชื่อเล่น เลขบัตร วิธีเข้าเรียน)"').' <label><input type="checkbox" name="all" value="1"'.($f['all'] === '1' ? ' checked' : '').' onchange="this.form.submit()"/> รวมนักเรียนที่พ้นสภาพ</label>'
         .' <input type="submit" value="ค้นหา" class="general radius" style="height:25px"/></span><div style="clear:both"></div></form>';
     $tools = head_btn('อัพเดต', a_url('csv_import').'#phones', 'reload').head_btn('นำเข้าไฟล์', a_url('csv_import').'#students', 'download').head_btn('ส่งออกไฟล์', a_url('student', '&export=1&'.$qs), 'upload')
-        .head_btn('เพิ่ม', a_url('student', '&func=Edit'), 'add').'<div style="float:left;margin:0px 2px"><a href="javascript:void(0)" onclick="if(confirm(\'ลบนักเรียนที่เลือก (รวมผลการเรียน)?\'))document.forms.stlist.submit()" style="display:inline-block;width:58px;height:56px;border:1px solid #ddd;border-radius:6px;background:#fafafa;text-align:center;font-size:11px;color:#555;padding-top:4px"><i class="fa fa-times-circle" style="font-size:24px;color:#E74C3C;margin-top:4px"></i><br>ลบ</a></div>';
+        .head_btn('เพิ่ม', a_url('student', '&func=Edit'), 'add').'<div style="float:left;margin:0px 2px"><a href="javascript:void(0)" onclick="return misConfirm(this,\'ลบนักเรียนที่เลือก (รวมผลการเรียน)?\',function(){document.forms.stlist.submit()})" style="display:inline-block;width:58px;height:56px;border:1px solid #ddd;border-radius:6px;background:#fafafa;text-align:center;font-size:11px;color:#555;padding-top:4px"><i class="fa fa-times-circle" style="font-size:24px;color:#E74C3C;margin-top:4px"></i><br>ลบ</a></div>';
     return ['กำหนดทะเบียนนักเรียนปัจจุบัน', $form.'<form id="stlist" name="stlist" method="post" action="'.h(a_url('student', '&'.$qs)).'">'.list_table('รายการทะเบียนนักเรียนปัจจุบัน ประจำปีการศึกษา '.explode('/', yt())[0],
         ['#', 'รหัสนักเรียน', 'ชื่อ', 'นามสกุล', 'ชื่อเล่น', 'สถานภาพ', 'ปัจจุบันอยู่ชั้น', 'เลขที่', 'วิธีการเข้าเรียน', ['<input type="checkbox" onclick="var c=document.querySelectorAll(\'input[name^=del_ids]\');for(var i=0;i<c.length;i++)c[i].checked=this.checked"/>', ' style="text-align:center"'], ['', ' style="width:70px"']],
         $rows, 'ทั้งหมด '.count($list).' รายการ').'</form>', $tools];
@@ -867,9 +867,9 @@ function adm_student_class(bool $post)
     $save = '<a href="javascript:void(0);" onclick="document.forms.sc.submit();" id="pinkgreenbtns"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึกครูที่ปรึกษา/แผนการเรียน</a>';
     $hy = hist_years('adv_hist');
     $py = hist_years('room_prog');
-    $copy = '<div style="width:983px;margin:0 auto 10px;text-align:left"><form method="post" action="'.h(a_url('student_class')).'" style="display:inline-block;margin-right:20px" onsubmit="return confirm(\'คัดลอกครูที่ปรึกษาทุกห้องจากปีที่เลือกมายังปีการศึกษา '.$cy.'?\')"><span class="search">คัดลอกครูประจำชั้นจาก '
+    $copy = '<div style="width:983px;margin:0 auto 10px;text-align:left"><form method="post" action="'.h(a_url('student_class')).'" style="display:inline-block;margin-right:20px" onsubmit="return misConfirm(this,\'คัดลอกครูที่ปรึกษาทุกห้องจากปีที่เลือกมายังปีการศึกษา '.$cy.'?\')"><span class="search">คัดลอกครูประจำชั้นจาก '
         .sel('copy_adv', ['' => 'เลือกปีการศึกษา'] + $hy, '').' <input type="submit" value="คัดลอก" class="general radius" style="height:25px"/></span></form>'
-        .'<form method="post" action="'.h(a_url('student_class')).'" style="display:inline-block" onsubmit="return confirm(\'คัดลอกแผนการเรียนทุกห้องจากปีที่เลือกมายังปีการศึกษา '.$cy.'?\')"><span class="search">คัดลอกแผนการเรียนจาก '
+        .'<form method="post" action="'.h(a_url('student_class')).'" style="display:inline-block" onsubmit="return misConfirm(this,\'คัดลอกแผนการเรียนทุกห้องจากปีที่เลือกมายังปีการศึกษา '.$cy.'?\')"><span class="search">คัดลอกแผนการเรียนจาก '
         .sel('copy_prog', ['' => 'เลือกปีการศึกษา'] + $py, '').' <input type="submit" value="คัดลอก" class="general radius" style="height:25px"/></span></form></div>'
         .'<div style="width:983px;margin:0 auto 8px;text-align:left" class="gray_12">คำอธิบาย: <i class="fa fa-wrench"></i> จัดการนักเรียน &nbsp; <i class="fa fa-cloud-upload"></i> เลื่อนชั้น &nbsp; <i class="fa fa-retweet"></i> ซ้ำชั้น &nbsp; <i class="fa fa-thumbs-up"></i> จบการศึกษา'
         .' &nbsp;|&nbsp; ครูที่ปรึกษาห้องละไม่เกิน 2 คน / "บันทึก" = นักเรียนที่บันทึกข้อมูลส่วนตัวแล้ว / ติ๊กห้องแล้วกด "ยืนยัน" เพื่อบันทึกประวัติ</div>';
@@ -941,7 +941,7 @@ function adm_student_class_Room(bool $post)
             ? [$i + 1, h($s['student_id']), inp('num['.$id.']', $s['number'] ?? '', 60), h($pre.$first), h($last), status_badge($st[$id]['status'] ?? 'ศึกษาอยู่')]
             : [[h($s['number']), ' align="center"'], h($s['student_id']), h($pre.$first), h($last), status_badge($st[$id]['status'] ?? 'ศึกษาอยู่'), h(class_room_full((int) $s['class'], $rid)),
                 sel('move['.$id.']', $choices, 0, 'style="width:170px;height:24px"'),
-                ['<a href="'.h($back.'&remove='.$id).'" onclick="return confirm(\'ลบออกจากห้องเรียน? (รายชื่อจะไปอยู่ที่เมนูนักเรียนยังไม่กำหนดห้องเรียน)\')" style="background:#F39C12;color:#fff;padding:3px 8px;border-radius:3px;white-space:nowrap"><i class="fa fa-times"></i> ลบออกจากห้องเรียน</a>', ' align="center"']];
+                ['<a href="'.h($back.'&remove='.$id).'" onclick="return misConfirm(this,\'ลบออกจากห้องเรียน? (รายชื่อจะไปอยู่ที่เมนูนักเรียนยังไม่กำหนดห้องเรียน)\')" style="background:#F39C12;color:#fff;padding:3px 8px;border-radius:3px;white-space:nowrap"><i class="fa fa-times"></i> ลบออกจากห้องเรียน</a>', ' align="center"']];
         $rows .= zrow($cells, $i);
     }
     $title = 'รายชื่อนักเรียนชั้น'.room_title($rid).' ประจำปีการศึกษา '.cur_term()[0];
@@ -990,7 +990,7 @@ function promote_page(bool $post, string $type): array
         $rows .= zrow([[h($s['number']), ' align="center"'], h($s['student_id']), h($pre.$first), h($last), status_badge($st[$id]['status'] ?? 'ศึกษาอยู่'), h(class_room_full((int) $s['class'], $rid)), [$mark, ' align="center"'],
             sel('to['.$id.']', $choices, $type === 'promote' ? $def : 0, 'style="width:150px;height:24px"'), inp('note['.$id.']', $d['note'] ?? '', 150, 'text', 'placeholder="หมายเหตุ"')], $i);
     }
-    $btn = '<a href="javascript:void(0)" onclick="if(confirm(\'ยืนยันการ'.($type === 'promote' ? 'เลื่อนระดับชั้น' : 'กำหนดนักเรียนซ้ำชั้น').'?\'))document.forms.pm.submit()" id="pinkgreenbtns" style="background:#F39C12">'.($type === 'promote' ? 'เลื่อนระดับชั้นนักเรียน' : 'กำหนดนักเรียนซ้ำชั้น').'</a>';
+    $btn = '<a href="javascript:void(0)" onclick="return misConfirm(this,\'ยืนยันการ'.($type === 'promote' ? 'เลื่อนระดับชั้น' : 'กำหนดนักเรียนซ้ำชั้น').'?\',function(){document.forms.pm.submit()})" id="pinkgreenbtns" style="background:#F39C12">'.($type === 'promote' ? 'เลื่อนระดับชั้นนักเรียน' : 'กำหนดนักเรียนซ้ำชั้น').'</a>';
     $help = $type === 'promote'
         ? 'เลือกชั้นเรียนที่ต้องการเลื่อนไป (ค่าเริ่มต้นคือห้องเดียวกันของชั้นถัดไป) หากนักเรียนคนใดไม่เลื่อนชั้นให้เลือก "ไม่เลื่อนชั้นเรียน" แล้วกด "เลื่อนระดับชั้นนักเรียน"'
         : 'เลือกห้องที่นักเรียนต้องเรียนซ้ำชั้น (คนที่ไม่ซ้ำชั้นให้คงไว้ที่ "ไม่ซ้ำชั้น") บันทึกหมายเหตุ (ถ้ามี) แล้วกด "กำหนดนักเรียนซ้ำชั้น"';
@@ -1038,7 +1038,7 @@ function adm_student_class_Grad(bool $post)
             sel('g['.$id.']', ['' => '- ไม่เปลี่ยน -', 'yes' => 'จบการศึกษา', 'no' => 'ไม่จบการศึกษา'], $isGrad ? 'yes' : ($notGrad ? 'no' : 'yes'), 'style="width:140px;height:24px"'),
             inp('note['.$id.']', $st[$id]['note'] ?? '', 150, 'text', 'placeholder="หมายเหตุ"')], $i);
     }
-    $btn = '<a href="javascript:void(0)" onclick="if(confirm(\'กำหนดสถานะจบการศึกษาตามที่เลือก?\'))document.forms.gd.submit()" id="pinkgreenbtns" style="background:#F39C12">กำหนดจบการศึกษา</a>';
+    $btn = '<a href="javascript:void(0)" onclick="return misConfirm(this,\'กำหนดสถานะจบการศึกษาตามที่เลือก?\',function(){document.forms.gd.submit()})" id="pinkgreenbtns" style="background:#F39C12">กำหนดจบการศึกษา</a>';
     return ['กำหนดนักเรียนจบการศึกษา '.room_title($rid), '<div style="width:983px;margin:0 auto 8px;text-align:left" class="gray_12">นักเรียนที่เลือก "จบการศึกษา" จะได้สถานภาพ "'.h($gradStatus).'" และย้ายไปที่เมนู "นักเรียนจบการศึกษา"'
         .' &nbsp; อธิบายสถานะ: <i class="fa fa-check-circle" style="color:#27AE60"></i> จบการศึกษา <i class="fa fa-exclamation-circle" style="color:#E74C3C"></i> ไม่จบการศึกษา</div><form name="gd" method="post" action="'.h($back).'">'
         .list_table('รายชื่อนักเรียนชั้น'.room_title($rid).' ประจำปีการศึกษา '.cur_term()[0], [['เลขที่', ' style="text-align:center"'], 'รหัส', 'ชื่อ', 'นามสกุล', 'สถานภาพ', 'ชั้นเรียน', 'สถานะ', 'จบการศึกษา', 'หมายเหตุ'], $rows, count($list).' คน', $btn).'</form>',

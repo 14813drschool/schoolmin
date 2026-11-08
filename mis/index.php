@@ -92,11 +92,11 @@ input:-webkit-autofill:focus {
 <tr>
 <td colspan="15">
 <span class="left" style="margin-left:30px">
-<a href="index.php"><img src="gallery/logo/school_logo.png" alt="logo" class="logo"/></a></span>
+<a href="index.php"><img src="<?php echo h(school_logo_abs()); ?>" alt="logo" class="logo"/></a></span>
 <span class="left">
-    <h2 style="margin-left:10px;font-size:38px">ระบบบริหารจัดการสารสนเทศโรงเรียน</h2>
+    <h2 style="margin-left:10px;font-size:38px"><?php echo h((string) (cfg('web_title') ?: 'ระบบบริหารจัดการสารสนเทศโรงเรียน')); ?></h2>
     <h5 style="font-size:18px;line-height:22px;font-family:Verdana, Arial, Helvetica, sans-serif;color:#666666;margin-left:10px">Online Administrative School Information System</h5>
-    <h4 style="font-size:38px;line-height:20px;margin-left:10px">โรงเรียนดรุณราษฎร์วิทยา</h4>
+    <h4 style="font-size:38px;line-height:20px;margin-left:10px"><?php echo h((string) (cfg('school_name') ?: 'โรงเรียนดรุณราษฎร์วิทยา')); ?></h4>
 </span></td>
 </tr>
 <tr>

@@ -10,7 +10,7 @@ TINY.table=function(){
 		t.l=t.r.length; t.w=t.r[0].cells.length; t.a=[]; t.c=[]; this.p.is=this.p.size;
 		if(this.p.colddid){
 			d=T$(this.p.colddid);
-			var o=document.createElement('option'); o.value=-1; o.innerHTML='ค้นหาจากคอลัมน์ทั้งหมด'; d.appendChild(o)
+			if(d){var o=document.createElement('option'); o.value=-1; o.innerHTML='ค้นหาจากคอลัมน์ทั้งหมด'; d.appendChild(o)}
 			//var o=document.createElement('option'); o.value=-1; o.innerHTML='ค้นหาจากคอลัมน์ทั้งหมด';
 		}
 		for(i;i<t.w;i++){
@@ -129,9 +129,9 @@ TINY.table=function(){
 	};
 	sorter.prototype.page=function(s){
 		var t=this.t, i=x=0, l=s+parseInt(this.p.size);
-		if(this.p.totalrecid){T$(this.p.totalrecid).innerHTML=t.t}
-		if(this.p.currentid){T$(this.p.currentid).innerHTML=this.g}
-		if(this.p.startingrecid){
+		if(this.p.totalrecid&&T$(this.p.totalrecid)){T$(this.p.totalrecid).innerHTML=t.t}
+		if(this.p.currentid&&T$(this.p.currentid)){T$(this.p.currentid).innerHTML=this.g}
+		if(this.p.startingrecid&&T$(this.p.startingrecid)&&T$(this.p.endingrecid)){
 			var b=((this.g-1)*this.p.size)+1, m=b+(this.p.size-1); m=m<t.l?m:t.t; m=m<t.t?m:t.t;
 			T$(this.p.startingrecid).innerHTML=t.t==0?0:b;; T$(this.p.endingrecid).innerHTML=m
 		}
@@ -147,9 +147,9 @@ TINY.table=function(){
 		var t=this.t;
 		if(s){this.p.size=s}
 		this.g=1; this.d=Math.ceil(this.t.t/this.p.size);
-		if(this.p.navid){T$(this.p.navid).style.display=this.d<2?'none':'block'}
+		if(this.p.navid&&T$(this.p.navid)){T$(this.p.navid).style.display=this.d<2?'none':'block'}
 		this.page(0);
-		if(this.p.totalid){T$(this.p.totalid).innerHTML=t.t==0?1:this.d}
+		if(this.p.totalid&&T$(this.p.totalid)){T$(this.p.totalid).innerHTML=t.t==0?1:this.d}
 		if(this.p.pageddid){
 			var d=T$(this.p.pageddid), l=this.d+1;
 			d.setAttribute('onchange',this.n+'.goto(this.value)');
@@ -166,7 +166,7 @@ TINY.table=function(){
 	
 	sorter.prototype.search=function(f){
 		var i=x=n=0, k=-1, q=T$(f).value.toLowerCase();
-		if(this.p.colddid){k=T$(this.p.colddid).value}
+		if(this.p.colddid&&T$(this.p.colddid)){k=T$(this.p.colddid).value}
 		var s=(k==-1)?0:k, e=(k==-1)?this.t.w:parseInt(s)+1;
 		//alert(s); // s คือ value ของ dropdownlist search 
 		//deleteCookie("currentshow");

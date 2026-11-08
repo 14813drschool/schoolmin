@@ -38,7 +38,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $error = 'ไม่มีสิทธิ์เข้าใช้งานระบบ';
 }
 mis_headers();
-$school = cfg('school_name', 'โรงเรียนดรุณราษฎร์วิทยา');
+$school = (string) (cfg('school_name') ?: 'โรงเรียนดรุณราษฎร์วิทยา');
 ?><!DOCTYPE html>
 <html lang="th">
 <head>
@@ -68,8 +68,8 @@ body{background:#ddd url(bg4.jpg) no-repeat center top;background-size:cover;fon
 </style>
 </head>
 <body>
-<div class="hd"><div class="in"><a href="/mis/"><img src="/mis/gallery/logo/school_logo.png" alt="logo"></a>
-<div><h5 class="t1">ระบบบชำระเงินค่าบำรุงการศึกษา</h5><h5 class="t2"><?php echo h($school); ?></h5></div></div></div>
+<div class="hd"><div class="in"><a href="/mis/"><img src="<?php echo h(school_logo_abs()); ?>" alt="logo"></a>
+<div><h5 class="t1">ระบบชำระเงินค่าบำรุงการศึกษา</h5><h5 class="t2"><?php echo h($school); ?></h5></div></div></div>
 <div class="ct">
 <form class="box" method="post" action="./" autocomplete="on">
 <h4><i class="fa fa-lock"></i>เข้าสู่ระบบ</h4>

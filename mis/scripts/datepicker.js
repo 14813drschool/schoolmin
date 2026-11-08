@@ -34,11 +34,12 @@ var datePickerController = (function datePickerController() {
                         affectJSON(json);
                 };
        
+                /* ไม่มีไฟล์ภาษาในระบบ (lang/*.js) — โหลดเฉพาะเมื่อกำหนด window.fdLocaleAutoLoad เพื่อไม่ให้เกิด 404 */
                 if(typeof(fdLocale) != "object") {
                         var loc    = scriptFiles[scriptFiles.length - 1].src.substr(0, scriptFiles[scriptFiles.length - 1].src.lastIndexOf("/")) + "/lang/",
                             script;
                         
-                        for(var i = 0; i < languageInfo.length; i++) {                                 
+                        for(var i = 0; window.fdLocaleAutoLoad && i < languageInfo.length; i++) {                                 
                                 script = document.createElement('script');                                               
                                 script.type = "text/javascript";                         
                                 script.src  = loc + languageInfo[i] + ".js";                                                                 

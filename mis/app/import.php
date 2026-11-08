@@ -125,6 +125,21 @@ function imp_md_find(string $kind, string $name, string $scope = ''): ?string
     return null;
 }
 
+/** หา r1 ของรายการเดิมที่ค่าตรงกับเงื่อนไขทุกช่อง (ไม่พบ = null) */
+function imp_md_match(string $kind, string $scope, array $where): ?string
+{
+    foreach (md_rows($kind, null, $scope) as $r) {
+        $d = json_decode((string) $r['value'], true) ?: [];
+        foreach ($where as $k => $v) {
+            if ((string) ($d[$k] ?? '') !== (string) $v) {
+                continue 2;
+            }
+        }
+        return (string) $r['r1'];
+    }
+    return null;
+}
+
 /** หา r1 ในรายการ mis_data ตามชื่อ (สร้างใหม่ถ้าไม่มี) */
 function imp_md(string $kind, string $name, array $extra = [], string $scope = ''): string
 {
@@ -231,11 +246,17 @@ function imp_row(string $set, array $c): string
                 }
                 return 'update';
             }
-            $need($fn, 'ชื่อ');
-            if (username_taken(trim($code), 0)) {
-                throw new \RuntimeException('ชื่อผู้ใช้ '.$code.' ถูกใช้แล้ว');
+            // มีบัญชีผู้ใช้รหัสนี้อยู่แล้ว (แต่ยังไม่มีข้อมูลนักเรียน) = ใช้บัญชีเดิม ไม่สร้างใหม่
+            $uid = imp_user($code);
+            if ($uid && q1('SELECT 1 x FROM {personnel} WHERE `id`=?', [$uid])) {
+                throw new \RuntimeException('ชื่อผู้ใช้ '.$code.' เป็นบัญชีบุคลากร');
             }
-            $uid = save_user(0, $u + ['username' => trim($code), 'status' => 0, 'active' => 1], trim($code));
+            if ($uid) {
+                save_user($uid, $u);
+            } else {
+                $need($fn, 'ชื่อ');
+                $uid = save_user(0, $u + ['username' => trim($code), 'status' => 0, 'active' => 1], trim($code));
+            }
             q('INSERT INTO {student} (`id`,`student_id`,`class`,`room`,`number`,`id_card`,`department`,`parent`,`parent_phone`,`address`) VALUES (?,?,?,?,?,?,0,?,?,?)',
                 [$uid, trim($code), $cid, $rid, $num === '' ? null : (int) $num, $u['id_card'] ?? null, mb_substr($parent, 0, 100), mb_substr($pphone, 0, 32), mb_substr($addr, 0, 100)]);
             stinfo_save($uid, $extra + ['status' => 'ศึกษาอยู่', 'entry_year' => (string) cur_term()[0]]);
@@ -376,9 +397,13 @@ function imp_row(string $set, array $c): string
             $s = imp_student($code) ?? throw new \RuntimeException('ไม่พบนักเรียน '.$code);
             $need($rule, 'พฤติกรรม');
             $rid = imp_md('sa_rule', $rule, ['points' => trim($pts), 'level' => '']);
-            md_set('sa_bad', (string) round(microtime(true) * 1000).random_int(10, 99), yt(), '', json_encode(['student' => (string) $s['id'], 'date' => imp_date($date) ?: date('Y-m-d'), 'rule' => $rid,
-                'points' => trim($pts), 'punish' => '', 'detail' => trim($detail)], JSON_UNESCAPED_UNICODE));
-            return 'add';
+            $d = imp_date($date) ?: date('Y-m-d');
+            // นักเรียน + วันที่ + พฤติกรรมเดิม = ปรับปรุงรายการเดิม
+            $key = imp_md_match('sa_bad', yt(), ['student' => (string) $s['id'], 'date' => $d, 'rule' => $rid]);
+            $old = $key !== null ? (json_decode((string) md_get('sa_bad', $key, yt()), true) ?: []) : [];
+            md_set('sa_bad', $key ?? (string) round(microtime(true) * 1000).random_int(10, 99), yt(), '', json_encode(['student' => (string) $s['id'], 'date' => $d, 'rule' => $rid,
+                'points' => trim($pts), 'punish' => $old['punish'] ?? '', 'detail' => trim($detail) !== '' ? trim($detail) : ($old['detail'] ?? '')] + $old, JSON_UNESCAPED_UNICODE));
+            return $key !== null ? 'update' : 'add';
 
         case 'scholar':
             [$code, $fund, $amount, $date] = $c;
@@ -394,8 +419,12 @@ function imp_row(string $set, array $c): string
             $uid = imp_user($un) ?: throw new \RuntimeException('ไม่พบบุคลากร '.$un);
             $tk = array_search(trim($type), LEAVE_TYPES, true) ?: (isset(LEAVE_TYPES[trim($type)]) ? trim($type) : 'other');
             $f = imp_date($from) ?: throw new \RuntimeException('วันที่ไม่ถูกต้อง: '.$from);
-            md_set('leave', (string) round(microtime(true) * 1000).random_int(10, 99), yt(), '', json_encode(['person' => (string) $uid, 'type' => $tk, 'from' => $f, 'to' => imp_date($to) ?: $f, 'days' => trim($days) ?: '1', 'note' => trim($note)], JSON_UNESCAPED_UNICODE));
-            return 'add';
+            // บุคลากร + ประเภทการลา + วันเริ่มลาเดิม = ปรับปรุงรายการเดิม
+            $key = imp_md_match('leave', yt(), ['person' => (string) $uid, 'type' => $tk, 'from' => $f]);
+            $old = $key !== null ? (json_decode((string) md_get('leave', $key, yt()), true) ?: []) : [];
+            md_set('leave', $key ?? (string) round(microtime(true) * 1000).random_int(10, 99), yt(), '', json_encode(['person' => (string) $uid, 'type' => $tk, 'from' => $f, 'to' => imp_date($to) ?: $f, 'days' => trim($days) ?: '1',
+                'note' => trim($note) !== '' ? trim($note) : ($old['note'] ?? '')] + $old, JSON_UNESCAPED_UNICODE));
+            return $key !== null ? 'update' : 'add';
 
         case 'holidays':
             [$date, $name] = $c;

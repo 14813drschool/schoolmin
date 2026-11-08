@@ -1,0 +1,14 @@
+/*
+ * TH Sarabun New (ฟอนต์แห่งชาติ SIPA ใช้และแจกจ่ายได้โดยเสรี)
+ * ฝังไว้ในเว็บเพื่อให้ทุกหน้าพิมพ์/PDF เป็นฟอนต์เดียวกัน แม้เครื่องจะไม่ได้ติดตั้งฟอนต์นี้
+ * size-adjust 65.43% = ปรับขนาดไฟล์เว็บฟอนต์ให้เท่ากับ TH Sarabun New ที่ติดตั้งใน Windows (วัดจากความกว้างข้อความจริง)
+ */
+@font-face{font-family:"TH Sarabun New";src:url("../root/fonts/sarabun/THSarabunNew.woff") format("woff");font-weight:normal;font-style:normal;size-adjust:65.43%;font-display:swap}
+@font-face{font-family:"TH Sarabun New";src:url("../root/fonts/sarabun/THSarabunNew-Bold.woff") format("woff");font-weight:bold;font-style:normal;size-adjust:65.43%;font-display:swap}
+@font-face{font-family:"TH Sarabun New";src:url("../root/fonts/sarabun/THSarabunNew-Italic.woff") format("woff");font-weight:normal;font-style:italic;size-adjust:65.43%;font-display:swap}
+@font-face{font-family:"TH Sarabun New";src:url("../root/fonts/sarabun/THSarabunNew-BoldItalic.woff") format("woff");font-weight:bold;font-style:italic;size-adjust:65.43%;font-display:swap}
+/* หน้าเว็บทั่วไปที่สั่งพิมพ์ตรง ๆ (ปุ่มพิมพ์ในหน้า): พิมพ์เป็น TH Sarabun New ขนาดเทียบเท่าเดิม */
+@media print{
+  body,body *:not(.fa):not([class^="fa-"]){font-family:"TH Sarabun New",sans-serif!important}
+  body.mis-site{font-size-adjust:0.545}
+}

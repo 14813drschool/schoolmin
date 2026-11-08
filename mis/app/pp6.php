@@ -177,8 +177,8 @@ function pp6_days(int $sid, int $y, int $t): array
 function pp6_page(array $s, string $sub, string $tabs, string $body, string $margin): void
 {
     mis_headers();
-    echo '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>ปพ.6 '.h($s['name']).'</title><link rel="stylesheet" href="/mis/css/thaisansbold.css"><style>'
-        .'@page{size:A4 portrait;margin:5mm 8mm}body{margin:0;background:#fff;font:18.67px/1.35 "TH Sarabun New","TH SarabunPSK",thaisansbold,Tahoma,sans-serif;color:#000}'
+    echo '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>ปพ.6 '.h($s['name']).'</title><link rel="stylesheet" href="/mis/css/thaisansbold.css"><link rel="stylesheet" href="/mis/css/sarabun.css"><style>'
+        .'@page{size:A4 portrait;margin:5mm 8mm}body{margin:0;background:#fff;font:18.67px/1.35 "TH Sarabun New",sans-serif;color:#000}'
         .'.pv-top{background:#FBFBFB;display:flex;justify-content:space-between;align-items:center;padding:0 10px;border-bottom:1px solid #9FD8E6;margin:10px 10px 0}'
         .'.pv-bar{margin:6px 10px 0;background:linear-gradient(90deg,#71C7F1,#63B5EC);color:#fff;text-align:center;font-family:thaisansbold,"TH Sarabun New";padding:6px 0}.pv-bar b{display:block;font-weight:normal;font-size:24px}.pv-bar span{font-size:19px}'
         .'.pv-line{margin:4px 10px 0;border-top:1px solid #2BB5C6}.tabs{margin:20px 10px 0;width:984px;border-bottom:2px solid #2BB5C6;display:flex;flex-wrap:wrap;gap:4px}'

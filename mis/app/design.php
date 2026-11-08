@@ -150,7 +150,8 @@ function d_css(): string
         .'.dz-info img{width:90px;height:100px;object-fit:cover;border:1px solid #ddd;padding:3px;margin-right:16px;background:#fff}.dz-info .t1{font-family:thaisansbold;font-size:28px;color:#2B7BB9}.dz-info .t2{font-family:thaisansbold;font-size:21px;color:#27AE60}'
         .'.dz-info .t3{font-family:thaisansbold;font-size:21px;color:#111}.dz-info .t4{font-family:thaisansbold;font-size:19px;color:#333}.dz-info .t4 span{display:inline-block}.dz-info .yt{font-family:thaisansbold;font-size:32px;color:#F7A21B}'
         .'.dz-info .ratio{font-family:thaisansbold;font-size:24px;color:#111;margin-top:6px}'
-        .'.dz-addunit{display:inline-block;margin-top:12px;background:#0B5CAD;color:#fff!important;font-family:thaisansbold;font-size:24px;padding:6px 16px;border-radius:3px;text-decoration:none;border:1px solid #084a8c}.dz-addunit:hover{background:#0a4f95}'
+        .'.dz-addunit{display:inline-block;margin-top:12px;background:#007DC1;color:#fff!important;padding:5px 15px;border-radius:3px;text-decoration:none!important;border:1px solid #124D77;font:bold 13px Tahoma}.dz-addunit:hover{background:#0a6fae}'
+        .'.dz-addunit b{font-family:thaisansbold!important;font-weight:normal!important;font-size:26px!important;line-height:33px;color:#fff;white-space:nowrap}.dz-addunit i{font-size:20px;margin-right:6px;vertical-align:2px}'
         .'.dz-h{display:flex;justify-content:space-between;align-items:center;margin:4px 0 8px}.dz-h h2{font-family:thaisansbold;font-weight:normal;font-size:30px;color:#4A90C2;margin:0}.dz-h h2 i{margin-right:8px}'
         .'.dz-h select{height:26px;padding:0 4px;border:1px solid #ccc;border-radius:3px;background:#f7f7f7}'
         .'table.dz-t{border-collapse:collapse;width:100%;font:13px Tahoma}table.dz-t th{background:#DDF0FA;border:1px solid #9CCFD6;font-weight:normal;color:#111;padding:4px;text-align:center!important;vertical-align:middle}'
@@ -319,7 +320,7 @@ function rows_task_design_measurement_DesignMeasurement()
     }
     $modals .= d_modal('mcopy', 'คัดลอกการออกแบบ', 460, $base.'&func=CopyDesign', '<label>คัดลอกหน่วยการเรียนรู้ ภาระงาน และคะแนนกลางภาค/ปลายภาค จาก</label>'.d_sel('from', $src, '', 'class="in" style="width:100%"')
         .'<div style="font-size:12px;color:#c00;margin-top:6px">การออกแบบเดิมของรายวิชานี้จะถูกแทนที่ทั้งหมด</div>', 'คัดลอกการออกแบบการวัดและประเมินผลจากรายวิชาอื่นมาใช้กับรายวิชานี้');
-    $body = d_css().saved_msg().'<div class="dz">'.d_info($c, $level, '<div class="ratio">นน.คะแนนคะแนนรายวิชา '.$rw.' : '.$rm.' : '.$rf.'</div><a href="javascript:void(0)" class="dz-addunit" onclick="dzOpen(\'mu0\')"><i class="fa fa-pencil-square-o"></i> เพิ่มหน่วยการเรียนรู้</a>')
+    $body = d_css().saved_msg().'<div class="dz">'.d_info($c, $level, '<div class="ratio">นน.คะแนนคะแนนรายวิชา '.$rw.' : '.$rm.' : '.$rf.'</div><a href="javascript:void(0)" class="dz-addunit" onclick="dzOpen(\'mu0\')"><b><i class="fa fa-pencil-square-o"></i>เพิ่มหน่วยการเรียนรู้</b></a>')
         .'<div class="dz-h"><h2><i class="fa fa-book"></i>ตารางออกแบบการวัดและประเมินผล</h2><select onchange="location.href=this.value">'.$opts.'</select></div>'.$table
         .'<div class="dz-print"><a href="?module=task&option=design_measurement&func=PrintDesign&SubjectNum='.$cid.'" target="_blank" onMouseOver="MM_swapImage(\'icon_print\',\'\',\'../icon_tools/icon_print.png\',1);" onMouseOut="MM_swapImgRestore();"><img id="icon_print" src="../icon_tools/hicon_print.png" border="0" title="พิมพ์"/></a></div><div style="clear:both"></div></div>'
         .$modals.'<script>function dzOpen(i){var e=document.getElementById(i);if(e)e.classList.add("on")}function dzClose(i){document.getElementById(i).classList.remove("on")}'
@@ -646,8 +647,8 @@ function rows_task_study_record_Record()
         .'<div class="ft"><button type="submit" class="s">✎ บันทึก</button><button type="button" class="c" onclick="document.getElementById(\'fx-score\').value=\'\';document.getElementById(\'fx-special\').checked=false">✕ เคลียร์</button></div></form></div></div>'
         .'<script>(function(){'
         // เครื่องที่ไม่มีฟอนต์ TH Sarabun New ใช้ฟอนต์เริ่มต้นของเครื่อง ขนาดเล็กลงให้พอดีหัวตาราง
-        .'try{var c=document.createElement("canvas").getContext("2d"),t="กขคงabc123",w=function(f){c.font="40px "+f;return c.measureText(t).width};'
-        .'if(w("\\"TH Sarabun New\\",monospace")===w("monospace")&&w("\\"TH SarabunPSK\\",monospace")===w("monospace"))document.body.classList.add("no-sarabun")}catch(e){}})();'
+        .'var chk=function(){try{var c=document.createElement("canvas").getContext("2d"),t="กขคงabc123",w=function(f){c.font="40px "+f;return c.measureText(t).width};'
+        .'if(w("\\"TH Sarabun New\\",monospace")===w("monospace")&&w("\\"TH SarabunPSK\\",monospace")===w("monospace"))document.body.classList.add("no-sarabun")}catch(e){}};document.fonts&&document.fonts.load?document.fonts.load("20px \\"TH Sarabun New\\"").then(chk,chk):chk()})();'
         .'(function(){var tabs=document.querySelectorAll(".rec-tab");function show(id){tabs.forEach(function(t){t.classList.toggle("on",t.dataset.p===id)});document.querySelectorAll(".rec-pane").forEach(function(p){p.classList.toggle("on",p.id===id)});document.getElementById("rec-tab").value=id}'
         .'tabs.forEach(function(t){t.addEventListener("click",function(){show(t.dataset.p)})});var m=location.search.match(/[?&]tab=(p\d+)/);show(m&&document.getElementById(m[1])?m[1]:tabs[tabs.length-1].dataset.p);'
         .'document.querySelectorAll(".rec-in").forEach(function(i){i.addEventListener("input",function(){recColor(i);recMax(i)})});recColor();'

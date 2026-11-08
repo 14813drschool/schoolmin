@@ -112,10 +112,10 @@ function rpt_room_name(int $rid): string
 function rpt_print(string $title, string $body, bool $landscape = false): void
 {
     mis_headers();
-    echo '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>'.h($title).'</title><link rel="stylesheet" href="/mis/css/thaisansbold.css"><style>'
-        .'@page{size:A4 '.($landscape ? 'landscape' : 'portrait').';margin:10mm 12mm}*{box-sizing:border-box}body{margin:0;background:#888;font:13px Tahoma,sans-serif;color:#000}'
+    echo '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>'.h($title).'</title><link rel="stylesheet" href="/mis/css/thaisansbold.css"><link rel="stylesheet" href="/mis/css/sarabun.css"><style>'
+        .'@page{size:A4 '.($landscape ? 'landscape' : 'portrait').';margin:10mm 12mm}*{box-sizing:border-box}body{margin:0;background:#888;font:13px/1.35 "TH Sarabun New",sans-serif;font-size-adjust:0.545;color:#000}.page *{font-family:"TH Sarabun New",sans-serif}'
         .'.page{width:'.($landscape ? '297mm' : '210mm').';min-height:'.($landscape ? '210mm' : '297mm').';margin:10px auto;background:#fff;padding:10mm 12mm;page-break-after:always;position:relative}'
-        .'.page:last-child{page-break-after:auto}h1,h2,h3{font-family:thaisansbold,Tahoma;font-weight:normal;margin:2px 0;text-align:center}h1{font-size:28px}h2{font-size:22px}h3{font-size:18px}'
+        .'.page:last-child{page-break-after:auto}h1,h2,h3{font-family:"TH Sarabun New",sans-serif;font-weight:bold;margin:2px 0;text-align:center}h1{font-size:28px}h2{font-size:22px}h3{font-size:18px}'
         .'table{border-collapse:collapse;width:100%}td,th{border:1px solid #000;padding:3px 5px;font-size:12px}th{background:#eee;font-weight:bold}.c{text-align:center}.r{text-align:right}.nb td{border:none;padding:1px 4px}'
         .'.head{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:6px}.head img{height:62px}.sign{display:flex;justify-content:space-around;margin-top:22px;text-align:center;font-size:12px}'
         .'.sign div{width:30%}.small{font-size:11px}.cut{border-top:1px dashed #000;margin-top:14px;padding-top:6px}.vt{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;padding:4px 1px}'
@@ -539,8 +539,8 @@ function rp_page(string $title, string $func, array $c, int $room, string $body,
         }
     }
     mis_headers();
-    echo '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>'.h($title).'</title><link rel="stylesheet" href="/mis/css/thaisansbold.css"><style>'
-        .'@page{size:A4 portrait;margin:4mm 8mm}body{margin:0;background:#fff;font:18.67px/1.15 "TH Sarabun New","TH SarabunPSK",thaisansbold,Tahoma,sans-serif;color:#000}'
+    echo '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>'.h($title).'</title><link rel="stylesheet" href="/mis/css/thaisansbold.css"><link rel="stylesheet" href="/mis/css/sarabun.css"><style>'
+        .'@page{size:A4 portrait;margin:4mm 8mm}body{margin:0;background:#fff;font:18.67px/1.15 "TH Sarabun New",sans-serif;color:#000}'
         .'.pv-top{background:#FBFBFB;display:flex;justify-content:space-between;align-items:center;padding:0 10px;border-bottom:1px solid #9FD8E6;margin:10px 10px 0}.pv-top select{font:13px Tahoma;height:22px}'
         .'.pv-bar{margin:0 10px;background:linear-gradient(90deg,#71C7F1,#63B5EC);color:#fff;text-align:center;font-size:24px;padding:8px 0;margin-top:8px;font-family:thaisansbold,"TH Sarabun New"}'
         .'.pv-line{margin:4px 10px 0;border-top:2px solid #2BB5C6}.pv-tabs{margin:14px 18px 0;border-bottom:2px solid #2BB5C6}.pv-tabs a{display:inline-block;background:#A9A9A9;color:#fff;font:15px thaisansbold;padding:5px 12px 3px;margin-right:4px;border-radius:3px 3px 0 0;cursor:pointer;text-decoration:none}.pv-tabs a.on{background:#17B4B4}'
@@ -548,7 +548,7 @@ function rp_page(string $title, string $func, array $c, int $room, string $body,
         .'.pv-hc{position:relative;text-align:center;font-weight:bold;font-size:19px}.pv-hc img{position:absolute;left:0;top:0;width:58px;height:58px}.pv-hc u{text-decoration:none;border-bottom:1px dotted #000;padding:0 6px}'
         .'table.pv{border-collapse:collapse;margin:14px auto 0;width:984px;max-width:100%}table.pv td,table.pv th{border:1px solid #000;padding:2px 4px;font-weight:normal;font-size:18.67px;height:24px}table.pv th{font-weight:bold}'
         .'table.pv .c{text-align:center}table.pv .r{text-align:right}table.pv .vt{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;margin:0 auto}table.pv tr.st td{background:#F2F2F2;font-weight:bold}table.pv .cv{color:#E00;font-weight:bold}'
-        .'.pv-rep{font:12px Tahoma;margin:12px 10px 6px}.pv-tip{background:#D3D3D3;margin:0 10px 10px;text-align:center;padding:10px;font-size:18px}.pv-page{display:none}.pv-page.on{display:block}'
+        .'.pv-rep{font:16px "TH Sarabun New",sans-serif;margin:12px 10px 6px}.pv-tip{background:#D3D3D3;margin:0 10px 10px;text-align:center;padding:10px;font-size:18px}.pv-page{display:none}.pv-page.on{display:block}'
         .'@media print{.pv-top,.pv-bar,.pv-line,.pv-tabs,.pv-tip{display:none}.pv-wrap{padding:0}table.pv{width:100%}}</style></head><body>'
         .'<div class="pv-top"><img src="/mis/images/preview_title.png" alt="ตัวอย่างก่อนพิมพ์" style="height:80px"/><div><select onchange="location.href=this.value">'.$opts.'</select> '
         .'<a href="javascript:window.print()" title="พิมพ์"><img src="/mis/icon_tools/icon_mini_print.png" border="0" align="absmiddle"/></a></div></div><div class="pv-bar">'.h($title).'</div><div class="pv-line"></div>'

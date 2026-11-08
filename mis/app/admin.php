@@ -423,7 +423,11 @@ function cat_page(string $type, string $option, string $label, bool $post, calla
     $editId = $_GET['edit'] ?? null;
     $rows = '';
     $i = 0;
-    foreach (cats($type) as $id => $name) {
+    $list = cats($type);
+    if ($type === 'room') {
+        uasort($list, 'strnatcmp'); // เรียงห้องตามเลขชั้น/เลขห้อง: 1/1, 1/2, ..., 2/1, ...
+    }
+    foreach ($list as $id => $name) {
         $cells = [++$i, h($name)];
         if ($extraCols) {
             $cells = array_merge($cells, $extraCols($id, $name));

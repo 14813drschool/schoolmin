@@ -52,6 +52,11 @@ function run_page(): void
         run_admin($option, $func);
         return;
     }
+    // พิมพ์เอกสารผลการเรียนของครู (เฉพาะวิชาที่สอน/ห้องที่ปรึกษา)
+    if ($module === 'print') {
+        run_print_page();
+        return;
+    }
     if ($module === '' && isset($_GET['admin']) && is_admin()) {
         setcookie('mis_teacher_view', '', ['expires' => time() - 3600, 'path' => '/mis/']);
         redirect('index.php');

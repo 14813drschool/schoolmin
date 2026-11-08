@@ -478,7 +478,21 @@ function st_att(array $S, bool $post): string
 function st_grade(array $S, bool $post): string
 {
     $sid = (int) $S['id'];
+    $terms = [];
+    foreach (student_grades($sid) as $g) {
+        $terms[$g['year'].'/'.$g['term']] = 'ภาคเรียนที่ '.$g['term'].'/'.$g['year'];
+    }
+    // พิมพ์ใบรายงานผลการเรียน (ใบเกรด) ของตนเอง
+    if (isset($_GET['print']) && isset($terms[$_GET['yt'] ?? ''])) {
+        [$y, $t] = rpt_term();
+        rpt_card([$S], $y, $t, ($_GET['mode'] ?? '') === 'year' ? 'year' : 'term');
+    }
     $html = str_replace('class="mis-gt"', 'class="t"', grade_table(student_grades($sid)));
+    if ($terms) {
+        krsort($terms);
+        $html = '<form method="get" target="_blank" style="margin:0 0 10px;padding:8px 10px;background:#f4f8fb;border:1px solid #d6e4ee;border-radius:6px"><input type="hidden" name="p" value="grade"/><input type="hidden" name="print" value="1"/>'
+            .'<b>พิมพ์ใบรายงานผลการเรียน (ใบเกรด)</b> &nbsp; '.sel('yt', $terms, array_key_first($terms)).' '.sel('mode', ['term' => 'รายภาคเรียน', 'year' => 'ทั้งปีการศึกษา'], 'term').' <button type="submit" style="cursor:pointer"><i class="fa fa-print"></i> พิมพ์</button></form>'.$html;
+    }
     $courses = [];
     foreach (q('SELECT `r2`, `value` FROM {mis_data} WHERE `kind`=\'remedial\'') as $r) {
         $d = json_decode((string) $r['value'], true) ?: [];

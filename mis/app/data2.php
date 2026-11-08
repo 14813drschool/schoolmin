@@ -734,7 +734,10 @@ function rows_task_study_record_Record()
             $rows, 'เกรดคำนวณจากคะแนนรวมตามเกณฑ์ระดับผลการเรียน', btn('กลับ', '?module=task&option=study_record', 'back')
             .'<a href="javascript:void(0);" onclick="document.forms.rec.submit();" id="pinkgreenbtns" style="margin-left:4px"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึกผลการเรียน</a>')
         .'</form>';
-    return sub_page('task_study_record', $body, 'บันทึกคะแนนและผลการเรียน');
+    $page = sub_page('task_study_record', $body, 'บันทึกคะแนนและผลการเรียน');
+    // ปุ่มพิมพ์ รายตัวชี้วัด / รายหน่วยฯ / ราย มฐ. / รายสาระฯ
+    $page['__CONTENT__'] = preg_replace('/<DIV style="float:right">/', '<DIV style="float:right">'.str_replace('$', '\\$', rpt_record_buttons($c, $room)), $page['__CONTENT__'], 1);
+    return $page;
 }
 
 function act_task_study_record_SaveRecord(): void

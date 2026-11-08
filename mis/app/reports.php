@@ -467,3 +467,100 @@ function run_print_page(): void
     render_page('พิมพ์เอกสารผลการเรียน', '<div style="width:983px;margin:10px auto 6px;text-align:left"><h1 style="font-family:thaisansbold;font-weight:normal;font-size:34px;color:#0F5A9C;margin:0">พิมพ์ใบเกรด / ใบคะแนน</h1>'
         .'<div class="gray_12">แสดงเฉพาะรายวิชาที่สอนและห้องที่เป็นครูที่ปรึกษา</div></div>'.rpt_forms('index.php'), '');
 }
+
+/* ---------------------------------------------------------------- พิมพ์จากหน้าบันทึกผลการเรียน (งานการสอน) */
+
+/** ปุ่ม 4 แบบ: [func, ไอคอน, ชื่อ, หัวข้อช่อง, จำนวนช่อง, แนวนอน] */
+const RPT_RECORD = [
+    'PrintByPoint' => ['print_point', 'รายตัวชี้วัด', 'ตัวชี้วัดที่', 10, true],
+    'PrintByUnit' => ['print_unit', 'รายหน่วยการเรียนรู้', 'หน่วยที่', 6, false],
+    'PrintByStandard' => ['print_std', 'รายมาตรฐานการเรียนรู้', 'มฐ.', 6, false],
+    'PrintByLearning' => ['print_strand', 'รายสาระการเรียนรู้', 'สาระที่', 4, false],
+];
+
+/** ปุ่มพิมพ์ 4 ปุ่มบนหัวหน้าบันทึกผลการเรียน */
+function rpt_record_buttons(array $c, int $room): string
+{
+    $o = '';
+    foreach (RPT_RECORD as $func => [$ic, $label]) {
+        $url = 'index.php?module=task&option=study_record&func='.$func.'&TeacherId='.(int) $c['teacher_id'].'&SubjectNum='.(int) $c['id'].'&RecordType=subject&Elective=0&RoomNum='.$room;
+        $o .= "<div style='float:left;margin:0px 2px'> <a href='javascript:void(0);' onclick=\"window.open('".$url."','_blank');\" onMouseOver=\"MM_swapImage('icon_".$ic."','','../icon_tools/icon_".$ic.".png',1);\" onMouseOut=\"MM_swapImgRestore();\">"
+            ."<img id='icon_".$ic."' name='icon_".$ic."' src='../icon_tools/hicon_".$ic.".png' border='0' title='พิมพ์".h($label)."' align='top'/></a> </div>";
+    }
+    return $o;
+}
+
+/** หน้าพิมพ์ผลการเรียนรายวิชา (ใช้คะแนนที่บันทึกไว้ + ช่องว่างตามแบบที่เลือกสำหรับเขียนเอง) */
+function rpt_record_print(string $func): void
+{
+    [, $label, $colName, $cols, $landscape] = RPT_RECORD[$func];
+    $c = att_course();
+    if (!$c) {
+        rpt_print('ไม่สามารถพิมพ์ได้', '<div class="page"><h3>ไม่มีสิทธิ์พิมพ์เอกสารของรายวิชานี้</h3></div>');
+    }
+    $room = (int) ($_GET['RoomNum'] ?? 0);
+    $d = json_decode((string) md_get('design', $c['id']), true) ?: ['work' => 50, 'mid' => 20, 'final' => 30];
+    $sql = 'SELECT G.*, S.`student_id` code, S.`number` sno, U.`name` FROM {grade} G JOIN {student} S ON S.`id`=G.`student_id` JOIN {user} U ON U.`id`=G.`student_id` WHERE G.`course_id`=?';
+    $p = [(int) $c['id']];
+    if ($room) {
+        $sql .= ' AND G.`room`=?';
+        $p[] = $room;
+    }
+    $rows = q($sql.' ORDER BY G.`room`, G.`number`, S.`student_id`', $p);
+    $att = rpt_attendance([(int) $c['id']]);
+    $th = '';
+    for ($k = 1; $k <= $cols; $k++) {
+        $th .= '<th style="width:'.($landscape ? 30 : 34).'px">'.$k.'</th>';
+    }
+    $tr = '';
+    $dist = [];
+    foreach ($rows as $i => $g) {
+        $pct = $att[(int) $c['id']][(int) $g['student_id']] ?? null;
+        $has = $g['midterm'] !== null || $g['final'] !== null;
+        $k = rpt_g($g['grade']);
+        $dist[$k] = ($dist[$k] ?? 0) + 1;
+        $tr .= '<tr><td class="c">'.($i + 1).'</td><td class="c">'.h($g['number'] ?: $g['sno']).'</td><td>'.h($g['code']).'</td><td style="white-space:nowrap">'.h($g['name']).'</td>'
+            .str_repeat('<td></td>', $cols).'<td class="c">'.($pct === null ? '-' : number_format($pct, 0)).'</td>'
+            .'<td class="c">'.($g['midterm'] === null ? '' : (int) $g['midterm']).'</td><td class="c">'.($g['final'] === null ? '' : (int) $g['final']).'</td>'
+            .'<td class="c">'.($has ? (int) $g['midterm'] + (int) $g['final'] : '').'</td><td class="c"><b>'.h($k === '-' ? '' : $k).'</b></td></tr>';
+    }
+    $dh = '';
+    $dv = '';
+    foreach (['4', '3.5', '3', '2.5', '2', '1.5', '1', '0', 'ร', 'มส', '-'] as $k) {
+        $dh .= '<th>'.($k === '-' ? 'ยังไม่มีผล' : h($k)).'</th>';
+        $dv .= '<td class="c">'.(int) ($dist[$k] ?? 0).'</td>';
+    }
+    $teacher = personnel_options()[$c['teacher_id']] ?? ($c['teacher'] ?? '');
+    $roomName = $room ? class_room_short($c['class'], $room) : cat('class', $c['class']);
+    $body = '<div class="page">'.rpt_head('รายงานผลการเรียน'.$label, 'ภาคเรียนที่ '.(int) $c['term'].' ปีการศึกษา '.(int) $c['year'])
+        .'<table class="nb"><tr><td>รายวิชา <b>'.h($c['course_code'].' '.$c['course_name']).'</b> ('.h(COURSE_TYPES[(int) $c['type']] ?? '').')</td><td>ชั้น <b>'.h($roomName).'</b></td><td>หน่วยกิต '.h($c['credit']).'</td><td>เวลาเรียน '.h($c['period']).' ชั่วโมง</td></tr>'
+        .'<tr><td>ครูผู้สอน <b>'.h($teacher ?: '-').'</b></td><td colspan="3">อัตราส่วนคะแนน ระหว่างภาค : กลางภาค : ปลายภาค = '.(int) $d['work'].' : '.(int) $d['mid'].' : '.(int) $d['final'].'</td></tr></table>'
+        .'<table style="margin-top:6px"><tr><th rowspan="2" style="width:26px">ที่</th><th rowspan="2" style="width:32px">เลขที่</th><th rowspan="2" style="width:56px">รหัส</th><th rowspan="2">ชื่อ-นามสกุล</th>'
+        .'<th colspan="'.$cols.'">คะแนน'.h($label).' ('.h($colName).')</th><th rowspan="2" style="width:42px">เวลาเรียน<br>%</th><th rowspan="2" style="width:48px">ระหว่างภาค+<br>กลางภาค<br>('.((int) $d['work'] + (int) $d['mid']).')</th>'
+        .'<th rowspan="2" style="width:42px">ปลายภาค<br>('.(int) $d['final'].')</th><th rowspan="2" style="width:34px">รวม<br>(100)</th><th rowspan="2" style="width:38px">เกรด</th></tr><tr>'.$th.'</tr>'
+        .($tr ?: '<tr><td colspan="'.(9 + $cols).'" class="c">ไม่มีนักเรียนลงทะเบียน</td></tr>').'</table>'
+        .'<table style="margin-top:6px"><tr><th>ผลการเรียน</th>'.$dh.'<th>รวม</th></tr><tr><td class="c">จำนวน (คน)</td>'.$dv.'<td class="c">'.count($rows).'</td></tr></table>'
+        .'<div class="small" style="margin-top:3px">ช่องคะแนน'.h($label).'เว้นไว้สำหรับกรอกเอง (ระบบเก็บคะแนนระหว่างภาค+กลางภาค และปลายภาค)</div>'
+        .rpt_signs([['ครูผู้สอน', $teacher], ['หัวหน้ากลุ่มสาระการเรียนรู้', ''], ['หัวหน้างานวัดผล', '']]).'</div>';
+    rpt_print('รายงานผลการเรียน'.$label, $body, $landscape);
+}
+
+function act_task_study_record_PrintByPoint(): void
+{
+    rpt_record_print('PrintByPoint');
+}
+
+function act_task_study_record_PrintByUnit(): void
+{
+    rpt_record_print('PrintByUnit');
+}
+
+function act_task_study_record_PrintByStandard(): void
+{
+    rpt_record_print('PrintByStandard');
+}
+
+function act_task_study_record_PrintByLearning(): void
+{
+    rpt_record_print('PrintByLearning');
+}

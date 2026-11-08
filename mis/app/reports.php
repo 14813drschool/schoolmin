@@ -490,60 +490,287 @@ function rpt_record_buttons(array $c, int $room): string
     return $o;
 }
 
-/** หน้าพิมพ์ผลการเรียนรายวิชา (ใช้คะแนนที่บันทึกไว้ + ช่องว่างตามแบบที่เลือกสำหรับเขียนเอง) */
-function rpt_record_print(string $func): void
+/** ตัวเลขแบบระบบเดิม (ทศนิยมเท่าที่จำเป็น) */
+function rp_num($v, int $dec = 2): string
 {
-    [, $label, $colName, $cols, $landscape] = RPT_RECORD[$func];
-    $c = att_course();
-    if (!$c) {
-        rpt_print('ไม่สามารถพิมพ์ได้', '<div class="page"><h3>ไม่มีสิทธิ์พิมพ์เอกสารของรายวิชานี้</h3></div>');
+    if ($v === null || $v === '') {
+        return '';
     }
-    $room = (int) ($_GET['RoomNum'] ?? 0);
-    [$rw, $rm, $rf] = score_ratio();
-    $d = ['work' => $rw, 'mid' => $rm, 'final' => $rf];
-    $sql = 'SELECT G.*, S.`student_id` code, S.`number` sno, U.`name` FROM {grade} G JOIN {student} S ON S.`id`=G.`student_id` JOIN {user} U ON U.`id`=G.`student_id` WHERE G.`course_id`=?';
+    $s = number_format((float) $v, $dec, '.', '');
+    return strpos($s, '.') !== false ? rtrim(rtrim($s, '0'), '.') : $s;
+}
+
+/** สถิติของคอลัมน์ [เฉลี่ย, ร้อยละผ่าน, ต่ำสุด, สูงสุด, ร้อยละของเต็ม, SD, CV] */
+function rp_stats(array $vals, float $max): array
+{
+    $vals = array_values(array_filter($vals, fn($v) => $v !== null));
+    $n = count($vals);
+    if (!$n) {
+        return array_fill(0, 7, '');
+    }
+    $avg = array_sum($vals) / $n;
+    $sd = sqrt(array_sum(array_map(fn($v) => ($v - $avg) ** 2, $vals)) / $n);
+    $pass = count(array_filter($vals, fn($v) => $max > 0 && $v >= $max / 2));
+    return [number_format($avg, 2), number_format($pass * 100 / $n, 2), rp_num(min($vals)), rp_num(max($vals)), $max > 0 ? number_format($avg * 100 / $max, 2) : '', number_format($sd, 2), $avg > 0 ? number_format($sd * 100 / $avg, 2) : ''];
+}
+
+/** หน้าพิมพ์แบบ "ตัวอย่างก่อนพิมพ์" ของระบบเดิม */
+function rp_page(string $title, string $func, array $c, int $room, string $body, string $margin = 'Left = 8 &nbsp; Right = 8 &nbsp; Top = 4 &nbsp; Bottom = 4'): void
+{
+    $opts = '';
+    $courses = my_courses();
+    if (!array_filter($courses, fn($x) => (int) $x['id'] === (int) $c['id'])) {
+        $courses[] = $c;
+    }
+    foreach (course_rooms($courses) as $cid => $rooms) {
+        foreach ($courses as $x) {
+            if ((int) $x['id'] === $cid) {
+                foreach (array_keys($rooms) as $r) {
+                    $opts .= '<option value="index.php?module=task&option=study_record&func='.$func.'&TeacherId='.(int) $x['teacher_id'].'&SubjectNum='.$cid.'&RecordType=subject&Elective=0&RoomNum='.$r.'"'.($cid === (int) $c['id'] && $r === $room ? ' selected' : '').'>'.h($x['course_code'].' - '.class_room_short($x['class'], $r)).'</option>';
+                }
+            }
+        }
+    }
+    mis_headers();
+    echo '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>'.h($title).'</title><link rel="stylesheet" href="/mis/css/thaisansbold.css"><style>'
+        .'@page{size:A4 portrait;margin:4mm 8mm}body{margin:0;background:#fff;font:18.67px/1.15 "TH Sarabun New","TH SarabunPSK",thaisansbold,Tahoma,sans-serif;color:#000}'
+        .'.pv-top{background:#FBFBFB;display:flex;justify-content:space-between;align-items:center;padding:0 10px;border-bottom:1px solid #9FD8E6;margin:10px 10px 0}.pv-top select{font:13px Tahoma;height:22px}'
+        .'.pv-bar{margin:0 10px;background:linear-gradient(90deg,#71C7F1,#63B5EC);color:#fff;text-align:center;font-size:24px;padding:8px 0;margin-top:8px;font-family:thaisansbold,"TH Sarabun New"}'
+        .'.pv-line{margin:4px 10px 0;border-top:2px solid #2BB5C6}.pv-tabs{margin:14px 18px 0;border-bottom:2px solid #2BB5C6}.pv-tabs a{display:inline-block;background:#A9A9A9;color:#fff;font:15px thaisansbold;padding:5px 12px 3px;margin-right:4px;border-radius:3px 3px 0 0;cursor:pointer;text-decoration:none}.pv-tabs a.on{background:#17B4B4}'
+        .'.pv-wrap{padding:14px 10px 4px}.pv-h{display:flex;align-items:flex-start;gap:10px;font-weight:bold;font-size:19px}.pv-h img{width:58px;height:58px}.pv-h u{text-decoration:none;border-bottom:1px dotted #000;padding:0 6px}'
+        .'.pv-hc{position:relative;text-align:center;font-weight:bold;font-size:19px}.pv-hc img{position:absolute;left:0;top:0;width:58px;height:58px}.pv-hc u{text-decoration:none;border-bottom:1px dotted #000;padding:0 6px}'
+        .'table.pv{border-collapse:collapse;margin:14px auto 0;width:984px;max-width:100%}table.pv td,table.pv th{border:1px solid #000;padding:2px 4px;font-weight:normal;font-size:18.67px;height:24px}table.pv th{font-weight:bold}'
+        .'table.pv .c{text-align:center}table.pv .r{text-align:right}table.pv .vt{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;margin:0 auto}table.pv tr.st td{background:#F2F2F2;font-weight:bold}table.pv .cv{color:#E00;font-weight:bold}'
+        .'.pv-rep{font:12px Tahoma;margin:12px 10px 6px}.pv-tip{background:#D3D3D3;margin:0 10px 10px;text-align:center;padding:10px;font-size:18px}.pv-page{display:none}.pv-page.on{display:block}'
+        .'@media print{.pv-top,.pv-bar,.pv-line,.pv-tabs,.pv-tip{display:none}.pv-wrap{padding:0}table.pv{width:100%}}</style></head><body>'
+        .'<div class="pv-top"><img src="/mis/images/preview_title.png" alt="ตัวอย่างก่อนพิมพ์" style="height:80px"/><div><select onchange="location.href=this.value">'.$opts.'</select> '
+        .'<a href="javascript:window.print()" title="พิมพ์"><img src="/mis/icon_tools/icon_mini_print.png" border="0" align="absmiddle"/></a></div></div><div class="pv-bar">'.h($title).'</div><div class="pv-line"></div>'
+        .$body.'<div class="pv-rep">Reported: DRW-MIS ('.date('d-m-').(date('Y') + 543).')</div><div class="pv-tip">คำแนะนำสำหรับการพิมพ์ : ตั้งค่ากระดาษเป็น A4 และกำหนดระยะขอบของ Web Browser ดังนี้ &nbsp; &nbsp; '.$margin.'</div>'
+        .'<script>function pvTab(n){document.querySelectorAll(".pv-page").forEach(function(p,i){p.classList.toggle("on",i===n)});document.querySelectorAll(".pv-tabs a").forEach(function(a,i){a.classList.toggle("on",i===n)})}</script></body></html>';
+    exit;
+}
+
+/** ข้อมูลคะแนนของรายวิชา-ห้อง สำหรับหน้าพิมพ์ */
+function rp_data(array $c, int $room): array
+{
+    $sql = 'SELECT G.`id` gid, G.`student_id`, G.`midterm`, G.`final`, G.`grade`, G.`number`, S.`student_id` code, S.`number` sno, U.`name` FROM {grade} G JOIN {student} S ON S.`id`=G.`student_id` JOIN {user} U ON U.`id`=G.`student_id` WHERE G.`course_id`=?';
     $p = [(int) $c['id']];
     if ($room) {
         $sql .= ' AND G.`room`=?';
         $p[] = $room;
     }
-    $rows = q($sql.' ORDER BY G.`room`, G.`number`, S.`student_id`', $p);
-    $att = rpt_attendance([(int) $c['id']]);
+    $students = q($sql.' ORDER BY G.`room`, G.`number`, S.`student_id`', $p);
+    $ts = task_scores(array_map(fn($s) => (int) $s['gid'], $students));
+    $units = d_units($c);
+    // รายการคะแนน: ภาระงานทุกชิ้น + กลางภาค + ปลายภาค
+    $items = [];
+    foreach ($units as $un => $u) {
+        foreach ($u['tasks'] as $tn => $t) {
+            $items[] = ['key' => $un.'.'.$tn, 'unit' => $un] + $t;
+        }
+    }
+    $items[] = ['key' => 'mid'] + d_exam($c, 'mid');
+    $items[] = ['key' => 'final'] + d_exam($c, 'final');
+    $score = [];
+    foreach ($students as $s) {
+        $gid = (int) $s['gid'];
+        [$u, $m] = array_pad(explode('|', (string) md_get('rec_split', $gid)), 2, '');
+        $score[$gid] = ($ts[$gid] ?? []) + ['mid' => $m === '' ? null : (float) $m, 'final' => $s['final'] === null ? null : (float) $s['final'], 'unitOld' => $u === '' ? null : (float) $u];
+    }
+    return [$students, $units, $items, $score];
+}
+
+/** หัวรายงานแบบโลโก้ซ้าย 2 บรรทัด */
+function rp_head(array $c, int $room, string $lead, string $tail): string
+{
+    $teacher = personnel_options()[$c['teacher_id']] ?? '';
+    return '<div class="pv-h"><img src="/mis/gallery/logo/school_logo.png" alt=""/><div>'.h($lead).'<u>'.h($c['course_code']).'</u> ชื่อวิชา <u>'.h($c['course_name']).'</u> ระดับชั้น <u>'.h(class_room_short($c['class'], $room)).'</u> '.h($tail)
+        .'<br>ครูผู้สอน <u>'.h($teacher).'</u> ภาคเรียนที่ <u>&nbsp;&nbsp;'.(int) $c['term'].'&nbsp;&nbsp;</u> ปีการศึกษา <u>'.(int) $c['year'].'</u></div></div>';
+}
+
+/** รายตัวชี้วัด / ราย มฐ. / รายสาระ: คะแนนถ่วงน้ำหนักจากภาระงาน กลางภาค ปลายภาค */
+function rp_weighted(string $func, array $c, int $room): void
+{
+    $cfg = ['PrintByPoint' => ['รายงานคะแนนรายตัวชี้วัด/ผลการเรียนรู้', 'รายงานคะแนนรายวิชา', 'รายตัวชี้วัด/ผลการเรียนรู้', 12],
+        'PrintByStandard' => ['รายงานตามมาตรฐานการเรียนรู้', 'สรุปคะแนนรายวิชา', 'ตามมาตรฐานการเรียนรู้', 15],
+        'PrintByLearning' => ['รายงานคะแนนรายสาระการเรียนรู้', 'รายงานคะแนนรายวิชา', 'รายสาระการเรียนรู้', 8]][$func];
+    [$students, , $items, $score] = rp_data($c, $room);
+    $strands = d_strands($c);
+    // คอลัมน์ [ชื่อ => น้ำหนักรวม] และส่วนของแต่ละรายการ
+    $cols = [];
+    $parts = [];
+    foreach ($items as $it) {
+        $list = $func === 'PrintByLearning' ? $it['strands'] : $it['pts'];
+        foreach ($list as [$k, $w]) {
+            $name = $func === 'PrintByLearning' ? (mb_substr((string) ($strands[(string) $k] ?? 'สาระที่ '.$k), 0, 40)) : ($func === 'PrintByStandard' ? preg_replace('#\s+[ปม]\.\d.*$#u', '', (string) $k) : (string) $k);
+            $cols[$name] = ($cols[$name] ?? 0) + (float) $w;
+            $parts[] = [$name, $it['key'], (float) $it['mark'], (float) $w];
+        }
+    }
+    $names = array_keys($cols);
+    $n = max($cfg[3], count($names));
     $th = '';
-    for ($k = 1; $k <= $cols; $k++) {
-        $th .= '<th style="width:'.($landscape ? 30 : 34).'px">'.$k.'</th>';
+    $mx = '';
+    for ($i = 0; $i < $n; $i++) {
+        $th .= '<th style="width:46px;height:120px;vertical-align:bottom"><div class="vt">'.h($names[$i] ?? '').'</div></th>';
+        $mx .= '<td class="c"><b>'.(isset($names[$i]) ? rp_num($cols[$names[$i]]) : '').'</b></td>';
     }
+    $totalMax = array_sum($cols);
     $tr = '';
-    $dist = [];
-    foreach ($rows as $i => $g) {
-        $pct = $att[(int) $c['id']][(int) $g['student_id']] ?? null;
-        $has = $g['midterm'] !== null || $g['final'] !== null;
-        $k = rpt_g($g['grade']);
-        $dist[$k] = ($dist[$k] ?? 0) + 1;
-        $tr .= '<tr><td class="c">'.($i + 1).'</td><td class="c">'.h($g['number'] ?: $g['sno']).'</td><td>'.h($g['code']).'</td><td style="white-space:nowrap">'.h($g['name']).'</td>'
-            .str_repeat('<td></td>', $cols).'<td class="c">'.($pct === null ? '-' : number_format($pct, 0)).'</td>'
-            .'<td class="c">'.($g['midterm'] === null ? '' : (int) $g['midterm']).'</td><td class="c">'.($g['final'] === null ? '' : (int) $g['final']).'</td>'
-            .'<td class="c">'.($has ? (int) $g['midterm'] + (int) $g['final'] : '').'</td><td class="c"><b>'.h($k === '-' ? '' : $k).'</b></td></tr>';
+    $colVals = [];
+    foreach ($students as $s) {
+        $gid = (int) $s['gid'];
+        $v = [];
+        foreach ($parts as [$name, $key, $mark, $w]) {
+            $sc = $score[$gid][$key] ?? null;
+            if ($sc !== null && $mark > 0) {
+                $v[$name] = ($v[$name] ?? 0) + $sc / $mark * $w;
+            }
+        }
+        $np = preg_split('/\s+/u', trim((string) $s['name']), 2);
+        $tr .= '<tr><td class="c">'.h($s['number'] ?: $s['sno']).'</td><td class="c">'.h($s['code']).'</td><td style="border-right:none;white-space:nowrap">'.h($np[0]).'</td><td style="border-left:none;white-space:nowrap">'.h($np[1] ?? '').'</td>';
+        for ($i = 0; $i < $n; $i++) {
+            $x = isset($names[$i]) ? ($v[$names[$i]] ?? null) : null;
+            if (isset($names[$i])) {
+                $colVals[$i][] = $x;
+            }
+            $tr .= '<td class="c">'.rp_num($x).'</td>';
+        }
+        $sum = $v ? array_sum($v) : null;
+        $colVals['sum'][] = $sum;
+        $tr .= '<td class="c">'.rp_num($sum).'</td></tr>';
     }
-    $dh = '';
-    $dv = '';
-    foreach (['4', '3.5', '3', '2.5', '2', '1.5', '1', '0', 'ร', 'มส', '-'] as $k) {
-        $dh .= '<th>'.($k === '-' ? 'ยังไม่มีผล' : h($k)).'</th>';
-        $dv .= '<td class="c">'.(int) ($dist[$k] ?? 0).'</td>';
+    $stat = [];
+    foreach (array_keys($names) as $i) {
+        $stat[$i] = rp_stats($colVals[$i] ?? [], (float) $cols[$names[$i]]);
     }
-    $teacher = personnel_options()[$c['teacher_id']] ?? ($c['teacher'] ?? '');
-    $roomName = $room ? class_room_short($c['class'], $room) : cat('class', $c['class']);
-    $body = '<div class="page">'.rpt_head('รายงานผลการเรียน'.$label, 'ภาคเรียนที่ '.(int) $c['term'].' ปีการศึกษา '.(int) $c['year'])
-        .'<table class="nb"><tr><td>รายวิชา <b>'.h($c['course_code'].' '.$c['course_name']).'</b> ('.h(COURSE_TYPES[(int) $c['type']] ?? '').')</td><td>ชั้น <b>'.h($roomName).'</b></td><td>หน่วยกิต '.h($c['credit']).'</td><td>เวลาเรียน '.h($c['period']).' ชั่วโมง</td></tr>'
-        .'<tr><td>ครูผู้สอน <b>'.h($teacher ?: '-').'</b></td><td colspan="3">อัตราส่วนคะแนน ระหว่างภาค : กลางภาค : ปลายภาค = '.(int) $d['work'].' : '.(int) $d['mid'].' : '.(int) $d['final'].'</td></tr></table>'
-        .'<table style="margin-top:6px"><tr><th rowspan="2" style="width:26px">ที่</th><th rowspan="2" style="width:32px">เลขที่</th><th rowspan="2" style="width:56px">รหัส</th><th rowspan="2">ชื่อ-นามสกุล</th>'
-        .'<th colspan="'.$cols.'">คะแนน'.h($label).' ('.h($colName).')</th><th rowspan="2" style="width:42px">เวลาเรียน<br>%</th><th rowspan="2" style="width:48px">ระหว่างภาค+<br>กลางภาค<br>('.((int) $d['work'] + (int) $d['mid']).')</th>'
-        .'<th rowspan="2" style="width:42px">ปลายภาค<br>('.(int) $d['final'].')</th><th rowspan="2" style="width:34px">รวม<br>(100)</th><th rowspan="2" style="width:38px">เกรด</th></tr><tr>'.$th.'</tr>'
-        .($tr ?: '<tr><td colspan="'.(9 + $cols).'" class="c">ไม่มีนักเรียนลงทะเบียน</td></tr>').'</table>'
-        .'<table style="margin-top:6px"><tr><th>ผลการเรียน</th>'.$dh.'<th>รวม</th></tr><tr><td class="c">จำนวน (คน)</td>'.$dv.'<td class="c">'.count($rows).'</td></tr></table>'
-        .'<div class="small" style="margin-top:3px">ช่องคะแนน'.h($label).'เว้นไว้สำหรับกรอกเอง (ระบบเก็บคะแนนระหว่างภาค+กลางภาค และปลายภาค)</div>'
-        .rpt_signs([['ครูผู้สอน', $teacher], ['หัวหน้ากลุ่มสาระการเรียนรู้', ''], ['หัวหน้างานวัดผล', '']]).'</div>';
-    rpt_print('รายงานผลการเรียน'.$label, $body, $landscape);
+    $stat['sum'] = rp_stats($colVals['sum'] ?? [], $totalMax);
+    $foot = '';
+    foreach ([[0, 'คะแนนเฉลี่ย'], [4, 'ร้อยละของคะแนนเต็ม'], [5, 'S.D']] as [$k, $label]) {
+        $foot .= '<tr><td></td><td></td><td colspan="2" class="r"><b>'.$label.'</b></td>';
+        for ($i = 0; $i < $n; $i++) {
+            $foot .= '<td class="c">'.($stat[$i][$k] ?? '').'</td>';
+        }
+        $foot .= '<td class="c">'.$stat['sum'][$k].'</td></tr>';
+    }
+    $body = '<div class="pv-wrap">'.rp_head($c, $room, $cfg[1], $cfg[2]).'<table class="pv"><tr><th rowspan="2" style="width:40px;vertical-align:bottom"><div class="vt">เลขที่</div></th><th rowspan="2" style="width:44px;vertical-align:bottom"><div class="vt">เลขประจำตัว</div></th>'
+        .'<th rowspan="2" colspan="2">ชื่อ-นามสกุล</th>'.$th.'<th style="width:46px">รวม</th></tr><tr>'.$mx.'<td class="c"><b>'.rp_num($totalMax).'</b></td></tr>'.$tr.$foot.'</table></div>';
+    rp_page($cfg[0], $func, $c, $room, $body);
+}
+
+/** รายหน่วย: หน้า 1 คะแนนรายหน่วย+กลางภาค / หน้า 2 เวลาเรียน รวมระหว่างภาค ปลายภาค รวม เกรด */
+function rp_unit(array $c, int $room): void
+{
+    [$students, $units, , $score] = rp_data($c, $room);
+    $mid = d_exam($c, 'mid');
+    $fin = d_exam($c, 'final');
+    [$rw] = score_ratio();
+    $att = [];
+    $sessions = 0;
+    foreach (q('SELECT `student_id`, COUNT(*) n, SUM(`status` IN (\''.implode("','", \Attendance\Sheet\Model::PRESENT).'\')) p FROM {attendance} WHERE `course_id`=?'.($room ? ' AND `room`='.$room : '').' GROUP BY `student_id`', [(int) $c['id']]) as $r) {
+        $att[(int) $r['student_id']] = (int) $r['p'];
+        $sessions = max($sessions, (int) $r['n']);
+    }
+    $teacher = personnel_options()[$c['teacher_id']] ?? '';
+    $head = '<div class="pv-hc"><img src="/mis/gallery/logo/school_logo.png" alt=""/>รายงานคะแนนการพัฒนานักเรียน ภาคเรียนที่ '.(int) $c['term'].' ปีการศึกษา '.(int) $c['year'].'<br>รายวิชา <u>'.h($c['course_code']).'</u> ชื่อวิชา <u>'.h($c['course_name']).'</u> ระดับชั้น <u>'.h(class_room_short($c['class'], $room)).'</u> ครูผู้สอน <u>'.h($teacher).'</u></div>';
+    $unitMax = $units ? array_sum(array_map(fn($u) => (float) $u['mark'], $units)) : (float) $rw;
+    // ค่าของแต่ละนักเรียน
+    $rows = [];
+    foreach ($students as $s) {
+        $gid = (int) $s['gid'];
+        $us = [];
+        foreach ($units as $un => $u) {
+            $has = false;
+            $sum = 0.0;
+            foreach (array_keys($u['tasks']) as $tn) {
+                if (isset($score[$gid][$un.'.'.$tn])) {
+                    $has = true;
+                    $sum += (float) $score[$gid][$un.'.'.$tn];
+                }
+            }
+            $us[$un] = $has ? $sum : null;
+        }
+        $m = $score[$gid]['mid'];
+        $uSum = $units ? (array_filter($us, fn($x) => $x !== null) ? array_sum($us) : null) : $score[$gid]['unitOld'];
+        $f = $score[$gid]['final'];
+        $mt = $s['midterm'] === null ? null : (float) $s['midterm'];
+        $rows[] = ['s' => $s, 'u' => $us, 'mid' => $m, 'uo' => $uSum, 'mt' => $mt, 'fin' => $f, 'tot' => $mt === null && $f === null ? null : (float) $mt + (float) $f, 'grade' => (string) $s['grade'], 'att' => $att[(int) $s['student_id']] ?? null];
+    }
+    $statRows = function (array $cols) use ($rows): string {
+        $labels = ['คะแนนเฉลี่ย', 'ร้อยละที่ผ่านเกณฑ์', 'คะแนนต่ำสุด', 'คะแนนสูงสุด', 'ร้อยละของคะแนนเต็ม (E<sub>1</sub>/E<sub>2</sub>)', 'ค่าเบี่ยงเบนมาตรฐาน (S.D)', 'ค่าสัมประสิทธิ์การกระจาย (C.V)'];
+        $st = [];
+        foreach ($cols as $i => [$fn, $max]) {
+            $st[$i] = $fn === null ? array_fill(0, 7, '') : rp_stats(array_map($fn, $rows), (float) $max);
+        }
+        $o = '';
+        foreach ($labels as $k => $label) {
+            $o .= '<tr class="st"><td class="c">'.($k ? '' : 'รวม').'</td><td class="c">'.($k ? '' : count($rows).' คน').'</td><td class="r">'.$label.'</td>';
+            foreach (array_keys($cols) as $i) {
+                $o .= '<td class="c'.($k === 6 && $st[$i][$k] !== '' ? ' cv' : '').'">'.$st[$i][$k].'</td>';
+            }
+            $o .= '</tr>';
+        }
+        return $o;
+    };
+    $nameCell = function ($s) {
+        return '<td class="c">'.h($s['number'] ?: $s['sno']).'</td><td class="c">'.h($s['code']).'</td>';
+    };
+    $splitName = function ($s) {
+        $np = preg_split('/\s+/u', trim((string) $s['name']), 2);
+        return '<td style="white-space:nowrap"><span style="display:inline-block;min-width:190px">'.h($np[0]).'</span>'.h($np[1] ?? '').'</td>';
+    };
+    $headL = '<tr><th rowspan="2" style="width:40px;vertical-align:bottom"><div class="vt">เลขที่</div></th><th rowspan="2" style="width:44px;vertical-align:bottom"><div class="vt">เลขประจำตัว</div></th><th rowspan="2">ชื่อ-นามสกุล</th>';
+    // หน้า 1
+    $cols1 = [];
+    $th1 = '';
+    $mx1 = '';
+    foreach ($units as $un => $u) {
+        $th1 .= '<th style="width:120px">หน่วยที่ '.$un.'</th>';
+        $mx1 .= '<th>'.rp_num($u['mark']).'</th>';
+        $cols1[] = [fn($r) => $r['u'][$un], (float) $u['mark']];
+    }
+    if (!$units) {
+        $th1 .= '<th style="width:120px">คะแนนระหว่างภาค</th>';
+        $mx1 .= '<th>'.$rw.'</th>';
+        $cols1[] = [fn($r) => $r['uo'], (float) $rw];
+    }
+    $th1 .= '<th style="width:120px">กลางภาค</th>';
+    $mx1 .= '<th>'.rp_num($mid['mark']).'</th>';
+    $cols1[] = [fn($r) => $r['mid'], (float) $mid['mark']];
+    $tr1 = '';
+    foreach ($rows as $r) {
+        $tr1 .= '<tr>'.$nameCell($r['s']).$splitName($r['s']);
+        foreach ($cols1 as [$fn]) {
+            $tr1 .= '<td class="c">'.rp_num($fn($r)).'</td>';
+        }
+        $tr1 .= '</tr>';
+    }
+    // หน้า 2
+    $cols2 = [[null, 0], [fn($r) => $r['mt'], $unitMax + (float) $mid['mark']], [fn($r) => $r['fin'], (float) $fin['mark']], [fn($r) => $r['tot'], 100], [null, 0]];
+    $tr2 = '';
+    foreach ($rows as $r) {
+        $tr2 .= '<tr>'.$nameCell($r['s']).$splitName($r['s']).'<td class="c">'.($r['att'] ?? '').'</td><td class="c">'.rp_num($r['mt']).'</td><td class="c">'.rp_num($r['fin']).'</td><td class="c">'.rp_num($r['tot']).'</td><td class="c">'.h($r['grade']).'</td></tr>';
+    }
+    $p1 = '<table class="pv">'.$headL.$th1.'</tr><tr>'.$mx1.'</tr>'.$tr1.$statRows($cols1).'</table>';
+    $p2 = '<table class="pv">'.$headL.'<th style="width:80px">เวลา<br>เรียน</th><th style="width:80px">รวมระหว่าง<br>ภาค</th><th style="width:80px">ปลายภาค</th><th style="width:80px">รวม</th><th style="width:80px">เกรด</th></tr>'
+        .'<tr><th>'.$sessions.'</th><th>'.rp_num($unitMax + (float) $mid['mark']).'</th><th>'.rp_num($fin['mark']).'</th><th>100</th><th>4</th></tr>'.$tr2.$statRows($cols2).'</table>';
+    $body = '<div class="pv-tabs"><a class="on" onclick="pvTab(0)">หน้า 1</a><a onclick="pvTab(1)">หน้า 2</a></div>'
+        .'<div class="pv-page on"><div class="pv-wrap">'.$head.$p1.'</div></div><div class="pv-page"><div class="pv-wrap">'.$head.$p2.'</div></div>';
+    rp_page('รายงานคะแนนพัฒนานักเรียน', 'PrintByUnit', $c, $room, $body, 'Left = 6 &nbsp; Right = 6 &nbsp; Top = 3 &nbsp; Bottom = 3');
+}
+
+/** ปุ่มพิมพ์จากหน้าบันทึกผลการเรียน */
+function rpt_record_print(string $func): void
+{
+    $c = att_course();
+    if (!$c) {
+        rpt_print('ไม่สามารถพิมพ์ได้', '<div class="page"><h3>ไม่มีสิทธิ์พิมพ์เอกสารของรายวิชานี้</h3></div>');
+    }
+    $room = (int) ($_GET['RoomNum'] ?? 0);
+    if ($func === 'PrintByUnit') {
+        rp_unit($c, $room);
+    }
+    rp_weighted($func, $c, $room);
 }
 
 function act_task_study_record_PrintByPoint(): void

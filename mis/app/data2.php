@@ -713,30 +713,86 @@ function rows_task_study_record_Record()
     $c = att_course() ?? redirect('?module=task&option=study_record');
     $room = (int) ($_GET['RoomNum'] ?? 0);
     $d = json_decode((string) md_get('design', $c['id']), true) ?: ['work' => 50, 'mid' => 20, 'final' => 30];
-    $rows = '';
-    $sql = 'SELECT G.`id` gid, G.`midterm`, G.`final`, G.`grade`, G.`number`, S.`student_id` code, U.`name`, U.`id` FROM {grade} G JOIN {student} S ON S.`id`=G.`student_id` JOIN {user} U ON U.`id`=G.`student_id` WHERE G.`course_id`=?';
+    $yt = (int) $c['year'].'/'.(int) $c['term'];
+    // รายวิชา-ห้องของครู สำหรับเลือกเปลี่ยน
+    $courses = my_courses();
+    if (!array_filter($courses, fn($x) => (int) $x['id'] === (int) $c['id'])) {
+        $courses[] = $c;
+    }
+    $opts = '';
+    foreach (course_rooms($courses) as $cid => $rooms) {
+        foreach ($courses as $x) {
+            if ((int) $x['id'] === $cid) {
+                foreach (array_keys($rooms) as $r) {
+                    $opts .= '<option value="?module=task&option=study_record&func=Record&SubjectNum='.$cid.'&RoomNum='.$r.'"'.($cid === (int) $c['id'] && $r === $room ? ' selected' : '').'>'.h($x['course_code'].' - '.class_room_short($x['class'], $r)).'</option>';
+                }
+            }
+        }
+    }
+    // เวลาเรียน [sid => [ทั้งหมด, มาเรียน]]
+    $att = [];
+    $total = 0;
+    foreach (q('SELECT `student_id`, COUNT(*) n, SUM(`status` IN (\''.implode("','", \Attendance\Sheet\Model::PRESENT).'\')) p FROM {attendance} WHERE `course_id`=?'.($room ? ' AND `room`='.$room : '').' GROUP BY `student_id`', [(int) $c['id']]) as $r) {
+        $att[(int) $r['student_id']] = [(int) $r['n'], (int) $r['p']];
+        $total = max($total, (int) $r['n']);
+    }
+    $sql = 'SELECT G.`id` gid, G.`student_id`, G.`midterm`, G.`final`, G.`grade`, G.`number`, S.`student_id` code, S.`number` sno, U.`name` FROM {grade} G JOIN {student} S ON S.`id`=G.`student_id` JOIN {user} U ON U.`id`=G.`student_id` WHERE G.`course_id`=?';
     $p = [(int) $c['id']];
     if ($room) {
         $sql .= ' AND G.`room`=?';
         $p[] = $room;
     }
-    $spec = ['' => 'อัตโนมัติ', 'ร' => 'ร', 'มส' => 'มส'];
+    $spec = ['' => '-', 'ร' => 'ร', 'มส' => 'มส'];
+    $in = fn($n, $v) => '<input type="text" name="'.$n.'" value="'.h($v).'" class="rec-in" maxlength="5"/>';
+    $rows = '';
     foreach (q($sql.' ORDER BY G.`room`, G.`number`, S.`student_id`', $p) as $i => $s) {
-        $g = (string) $s['grade'];
-        $rows .= zrow([$s['number'], h($s['code']), name_nbsp($s['name']),
-            ['<input type="text" name="mid['.(int) $s['gid'].']" value="'.h($s['midterm']).'" class="general radius" style="width:60px;height:19px;text-align:center"/>', ' align="center"'],
-            ['<input type="text" name="fin['.(int) $s['gid'].']" value="'.h($s['final']).'" class="general radius" style="width:60px;height:19px;text-align:center"/>', ' align="center"'],
-            [(int) $s['midterm'] + (int) $s['final'], ' align="center"'], [h($g), ' align="center" style="font-weight:bold"'], [sel('spec['.(int) $s['gid'].']', $spec, in_array($g, ['ร', 'มส'], true) ? $g : ''), ' align="center"']], $i);
+        $gid = (int) $s['gid'];
+        [$unit, $mid] = array_pad(explode('|', (string) md_get('rec_split', $gid)), 2, '');
+        if ($unit === '' && $mid === '' && $s['midterm'] !== null) {
+            $unit = (string) $s['midterm'];
+        }
+        $fix = json_decode((string) md_get('remedial', 'g'.$gid, $yt), true) ?: [];
+        $grade = (string) ($fix['old'] ?? $s['grade']);
+        $has = $s['midterm'] !== null || $s['final'] !== null;
+        [$n, $pr] = $att[(int) $s['student_id']] ?? [0, 0];
+        $np = preg_split('/\s+/u', trim((string) $s['name']), 2);
+        $rows .= '<tr><td class="c">'.h($s['number'] ?: $s['sno']).'</td><td class="c">'.h($s['code']).'</td><td style="white-space:nowrap"><span style="display:inline-block;min-width:150px">'.h($np[0]).'</span>'.h($np[1] ?? '').'</td>'
+            .'<td class="c">'.($n - $pr).'</td><td class="c">'.($n ? number_format($pr * 100 / $n, 0) : '100').'</td>'
+            .'<td class="c">'.$in('unit['.$gid.']', $unit).'</td><td class="c">'.$in('mid['.$gid.']', $mid).'</td><td class="c">'.$in('fin['.$gid.']', (string) $s['final']).'</td>'
+            .'<td class="c sum">'.($has ? (int) $s['midterm'] + (int) $s['final'] : '').'</td><td class="c sum"><b>'.h($grade).'</b><br>'.sel('spec['.$gid.']', $spec, in_array($grade, ['ร', 'มส'], true) ? $grade : '', 'class="rec-sp" title="กรณีพิเศษ"').'</td>'
+            .'<td class="c fix">'.$in('fix['.$gid.']', (string) ($fix['score'] ?? '')).'</td><td class="c fix">'.h((string) ($fix['score'] ?? '')).'</td><td class="c fix"><b>'.h((string) ($fix['new'] ?? '')).'</b></td></tr>';
     }
-    $body = saved_msg().'<form name="rec" method="post" action="?module=task&option=study_record&func=SaveRecord&SubjectNum='.(int) $c['id'].'&RoomNum='.$room.'">'
-        .list_table('บันทึกผลการเรียน '.h($c['course_code'].' '.$c['course_name'].' '.class_room_short($c['class'], $room)),
-            ['เลขที่', 'รหัสนร.', 'ชื่อ-นามสกุล', ['คะแนนระหว่างภาค+กลางภาค ('.($d['work'] + $d['mid']).')', ' style="text-align:center"'], ['ปลายภาค ('.$d['final'].')', ' style="text-align:center"'], ['รวม', ' style="text-align:center"'], ['ผลการเรียน', ' style="text-align:center"'], ['กรณีพิเศษ', ' style="text-align:center"']],
-            $rows, 'เกรดคำนวณจากคะแนนรวมตามเกณฑ์ระดับผลการเรียน', btn('กลับ', '?module=task&option=study_record', 'back')
-            .'<a href="javascript:void(0);" onclick="document.forms.rec.submit();" id="pinkgreenbtns" style="margin-left:4px"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึกผลการเรียน</a>')
-        .'</form>';
-    $page = sub_page('task_study_record', $body, 'บันทึกคะแนนและผลการเรียน');
-    // ปุ่มพิมพ์ รายตัวชี้วัด / รายหน่วยฯ / ราย มฐ. / รายสาระฯ
-    $page['__CONTENT__'] = preg_replace('/<DIV style="float:right">/', '<DIV style="float:right">'.str_replace('$', '\\$', rpt_record_buttons($c, $room)), $page['__CONTENT__'], 1);
+    $teacher = personnel_options()[$c['teacher_id']] ?? ($c['teacher'] ?? '');
+    $rn = room_short($room);
+    $level = cat('class', $c['class']).($room ? '/'.(strpos($rn, '/') !== false ? substr($rn, strrpos($rn, '/') + 1) : $rn) : '');
+    $style = '<style>.rec-box{width:983px;margin:0 auto;text-align:left}.rec-bar{border:1px solid #d3d3d3;border-radius:4px 4px 0 0;background:linear-gradient(#fff,#f3f3f3);padding:6px 10px;display:flex;align-items:center;justify-content:space-between}'
+        .'.rec-bar h2{font-family:thaisansbold;font-weight:normal;font-size:24px;margin:0;color:#333}.rec-bar h2 i{color:#F7941D;margin-right:8px}'
+        .'.rec-info{border:1px dashed #6FCF97!important;border-top:none!important;background:#fff;padding:14px 16px;display:flex;justify-content:space-between;margin-bottom:14px}'
+        .'.rec-info img{width:100px;height:110px;object-fit:cover;border:1px solid #ddd;padding:3px;margin-right:16px}.rec-info .t1{font-family:thaisansbold;font-size:28px;color:#2B7BB9}.rec-info .t2{font-family:thaisansbold;font-size:21px;color:#27AE60}'
+        .'.rec-info .t3{font-family:thaisansbold;font-size:21px;color:#111}.rec-info .t4{font-family:thaisansbold;font-size:19px;color:#333}.rec-info .t4 span{display:inline-block}.rec-info .yt{font-family:thaisansbold;font-size:32px;color:#F7A21B;text-align:right}'
+        .'.rec-info .ratio{font-family:thaisansbold;font-size:24px;color:#111;text-align:right;margin-top:6px}'
+        .'.rec-tab{display:inline-block;background:#17B4B4;color:#fff;font-family:thaisansbold;font-size:17px;padding:5px 10px 3px;border-radius:3px 3px 0 0}.rec-tabline{border-top:3px solid #17B4B4}'
+        .'table.rec{border-collapse:collapse;width:100%;font:13px Tahoma}table.rec th{background:#FDE5DA;border:1px solid #8FD3D3;font-family:thaisansbold;font-weight:normal;font-size:18px;color:#222;padding:3px 4px;text-align:center!important;vertical-align:middle}'
+        .'table.rec td{border:1px solid #8FD3D3;padding:4px 5px;height:26px;color:#000}table.rec .c{text-align:center}table.rec .sum{background:#F3F5FF}table.rec .fix{background:#FFFDE8}table.rec tr.max td{background:#FBFBFB;text-align:center}'
+        .'.rec-in{width:42px;height:20px;text-align:center;border:1px solid #ccc;border-radius:3px;font:13px Tahoma}.rec-sp{font-size:11px;height:18px;margin-top:2px}'
+        .'.rec-btn{text-align:right;padding:8px 0}</style>';
+    $th1 = '<tr><th rowspan="3" style="width:46px">เลขที่</th><th rowspan="3" style="width:56px">รหัส</th><th rowspan="3">ชื่อ-นามสกุล</th><th colspan="10" style="font-size:21px">คะแนนสอบและผลการเรียน ประจำภาคเรียนที่ '.(int) $c['term'].' ปีการศึกษา '.(int) $c['year'].'</th></tr>'
+        .'<tr><th colspan="2">เวลาเรียน</th><th>รายหน่วย</th><th>กลางภาค</th><th>ปลายภาค</th><th colspan="2">คะแนนรวมและสรุปผล</th><th colspan="3">แก้ไข</th></tr>'
+        .'<tr><th>คาบ</th><th>ร้อยละ</th><th>รวม</th><th>คะแนน</th><th>คะแนน</th><th>รวม</th><th>เกรด</th><th rowspan="2">แก้</th><th>รวม</th><th>เกรด</th></tr>'
+        .'<tr class="max"><td colspan="3" style="background:#FDE5DA"></td><td>'.$total.'</td><td>100</td><td>'.(int) $d['work'].'</td><td>'.(int) $d['mid'].'</td><td>'.(int) $d['final'].'</td><td>100</td><td>4</td><td></td><td>4</td></tr>';
+    $body = $style.saved_msg().'<div class="rec-box"><div class="rec-bar"><h2><i class="fa fa-list-ul"></i>โอนคะแนนและผลการเรียน</h2><select onchange="location.href=this.value" style="height:24px;min-width:160px">'.$opts.'</select></div>'
+        .'<div class="rec-info"><div style="display:flex"><img src="'.h(avatar_url((int) $c['teacher_id'])).'" alt=""/><div><div class="t1">ครูผู้รับผิดชอบ : '.h($teacher).'</div><div class="t2">ระดับชั้น'.h($level).'</div>'
+        .'<div class="t3">รายวิชา '.h($c['course_code'].' '.$c['course_name']).' (รายวิชา'.h(COURSE_TYPES[(int) $c['type']] ?? '').')</div>'
+        .'<div class="t4"><span style="width:200px">จำนวนหน่วยกิตต่อภาค</span><span style="width:70px">'.h($c['credit']).'</span>หน่วยกิต</div><div class="t4"><span style="width:200px">จำนวนชั่วโมงเรียนต่อภาค</span><span style="width:70px">'.h($c['period']).'</span>ชั่วโมง</div></div></div>'
+        .'<div><div class="yt">ภาคเรียนที่ '.(int) $c['term'].' ปีการศึกษา '.(int) $c['year'].'</div><div class="ratio">อัตราส่วนคะแนนรายวิชา '.(int) $d['work'].' : '.(int) $d['mid'].' : '.(int) $d['final'].'</div></div></div>'
+        .'<form name="rec" method="post" action="?module=task&option=study_record&func=SaveRecord&SubjectNum='.(int) $c['id'].'&RoomNum='.$room.'"><span class="rec-tab">กลางภาค ปลายภาค และสรุปรวม</span><div class="rec-tabline"></div>'
+        .'<table class="rec">'.$th1.($rows ?: '<tr><td colspan="13" class="c">ไม่มีนักเรียนลงทะเบียน</td></tr>').'</table>'
+        .'<div class="rec-btn">'.btn('กลับ', '?module=task&option=study_record', 'back')
+        .'<a href="javascript:void(0);" onclick="document.forms.rec.submit();" id="pinkgreenbtns" style="margin-left:4px"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึกผลการเรียน</a></div></form></div>';
+    $page = sub_page('task_study_record', $body, 'รายงานผลการเรียน');
+    // ปุ่มพิมพ์ รายตัวชี้วัด / รายหน่วยฯ / ราย มฐ. / รายสาระฯ และปุ่มกลับ
+    $back = "<div style='float:left;margin:0px 2px'> <a href='?module=task&option=study_record' onMouseOver=\"MM_swapImage('icon_back','','../icon_tools/icon_back.png',1);\" onMouseOut=\"MM_swapImgRestore();\"><img id='icon_back' name='icon_back' src='../icon_tools/hicon_back.png' border='0' title='กลับ' align='top'/></a> </div>";
+    $page['__CONTENT__'] = preg_replace('/<DIV style="float:right">/', '<DIV style="float:right">'.str_replace('$', '\\$', rpt_record_buttons($c, $room).$back), $page['__CONTENT__'], 1);
     return $page;
 }
 
@@ -744,13 +800,35 @@ function act_task_study_record_SaveRecord(): void
 {
     $c = att_course();
     if ($c) {
-        foreach ((array) ($_POST['mid'] ?? []) as $gid => $mid) {
-            $fin = $_POST['fin'][$gid] ?? '';
+        $d = json_decode((string) md_get('design', $c['id']), true) ?: [];
+        $pass = (int) ($d['pass'] ?? 50);
+        $yt = (int) $c['year'].'/'.(int) $c['term'];
+        $num = fn($v) => trim((string) $v) === '' ? null : max(0, min(100, (float) $v));
+        foreach ((array) ($_POST['fin'] ?? []) as $gid => $fin) {
+            $gid = (int) $gid;
+            $row = q1('SELECT `student_id` FROM {grade} WHERE `id`=? AND `course_id`=?', [$gid, (int) $c['id']]);
+            if (!$row) {
+                continue;
+            }
+            $u = $num($_POST['unit'][$gid] ?? '');
+            $m = $num($_POST['mid'][$gid] ?? '');
+            $f = $num($fin);
+            md_set('rec_split', $gid, '', '', $u === null && $m === null ? null : ($u ?? '').'|'.($m ?? ''));
+            $midterm = $u === null && $m === null ? null : (int) round((float) $u + (float) $m);
+            $final = $f === null ? null : (int) round($f);
             $spec = (string) ($_POST['spec'][$gid] ?? '');
-            $m = $mid === '' ? null : max(0, min(100, (int) $mid));
-            $f = $fin === '' ? null : max(0, min(100, (int) $fin));
-            $grade = in_array($spec, ['ร', 'มส'], true) ? $spec : ($m === null && $f === null ? null : grade_of((int) $m + (int) $f));
-            q('UPDATE {grade} SET `midterm`=?, `final`=?, `grade`=? WHERE `id`=? AND `course_id`=?', [$m, $f, $grade, (int) $gid, (int) $c['id']]);
+            $grade = in_array($spec, ['ร', 'มส'], true) ? $spec : ($midterm === null && $final === null ? null : grade_of((int) $midterm + (int) $final));
+            // สอบแก้ตัว: ผ่านเกณฑ์ได้ 1 ไม่ผ่านได้ 0 (บันทึกในผลการสอบแก้ตัวด้วย)
+            $fx = $num($_POST['fix'][$gid] ?? '');
+            if ($fx === null) {
+                md_set('remedial', 'g'.$gid, $yt, '', null);
+            } else {
+                $new = $fx >= $pass ? '1' : '0';
+                md_set('remedial', 'g'.$gid, $yt, '', json_encode(['student' => (int) $row['student_id'], 'course' => (int) $c['id'], 'old' => (string) $grade, 'new' => $new,
+                    'date' => date('Y-m-d'), 'apply' => 'ใช่', 'score' => (string) (int) round($fx)], JSON_UNESCAPED_UNICODE));
+                $grade = $new;
+            }
+            q('UPDATE {grade} SET `midterm`=?, `final`=?, `grade`=? WHERE `id`=? AND `course_id`=?', [$midterm, $final, $grade, $gid, (int) $c['id']]);
         }
     }
     redirect(str_replace('func=SaveRecord', 'func=Record', $_SERVER['REQUEST_URI']).'&msg=saved');

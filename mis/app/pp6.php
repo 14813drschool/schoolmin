@@ -230,7 +230,7 @@ function act_task_report_pp6_Print(): void
     $tabs .= '</div>';
     $sub = $s['name'].' ระดับชั้น'.pp6_level_name($lt, $ln).'/'.$roomNo.' ปีการศึกษา '.$cy;
     $p = pp6_person($s);
-    $logo = '/mis/gallery/logo/school_logo.png';
+    $logo = rpt_logo();
     $margin = ['Left = 20 &nbsp; Right = 5 &nbsp; Top = 10 &nbsp; Bottom = 5', 'Left = 15 &nbsp; Right = 10 &nbsp; Top = 15 &nbsp; Bottom = 15', 'Left = 12 &nbsp; Right = 7 &nbsp; Top = 5 &nbsp; Bottom = 5',
         'Left = 9 &nbsp; Right = 11 &nbsp; Top = 5 &nbsp; Bottom = 5', 'Left = 15 &nbsp; Right = 7 &nbsp; Top = 5 &nbsp; Bottom = 5', 'Left = 9 &nbsp; Right = 11 &nbsp; Top = 5 &nbsp; Bottom = 5', 'Left = 9 &nbsp; Right = 11 &nbsp; Top = 5 &nbsp; Bottom = 5'][$tab - 1];
     $body = '';
@@ -251,7 +251,7 @@ function act_task_report_pp6_Print(): void
         }
         $body = '<div class="doc"><div style="position:absolute;right:-90px;top:0;font-weight:bold">ปพ.6</div><div class="ctr"><img src="'.$logo.'" style="width:100px"/>'
             .'<div style="font-size:32px;font-weight:bold;margin-top:4px">รายงานผลการพัฒนาคุณภาพผู้เรียนรายบุคคล</div><div style="font-size:26px;font-weight:bold">'.h($band).'</div>'
-            .'<div style="font-size:26px;font-weight:bold">'.h($school.' อำเภอ'.cfg('school_amphoe', 'แม่สาย').' จังหวัด'.cfg('school_province', 'เชียงราย')).'</div></div>'
+            .'<div style="font-size:26px;font-weight:bold">'.h($school.' อำเภอ'.cfg('addr_amphoe', cfg('school_amphoe', 'แม่สาย')).' จังหวัด'.cfg('addr_province', cfg('school_province', 'เชียงราย'))).'</div></div>'
             .'<div style="width:706px;margin:30px auto 0">'.$dl('ชื่อ-สกุล', $s['name'], '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b>เลขประจำตัว</b>&nbsp; '.h($s['student_id'])).$dl('เลขประจำตัวประชาชน', pp6_idcard((string) $s['id_card']))
             .$dl('ชื่อ-ชื่อสกุลบิดา', $p['father'] ?? '').$dl('ชื่อ-ชื่อสกุลมารดา', $p['mother'] ?? '').$dl('ชื่อ-ชื่อสกุลผู้ปกครอง', $p['guardian'] ?? '')
             .'<div class="ctr bold" style="font-size:22px;margin-top:50px">ครูประจำชั้น</div><table class="t" style="margin-top:4px"><tr><th style="width:125px">ปีการศึกษา</th><th style="width:175px">ระดับชั้น</th><th>ครูประจำชั้น</th></tr>'.$tr.'</table></div></div>';
@@ -355,7 +355,7 @@ function act_task_report_pp6_Print(): void
             }
             $gpa = gpa_of(array_map(fn($g) => ['grade' => $g['grade'], 'credit' => $g['credit']], array_filter($gs, fn($g) => (int) $g['ctype'] !== 9)));
             $body = '<div class="doc"><div style="display:flex;align-items:center;gap:8px;margin-left:100px"><img src="'.$logo.'" style="width:52px"/><div><div style="font-size:26px;font-weight:bold;line-height:1">'.h($school).'</div>'
-                .h(cfg('address', '7 หมู่ 3 ต.เวียงพางคำ อ.แม่สาย จ.เชียงราย').' โทรศัพท์ '.cfg('phone', '0-5373-1268')).'</div></div><hr style="border:0;border-top:1px solid #000;margin:8px 0"/>'
+                .h(school_address(true)).'</div></div><hr style="border:0;border-top:1px solid #000;margin:8px 0"/>'
                 .'<div class="ctr bold">รายงานการวัดประเมินผลการเรียนรู้ ระดับชั้น <u style="text-decoration:none;border-bottom:1px dotted #000">'.h(pp6_level_name($lt, $lvn)).'</u><br>ปลายภาคเรียนที่ '.$term.' ปีการศึกษา '.$year.'<br>'.$who.'</div>'
                 .'<table class="t" style="margin-top:8px"><tr><th rowspan="3" style="width:80px">รหัสวิชา</th><th rowspan="3">รายวิชา</th><th colspan="6">การวัดผลและประเมินผลการเรียนรู้</th></tr>'
                 .'<tr><th rowspan="2" style="width:80px">น.น.</th><th style="width:80px">เวลาเรียน</th><th style="width:80px">คะแนน</th><th style="width:80px">คะแนน</th><th rowspan="2" style="width:80px">ผลการ<br>ประเมิน</th><th rowspan="2" style="width:80px">แก้ไข</th></tr>'

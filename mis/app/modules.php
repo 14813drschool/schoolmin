@@ -153,7 +153,7 @@ function room_opts(bool $all = true): array
 
 function logo_url(): string
 {
-    return '../gallery/logo/school_logo.png';
+    return school_logo();
 }
 
 /* ================================================================ โมดูล 1: ข้อมูลหลัก */
@@ -602,7 +602,7 @@ function pp_pick(string $option, string $note): string
 
 function doc_head(string $title, string $code): string
 {
-    return '<div style="text-align:right;font-size:12px">'.h($code).'</div><div style="text-align:center"><img src="'.logo_url().'" style="height:70px"/><h1>'.h($title).'</h1><h2>'.h(cfg('school_name', 'โรงเรียนดรุณราษฎร์วิทยา')).'</h2></div>';
+    return '<div style="text-align:right;font-size:12px">'.h($code).'</div><div style="text-align:center"><img src="'.logo_url().'" style="height:70px"/><h1>'.h($title).'</h1><h2>'.h(cfg('school_name', 'โรงเรียนดรุณราษฎร์วิทยา')).'</h2><div style="font-size:13px">'.h(school_address(true)).'</div></div>';
 }
 
 function student_info_table(array $s): string
@@ -616,7 +616,8 @@ function signs(array $who): string
 {
     $o = '<table style="margin-top:50px;border:none"><tr>';
     foreach ($who as $w) {
-        $o .= '<td style="border:none;text-align:center">ลงชื่อ ........................................<br>( ........................................ )<br>'.h($w).'</td>';
+        $n = $w === 'นายทะเบียน' ? registrar_name() : (preg_match('/^ผู้อำนวยการ/u', $w) ? rpt_signer('ผู้อำนวยการ') : '');
+        $o .= '<td style="border:none;text-align:center">ลงชื่อ ........................................<br>( '.($n !== '' ? h($n) : '........................................').' )<br>'.h($w).'</td>';
     }
     return $o.'</tr></table>';
 }

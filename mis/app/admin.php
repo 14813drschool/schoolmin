@@ -62,7 +62,7 @@ function admin_modules(): array
         'general' => ['บริหารงานทั่วไป', 'general', general_menu()],
         'finance' => ['รับชำระเงินค่าบำรุงการศึกษา', 'finance', finance_menu(), 'รับชำระเงิน'],
         'settings' => ['การตั้งค่า', 'settings', [
-            'ตั้งค่าระบบ' => ['school' => 'ข้อมูลโรงเรียน / ปีการศึกษา', 'admins' => 'กำหนดผู้ดูแลระบบและสิทธิ์โมดูล', 'csv_import' => 'นำเข้าข้อมูลจากไฟล์ CSV', 'users' => 'บัญชีผู้ใช้', 'password' => 'เปลี่ยนรหัสผ่าน', 'teacher_view' => 'ไปหน้าครูผู้สอน'],
+            'กำหนดค่าเริ่มต้นของระบบ' => ['school' => 'ข้อมูลโรงเรียน', 'admins' => 'กำหนดผู้ดูแลระบบและสิทธิ์โมดูล', 'csv_import' => 'นำเข้าข้อมูลจากไฟล์ CSV', 'users' => 'บัญชีผู้ใช้', 'password' => 'เปลี่ยนรหัสผ่าน', 'teacher_view' => 'ไปหน้าครูผู้สอน'],
         ]],
     ];
 }
@@ -203,7 +203,8 @@ function admin_head(string $crumb1, string $crumb2, string $title, string $sub, 
     return '<div style="padding-top:5px"><div id="page_topic_blue" style="width:967px"><div style="float:left"><h1 class=\'title_26\' style=\'font-size:21px;float:left;white-space:nowrap\'>&nbsp;'.h($crumb1)
         .'&nbsp;<img src="../images/white_br_next.png" border="0" style="width:5px"/>&nbsp;'.h($crumb2).'</h1></div><div style="float:right">'
         .'<span style="float:left;margin-top:3px;padding:5px 10px;background-image:url(../icon_tools/menubar_year.png); background-repeat:no-repeat;width:163px;height:22px;font-size:11px;font-weight:normal">แสดงข้อมูล ปีการศึกษา '.yt().'</span>'
-        .'<span style="float:left;margin-top:3px;padding:0px 2px"><a href="index.php"><img src="../icon_tools/menubar_dashboard.png" border="0" alt="แผงเมนูหลัก" title="แผงเมนูหลัก"/></a></span></div></div>'
+        .'<span style="float:left;margin-top:3px;padding:0px 2px"><a href="index.php"><img src="../icon_tools/menubar_dashboard.png" border="0" alt="แผงเมนูหลัก" title="แผงเมนูหลัก"/></a></span>'
+        .(in_array('settings', user_modules(), true) ? '<span style="float:left;margin-top:3px;padding:0px 2px"><a href="'.h(a_url('school')).'" title="การตั้งค่า"><img src="../icon_tools/icon_setting.png" border="0" alt="การตั้งค่า" style="height:22px"/></a></span>' : '').'</div></div>'
         .'<div id="maindetail" style="width:965px"><table border="0" cellpadding="0" cellspacing="0" style="margin-top:3px;width:967px"><tr><td align="left" valign="bottom" style="width:70px;white-space:nowrap">&nbsp;<img src="../icon_tools/icon_main.png"/></td>'
         .'<td align="left" valign="bottom" style="padding-left:5px;white-space:nowrap"><table border="0" cellspacing="0" cellpadding="0"><tr><td style="white-space:nowrap"><h1 class="header_subtitle" style="font-size:25px;white-space:nowrap">'.h($title).'</h1></td></tr>'
         .'<tr><td style="white-space:nowrap"><h1 class="blue_secondtitle" style="font-size:23px;white-space:nowrap">'.h($sub).'</h1></td></tr></table></td>'
@@ -287,6 +288,10 @@ function run_admin(string $option, string $func): void
             return;
         }
         $prefer = $ok[0] ?? '';
+        // ข้อมูลโรงเรียนเป็นเมนูของ "การตั้งค่า" (เมนูรับชำระเงินใช้หน้าเดียวกัน)
+        if ($option === 'school' && in_array('settings', $ok, true)) {
+            $prefer = 'settings';
+        }
         $links = admin_links();
         if (isset($links[$option])) {
             redirect($links[$option]);
@@ -1070,32 +1075,112 @@ function adm_log(bool $post)
     return list_table('ประวัติการใช้งานล่าสุด', ['#', 'เวลา', 'ผู้ใช้', 'โมดูล', 'การกระทำ', 'รายละเอียด'], $rows);
 }
 
+/* ---------------------------------------------------------------- ข้อมูลโรงเรียน (การตั้งค่า) */
+
+const SCHOOL_FIELDS = [
+    'school_name' => ['ชื่อโรงเรียน', true], 'affiliation' => ['สังกัด', true], 'school_area' => ['เขต', true], 'web_title' => ['ชื่อระบบโรงเรียน', true],
+    'addr_no' => ['ที่ตั้ง เลขที่', false], 'addr_moo' => ['หมู่', false], 'addr_tambon' => ['แขวง/ตำบล', false], 'addr_amphoe' => ['เขต/อำเภอ', false],
+    'addr_province' => ['จังหวัด', false], 'addr_zip' => ['รหัสไปรษณีย์', false], 'phone' => ['เบอร์โทรศัพท์', false], 'fax' => ['โทรสาร', false],
+    'email' => ['อีเมล', false], 'network' => ['ศูนย์เครือข่ายที่', false], 'area_rai' => ['พื้นที่ (ไร่)', false], 'area_ngan' => ['พื้นที่ (งาน)', false],
+    'area_wa' => ['พื้นที่ (ตารางวา)', false], 'levels_open' => ['ระดับชั้นที่เปิดสอน', false],
+];
+
+/** ที่อยู่โรงเรียนแบบย่อ (7 หมู่ 3 ต.เวียงพางคำ อ.แม่สาย จ.เชียงราย) */
+function school_address(bool $withPhone = false): string
+{
+    $parts = array_filter([cfg('addr_no', ''), cfg('addr_moo', '') !== '' ? 'หมู่ '.cfg('addr_moo') : '', cfg('addr_tambon', '') !== '' ? 'ต.'.cfg('addr_tambon') : '',
+        cfg('addr_amphoe', '') !== '' ? 'อ.'.cfg('addr_amphoe') : '', cfg('addr_province', '') !== '' ? 'จ.'.cfg('addr_province') : '', (string) cfg('addr_zip', '')], fn($x) => (string) $x !== '');
+    $a = $parts ? implode(' ', $parts) : (string) cfg('address', '7 หมู่ 3 ต.เวียงพางคำ อ.แม่สาย จ.เชียงราย');
+    return $a.($withPhone && cfg('phone', '') !== '' ? ' โทรศัพท์ '.cfg('phone') : '');
+}
+
+/** ตราโรงเรียน (อัปโหลดได้ที่การตั้งค่า > ข้อมูลโรงเรียน) */
+function school_logo(): string
+{
+    foreach (['png', 'jpg', 'gif'] as $e) {
+        $f = ROOT_PATH.'datas/school/logo.'.$e;
+        if (is_file($f)) {
+            return '/datas/school/logo.'.$e.'?v='.filemtime($f);
+        }
+    }
+    return '../gallery/logo/school_logo.png';
+}
+
+/** ชื่อนายทะเบียน */
+function registrar_name(): string
+{
+    return (string) (personnel_options()[(int) cfg('registrar', 0)] ?? '');
+}
+
 function adm_school(bool $post)
 {
-    $file = ROOT_PATH.'settings/config.php';
     if ($post) {
-        $config = \Kotchasan\Config::load($file);
-        foreach (['school_name', 'web_title', 'phone', 'address'] as $k) {
-            $config->$k = mb_substr(trim((string) ($_POST[$k] ?? '')), 0, 200);
+        $vals = [];
+        foreach (SCHOOL_FIELDS as $k => $x) {
+            $vals[$k] = mb_substr(trim((string) ($_POST[$k] ?? '')), 0, 200);
         }
-        $config->academic_year = max(2500, min(2700, (int) ($_POST['academic_year'] ?? 0)));
-        $config->term = (int) ($_POST['term'] ?? 1) === 2 ? 2 : 1;
-        \Kotchasan\Config::save($config, $file);
-        if (function_exists('opcache_invalidate')) {
-            @opcache_invalidate($file, true);
+        $vals['registrar'] = (int) ($_POST['registrar'] ?? 0);
+        // ค่าเดิมที่ส่วนอื่นของระบบใช้
+        $vals['school_amphoe'] = $vals['addr_amphoe'];
+        $vals['school_province'] = $vals['addr_province'];
+        $vals['address'] = trim(implode(' ', array_filter([$vals['addr_no'], $vals['addr_moo'] !== '' ? 'หมู่ '.$vals['addr_moo'] : '', $vals['addr_tambon'] !== '' ? 'ต.'.$vals['addr_tambon'] : '',
+            $vals['addr_amphoe'] !== '' ? 'อ.'.$vals['addr_amphoe'] : '', $vals['addr_province'] !== '' ? 'จ.'.$vals['addr_province'] : '', $vals['addr_zip']])));
+        $miss = array_filter(SCHOOL_FIELDS, fn($x, $k) => $x[1] && $vals[$k] === '', ARRAY_FILTER_USE_BOTH);
+        if ($miss || !$vals['registrar']) {
+            return msg_box('กรุณากรอกรายละเอียดในช่องที่มีเครื่องหมาย * ให้ครบทุกช่อง', false).adm_school(false);
         }
-        setcookie('mis_term', '', ['expires' => time() - 3600, 'path' => '/mis/']);
+        $up = $_FILES['logo'] ?? null;
+        if ($up && (int) $up['error'] === 0 && (int) $up['size'] > 0 && (int) $up['size'] < 2 * 1024 * 1024) {
+            $ext = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/gif' => 'gif'][(string) @mime_content_type($up['tmp_name'])] ?? '';
+            if ($ext !== '') {
+                @mkdir(ROOT_PATH.'datas/school', 0777, true);
+                foreach (['png', 'jpg', 'gif'] as $e) {
+                    @unlink(ROOT_PATH.'datas/school/logo.'.$e);
+                }
+                move_uploaded_file($up['tmp_name'], ROOT_PATH.'datas/school/logo.'.$ext);
+            }
+        }
+        save_cfg($vals);
         admin_done('school');
     }
-    $rows = [
-        ['ชื่อโรงเรียน', inp('school_name', cfg('school_name', 'โรงเรียนดรุณราษฎร์วิทยา'), 400), true],
-        ['ชื่อระบบ', inp('web_title', cfg('web_title', ''), 400), false],
-        ['ที่อยู่', inp('address', cfg('address', ''), 500), false],
-        ['โทรศัพท์', inp('phone', cfg('phone', ''), 200), false],
-        ['ปีการศึกษาปัจจุบัน', inp('academic_year', cfg('academic_year', date('Y') + 543), 80), true],
-        ['ภาคเรียนปัจจุบัน', sel('term', [1 => '1', 2 => '2'], cfg('term', 1)), true],
-    ];
-    return admin_form('ข้อมูลโรงเรียน / ปีการศึกษา', a_url('school'), $rows, 'index.php');
+    $field = function (string $k) {
+        [$label, $req] = SCHOOL_FIELDS[$k];
+        $def = ['school_name' => 'โรงเรียนดรุณราษฎร์วิทยา', 'web_title' => 'ระบบบริหารจัดการสารสนเทศโรงเรียน', 'addr_amphoe' => (string) cfg('school_amphoe', ''), 'addr_province' => (string) cfg('school_province', '')][$k] ?? '';
+        $v = (string) (cfg($k) ?: $def);
+        $style = $req ? 'border:1px solid #F5B7A8;border-left:3px solid #C0392B;background:#FFF8F2;color:#C0392B' : 'border:1px solid #ccc;border-left:3px solid #555;background:#F4F4F4';
+        return '<td class="sl">'.h($label).'</td><td class="sc">'.($req ? '<span style="color:#C0392B">*</span>' : '').':</td><td><input name="'.$k.'" value="'.h($v).'" style="width:220px;height:24px;padding:0 6px;border-radius:2px;'.$style.'"/></td>';
+    };
+    $po = ['' => '- เลือกนายทะเบียน -'] + personnel_options();
+    $logo = school_logo();
+    $grid = [['__logo', 'school_name'], [null, 'affiliation'], [null, 'school_area'], [null, 'web_title'], ['addr_no', 'addr_moo'], ['addr_tambon', 'addr_amphoe'], ['addr_province', 'addr_zip'],
+        ['phone', 'fax'], ['email', 'network'], ['area_rai', 'area_ngan'], ['area_wa', 'levels_open'], ['__registrar', null]];
+    $rows = '';
+    foreach ($grid as $i => [$l, $r]) {
+        $left = '';
+        if ($l === '__logo') {
+            $left = '<td class="sl" style="vertical-align:top">ตราโรงเรียน</td><td class="sc" style="vertical-align:top">:</td><td rowspan="4" style="vertical-align:top"><div style="width:96px;height:96px;border:1px solid #ccc;border-radius:3px;display:flex;align-items:center;justify-content:center;background:#fff"><img src="'.h($logo).'" style="max-width:88px;max-height:88px"/></div>'
+                .'<input type="file" name="logo" accept="image/png,image/jpeg,image/gif" style="margin-top:6px;width:240px;font-size:12px"/><div class="gray_12" style="font-size:11px">ไฟล์ PNG/JPG/GIF ไม่เกิน 2 MB</div></td>';
+        } elseif ($l === '__registrar') {
+            $left = '<td class="sl">นายทะเบียน</td><td class="sc"><span style="color:#C0392B">*</span>:</td><td>'.str_replace('<select', '<select style="width:234px;height:26px;border:1px solid #F5B7A8;border-left:3px solid #C0392B;background:#FFF8F2;color:#C0392B"', sel('registrar', $po, (string) cfg('registrar', ''))).'</td>';
+        } elseif ($l !== null) {
+            $left = $field($l);
+        } elseif ($i <= 3) {
+            $left = '<td></td><td></td>';
+        } else {
+            $left = '<td></td><td></td><td></td>';
+        }
+        $rows .= '<tr>'.$left.($r !== null ? $field($r) : '<td></td><td></td><td></td>').'</tr>';
+    }
+    $html = '<style>.sch td{padding:5px 4px;font-size:13px;vertical-align:middle}.sch td.sl{width:150px;color:#333}.sch td.sc{width:20px;text-align:center}</style>'
+        .'<div style="width:983px;margin:0 auto;text-align:left"><form method="post" enctype="multipart/form-data" action="'.h(a_url('school')).'">'
+        .'<div style="border:1px solid #d6dde3;border-radius:4px;background:#fff"><div style="background:linear-gradient(#fff,#f1f1f1);border-bottom:1px solid #ddd;padding:8px 12px;font-family:thaisansbold;font-size:24px;color:#17A2B8"><i class="fa fa-pencil-square-o"></i> ข้อมูลโรงเรียน</div>'
+        .'<div style="padding:10px 16px"><div style="color:#17A2B8;font-size:12px;margin-bottom:8px"><i class="fa fa-commenting" style="font-size:16px"></i> กรุณากรอกรายละเอียดในช่องที่มีเครื่องหมาย * ให้ครบทุกช่อง</div>'
+        .'<table class="sch" style="width:100%">'.$rows.'</table></div>'
+        .'<div style="background:#F5F5F5;border-top:1px solid #ddd;padding:8px 12px 8px 196px"><button type="submit" style="background:#3EA2E8;border:1px solid #2f8fd3;color:#fff;border-radius:3px;padding:4px 12px;font-size:13px;cursor:pointer"><i class="fa fa-cog"></i> บันทึก</button> '
+        .'<button type="reset" style="background:#F7B331;border:1px solid #e09a16;color:#fff;border-radius:3px;padding:4px 12px;font-size:13px;cursor:pointer">✕ เคลียร์</button></div></div></form>'
+        .'<div class="gray_12" style="margin-top:8px">ข้อมูลเหล่านี้จะถูกเรียกไปแสดงในส่วนต่าง ๆ ของโปรแกรม เช่น หัวเว็บ รายงาน และหลักฐานการศึกษา (ปพ.) จึงควรระบุข้อมูลให้สมบูรณ์และตรงตามความเป็นจริง'
+        .' &nbsp;|&nbsp; กำหนดปีการศึกษา/ภาคเรียนปัจจุบันได้ที่เมนู <a href="'.h(a_url('term')).'">ภาคเรียน</a></div></div>';
+    return ['ตั้งค่าระบบ', $html];
 }
 
 function adm_users(bool $post)

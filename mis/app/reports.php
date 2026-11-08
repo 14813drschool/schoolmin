@@ -15,6 +15,13 @@ const RPT_DOCS = ['card' => 'ใบรายงานผลการเรีย
 /* ---------------------------------------------------------------- ข้อมูล */
 
 /** ภาคเรียนจากพารามิเตอร์ yt=ปี/ภาค (ค่าเริ่มต้น = ที่เลือกดูอยู่) */
+/** ตราโรงเรียนสำหรับหน้าพิมพ์ (ทางเต็ม) */
+function rpt_logo(): string
+{
+    $l = school_logo();
+    return strpos($l, '../') === 0 ? '/mis/'.substr($l, 3) : $l;
+}
+
 function rpt_term(): array
 {
     if (preg_match('#^(\d{4})/([123])$#', (string) ($_GET['yt'] ?? ''), $m)) {
@@ -121,7 +128,7 @@ function rpt_print(string $title, string $body, bool $landscape = false): void
 
 function rpt_head(string $title, string $sub = ''): string
 {
-    return '<div class="head"><img src="/mis/gallery/logo/school_logo.png" alt=""/><div><h2>'.h(cfg('school_name', 'โรงเรียนดรุณราษฎร์วิทยา')).'</h2><h3>'.h($title).'</h3>'.($sub !== '' ? '<div class="c small">'.$sub.'</div>' : '').'</div></div>';
+    return '<div class="head"><img src="'.h(rpt_logo()).'" alt=""/><div><h2>'.h(cfg('school_name', 'โรงเรียนดรุณราษฎร์วิทยา')).'</h2><h3>'.h($title).'</h3>'.($sub !== '' ? '<div class="c small">'.$sub.'</div>' : '').'</div></div>';
 }
 
 function rpt_signs(array $who): string
@@ -584,7 +591,7 @@ function rp_data(array $c, int $room): array
 function rp_head(array $c, int $room, string $lead, string $tail): string
 {
     $teacher = personnel_options()[$c['teacher_id']] ?? '';
-    return '<div class="pv-h"><img src="/mis/gallery/logo/school_logo.png" alt=""/><div>'.h($lead).'<u>'.h($c['course_code']).'</u> ชื่อวิชา <u>'.h($c['course_name']).'</u> ระดับชั้น <u>'.h(class_room_short($c['class'], $room)).'</u> '.h($tail)
+    return '<div class="pv-h"><img src="'.h(rpt_logo()).'" alt=""/><div>'.h($lead).'<u>'.h($c['course_code']).'</u> ชื่อวิชา <u>'.h($c['course_name']).'</u> ระดับชั้น <u>'.h(class_room_short($c['class'], $room)).'</u> '.h($tail)
         .'<br>ครูผู้สอน <u>'.h($teacher).'</u> ภาคเรียนที่ <u>&nbsp;&nbsp;'.(int) $c['term'].'&nbsp;&nbsp;</u> ปีการศึกษา <u>'.(int) $c['year'].'</u></div></div>';
 }
 
@@ -672,7 +679,7 @@ function rp_unit(array $c, int $room): void
         $sessions = max($sessions, (int) $r['n']);
     }
     $teacher = personnel_options()[$c['teacher_id']] ?? '';
-    $head = '<div class="pv-hc"><img src="/mis/gallery/logo/school_logo.png" alt=""/>รายงานคะแนนการพัฒนานักเรียน ภาคเรียนที่ '.(int) $c['term'].' ปีการศึกษา '.(int) $c['year'].'<br>รายวิชา <u>'.h($c['course_code']).'</u> ชื่อวิชา <u>'.h($c['course_name']).'</u> ระดับชั้น <u>'.h(class_room_short($c['class'], $room)).'</u> ครูผู้สอน <u>'.h($teacher).'</u></div>';
+    $head = '<div class="pv-hc"><img src="'.h(rpt_logo()).'" alt=""/>รายงานคะแนนการพัฒนานักเรียน ภาคเรียนที่ '.(int) $c['term'].' ปีการศึกษา '.(int) $c['year'].'<br>รายวิชา <u>'.h($c['course_code']).'</u> ชื่อวิชา <u>'.h($c['course_name']).'</u> ระดับชั้น <u>'.h(class_room_short($c['class'], $room)).'</u> ครูผู้สอน <u>'.h($teacher).'</u></div>';
     $unitMax = $units ? array_sum(array_map(fn($u) => (float) $u['mark'], $units)) : (float) $rw;
     // ค่าของแต่ละนักเรียน
     $rows = [];

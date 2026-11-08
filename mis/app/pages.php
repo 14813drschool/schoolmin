@@ -40,6 +40,7 @@ function run_page(): void
     if (!me()) {
         redirect('../');
     }
+    admin_room_override();
     // นักเรียนใช้ได้เฉพาะระบบสารสนเทศสำหรับนักเรียน
     if (is_student()) {
         redirect('/student/');
@@ -128,4 +129,62 @@ function run_page(): void
     }
     $mod = explode('_', $key)[0];
     render_page($title, $content, $mod);
+}
+
+
+/* ---------------------------------------------------------------- ผู้ดูแล: ดูข้อมูลห้องใดก็ได้โดยไม่ต้องเป็นครูประจำชั้น */
+
+function is_school_admin(): bool
+{
+    $u = me();
+    return $u && ((int) $u['status'] === 1 || array_intersect(['main', 'academic', 'affairs'], user_modules()));
+}
+
+/** ห้องที่ผู้ดูแลเลือกดู (คุกกี้ mis_adv_room = ชั้น|ห้อง) แทนห้องประจำชั้นของตนเอง */
+function admin_room_override(): void
+{
+    if (!is_school_admin()) {
+        return;
+    }
+    if (isset($_GET['AdvRoom'])) {
+        $v = preg_match('/^\d+\|\d+$/', (string) $_GET['AdvRoom']) ? (string) $_GET['AdvRoom'] : '';
+        setcookie('mis_adv_room', $v, ['expires' => $v === '' ? time() - 3600 : 0, 'path' => '/mis/', 'httponly' => true, 'samesite' => 'Lax', 'secure' => !empty($_SERVER['HTTPS'])]);
+        $q = $_GET;
+        unset($q['AdvRoom']);
+        redirect('index.php'.($q ? '?'.http_build_query($q) : ''));
+    }
+    if (preg_match('/^(\d+)\|(\d+)$/', (string) ($_COOKIE['mis_adv_room'] ?? ''), $m)) {
+        $u = me();
+        $p = $u['personnel'] ?: ['id' => (int) $u['id']];
+        $p['class'] = (int) $m[1];
+        $p['room'] = (int) $m[2];
+        $u['personnel'] = $p;
+        $u['adv_override'] = true;
+        me($u);
+    }
+}
+
+/** แถบเลือกห้องสำหรับผู้ดูแล (แสดงในหน้างานครู) */
+function admin_room_picker(): string
+{
+    if (!is_school_admin() || ($_GET['module'] ?? '') !== 'task') {
+        return '';
+    }
+    $cur = preg_match('/^\d+\|\d+$/', (string) ($_COOKIE['mis_adv_room'] ?? '')) ? (string) $_COOKIE['mis_adv_room'] : '';
+    $opt = '<option value="">- ห้องประจำชั้นของตนเอง -</option>';
+    foreach (rooms_by_class() as $cid => $rooms) {
+        foreach ($rooms as $rid => $n) {
+            $v = (int) $cid.'|'.(int) $rid;
+            $opt .= '<option value="'.$v.'"'.($v === $cur ? ' selected' : '').'>'.h($cid ? class_room_short($cid, $rid) : $n).'</option>';
+        }
+    }
+    $hidden = '';
+    foreach ($_GET as $k => $v) {
+        if (is_string($v) && $k !== 'AdvRoom') {
+            $hidden .= '<input type="hidden" name="'.h($k).'" value="'.h($v).'"/>';
+        }
+    }
+    return '<div style="width:983px;margin:6px auto 0;text-align:left;background:#FFF8E1;border:1px solid #F5D78E;border-radius:4px;padding:5px 10px;font-size:13px">'
+        .'<form method="get" action="index.php" style="margin:0">'.$hidden.'<i class="fa fa-user-secret"></i> ผู้ดูแลระบบ: ดูข้อมูลห้อง <select name="AdvRoom" onchange="this.form.submit()" style="height:22px">'.$opt.'</select>'
+        .' <span style="color:#777">(ตรวจสอบและพิมพ์เอกสารของนักเรียนทุกห้องได้โดยไม่ต้องเป็นครูประจำชั้น)</span></form></div>';
 }

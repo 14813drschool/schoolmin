@@ -37,7 +37,16 @@ function h($s): string
 
 function cfg($key, $default = null)
 {
-    return \Kotchasan::$cfg->$key ?? $default;
+    // ค่าที่ระบบเพิ่มเอง (ปีการศึกษา ภาคเรียน ข้อมูลโรงเรียน) Kotchasan ไม่ได้โหลดไว้ จึงอ่านจากไฟล์ตั้งค่าโดยตรง
+    static $file = null;
+    if (isset(\Kotchasan::$cfg->$key)) {
+        return \Kotchasan::$cfg->$key;
+    }
+    if ($file === null) {
+        $f = ROOT_PATH.'settings/config.php';
+        $file = is_file($f) ? (array) (include $f) : [];
+    }
+    return $file[$key] ?? $default;
 }
 
 const TH_MONTHS = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
@@ -53,9 +62,13 @@ function th_date(string $ymd = '', string $sep = '&nbsp;'): string
 /* ---------------------------------------------------------------- ผู้ใช้ */
 
 /** ผู้ใช้ปัจจุบันจากคุกกี้ของ SMS (null = ยังไม่ได้เข้าสู่ระบบ) */
-function me(): ?array
+function me(?array $override = null): ?array
 {
     static $me = false;
+    if ($override !== null) {
+        $me = $override;
+        return $me;
+    }
     if ($me !== false) {
         return $me;
     }
@@ -261,7 +274,9 @@ function render_page(string $title, string $content, string $module = ''): void
     $adv = $u['personnel'] ?? null;
     $sel = ['task' => '00', 'main' => '01', 'academic' => '02'][$module] ?? '';
     $rep = [
-        '{{TITLE}}' => h($title).' - ระบบบริหารจัดการสารสนเทศโรงเรียน',
+        '{{TITLE}}' => h($title).' - '.h((string) (cfg('web_title') ?: 'ระบบบริหารจัดการสารสนเทศโรงเรียน')),
+        '{{WEBTITLE}}' => h((string) (cfg('web_title') ?: 'ระบบบริหารจัดการสารสนเทศโรงเรียน')),
+        '{{SCHOOL}}' => h((string) (cfg('school_name') ?: 'โรงเรียนดรุณราษฎร์วิทยา')),
         '{{V}}' => (string) @filemtime(dirname(MIS_APP).'/css/main.css'),
         '{{YEAR_OPTIONS}}' => year_options(),
         '{{SELF}}' => h($_SERVER['REQUEST_URI'] ?? 'index.php'),
@@ -277,7 +292,10 @@ function render_page(string $title, string $content, string $module = ''): void
         '{{SEL01}}' => $sel === '01' ? "class='selected' " : '',
         '{{SEL02}}' => $sel === '02' ? "class='selected' " : '',
     ];
-    $html = strtr(tpl('layout_head.html'), $rep).strtr($GLOBALS['mis_top_override'] ?? tpl('layout_top.html'), $rep).$content;
+    $html = strtr(tpl('layout_head.html'), $rep).strtr($GLOBALS['mis_top_override'] ?? tpl('layout_top.html'), $rep).(function_exists('admin_room_picker') ? admin_room_picker() : '').$content;
+    if (($logo = school_logo()) !== '../gallery/logo/school_logo.png') {
+        $html = str_replace('../gallery/logo/school_logo.png', $logo, $html);
+    }
     $foot = strtr(tpl('layout_foot.html'), ['{{EXEC}}' => (string) (microtime(true) - MIS_START)]);
     mis_headers();
     echo $html.$foot;

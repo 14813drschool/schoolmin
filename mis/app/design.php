@@ -574,7 +574,7 @@ function rows_task_study_record_Record()
             $rows .= '<tr>'.$nameCell($s).$attCells($s).$cells.'<td class="c u-sum">'.h((string) $sum).'</td><td class="c u-sum">'.h((string) $all).'</td></tr>';
         }
         $n = count($u['tasks']);
-        $panes .= '<div class="rec-pane" id="p'.$ti.'"><table class="rec u"><tr><th rowspan="3" style="width:46px">เลขที่</th><th rowspan="3" style="width:56px">รหัส</th><th rowspan="3">ชื่อ-นามสกุล</th><th colspan="'.(3 + $n + 1).'" style="font-size:21px">คะแนนประจำหน่วยการเรียนรู้ที่ '.$un.'</th></tr>'
+        $panes .= '<div class="rec-pane" id="p'.$ti.'"><table class="rec u"><tr><th rowspan="3" style="width:46px">เลขที่</th><th rowspan="3" style="width:56px">รหัส</th><th rowspan="3">ชื่อ-นามสกุล</th><th colspan="'.(3 + $n + 1).'" class="big">คะแนนประจำหน่วยการเรียนรู้ที่ '.$un.'</th></tr>'
             .'<tr><th colspan="2">เวลาเรียน</th><th colspan="'.($n + 1).'">'.h($u['title']).'</th><th>รวม</th></tr>'
             .'<tr><th class="b">คาบ</th><th class="b">ร้อยละ</th>'.$th.'<th class="b">รวม</th><th class="b">เต็ม</th></tr>'
             .'<tr class="max"><td colspan="3" style="background:#EDFCBE"></td><td>'.$total.'</td><td>100</td>'.$mx.'<td>'.h((string) (float) $u['mark']).'</td><td>'.h((string) $unitMarkAll).'</td></tr>'
@@ -611,7 +611,7 @@ function rows_task_study_record_Record()
             .'<td class="c fix">'.$fixCell.'</td><td class="c fix"><b class="'.(isset($fix['score']) && (float) $fix['score'] < PASS_SCORE ? 'bad' : 'ok').'">'.h((string) ($fix['score'] ?? '')).'</b></td><td class="c fix"><b class="'.(($fix['new'] ?? '') === '0' ? 'bad' : 'ok').'">'.h((string) ($fix['new'] ?? '')).'</b></td></tr>';
     }
     $tabs .= '<span class="rec-tab" data-p="p'.$ti.'">กลางภาค ปลายภาค และสรุปรวม</span>';
-    $panes .= '<div class="rec-pane" id="p'.$ti.'"><table class="rec"><tr><th rowspan="3" style="width:46px">เลขที่</th><th rowspan="3" style="width:56px">รหัส</th><th rowspan="3">ชื่อ-นามสกุล</th><th colspan="10" style="font-size:21px">คะแนนสอบและผลการเรียน ประจำภาคเรียนที่ '.(int) $c['term'].' ปีการศึกษา '.(int) $c['year'].'</th></tr>'
+    $panes .= '<div class="rec-pane" id="p'.$ti.'"><table class="rec"><tr><th rowspan="3" style="width:46px">เลขที่</th><th rowspan="3" style="width:56px">รหัส</th><th rowspan="3">ชื่อ-นามสกุล</th><th colspan="10" class="big">คะแนนสอบและผลการเรียน ประจำภาคเรียนที่ '.(int) $c['term'].' ปีการศึกษา '.(int) $c['year'].'</th></tr>'
         .'<tr><th colspan="2">เวลาเรียน</th><th>รายหน่วย</th><th>กลางภาค</th><th>ปลายภาค</th><th colspan="2">คะแนนรวมและสรุปผล</th><th colspan="3">แก้ไข</th></tr>'
         .'<tr><th class="b">คาบ</th><th class="b">ร้อยละ</th><th class="b">รวม</th><th class="b">คะแนน</th><th class="b">คะแนน</th><th class="b">รวม</th><th class="b">เกรด</th><th rowspan="2" class="b">แก้</th><th class="b">รวม</th><th class="b">เกรด</th></tr>'
         .'<tr class="max"><td colspan="3" style="background:#FDE5DA"></td><td>'.$total.'</td><td>100</td><td>'.h((string) ($units ? $unitMarkAll : $rw)).'</td><td>'.h((string) (float) $mid['mark']).'</td><td>'.h((string) (float) $fin['mark']).'</td><td>100</td><td>4</td><td>100</td><td>4</td></tr>'
@@ -623,12 +623,12 @@ function rows_task_study_record_Record()
         .'.rec-bar h2{font-family:thaisansbold;font-weight:normal;font-size:24px;margin:0;color:#333}.rec-bar h2 i{color:#F7941D;margin-right:8px}.rec-bar+.dz-info{border-top:none!important;border-radius:0 0 4px 4px}'
         .'.rec-tabs{margin-top:4px}.rec-tab{display:inline-block;background:#A9A9A9;color:#fff;font-family:thaisansbold;font-size:17px;padding:5px 10px 3px;border-radius:3px 3px 0 0;cursor:pointer;margin-right:3px}.rec-tab.on{background:#17B4B4}'
         .'.rec-line{border-top:3px solid #17B4B4}.rec-pane{display:none}.rec-pane.on{display:block}'
-        .'table.rec{border-collapse:collapse;width:100%;font:13px Tahoma}table.rec th{background:#FDE5DA;border:1px solid #9CCFD6;font-family:thaisansbold;font-weight:normal;font-size:19px;color:#222;padding:3px 4px;text-align:center!important;vertical-align:middle}'
+        .'table.rec{border-collapse:collapse;width:100%;font:13px Tahoma}table.rec th{background:#FDE5DA;border:1px solid #9CCFD6;font-family:"TH Sarabun New","TH SarabunPSK",sans-serif;font-weight:bold;font-size:20px;color:#222;padding:3px 4px;text-align:center!important;vertical-align:middle}'
         .'table.rec th.b{background:#EDEDED}table.rec.u th{background:#EDFCBE}table.rec.u th.b,table.rec.u th.vt{background:#EDEDED}'
-        .'table.rec th.vt{height:240px;vertical-align:bottom;padding:6px 2px;width:46px}table.rec th.vt div{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;margin:0 auto;font-size:16px;max-height:230px;overflow:hidden}'
+        .'table.rec th.vt{height:240px;vertical-align:bottom;padding:6px 2px;width:46px}table.rec th.vt div{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;margin:0 auto;font-size:18px;max-height:230px;overflow:hidden}'
         .'table.rec td{border:1px solid #9CCFD6;padding:4px 5px;height:26px;color:#000}table.rec .c{text-align:center}table.rec .sum{background:#F3F5FF}table.rec .fix{background:#FFFDE8}table.rec .u-sum{background:#F8FDE8}'
         .'table.rec tr.max td{background:#F7F7F7;text-align:center;font-size:14px}table.rec b.ok{color:#1BA826}table.rec b.bad{color:#E00}'
-        .'.rec-in{width:40px;height:20px;text-align:center;border:1px solid #ccc;border-radius:3px;font:13px Tahoma}.rec-in.ok{border-color:#B1D2A4;background:#ECFFEC}.rec-in.bad{border-color:#EEB9B9;background:#FFFAF2;color:#E00}.rec-in.err{border-color:#e00;background:#ffecec}'
+        .'table.rec th.big{font-size:24px}body.no-sarabun table.rec th{font-size:14px}body.no-sarabun table.rec th.big{font-size:16px}body.no-sarabun table.rec th.vt div{font-size:13px}.rec-in{width:40px;height:20px;text-align:center;border:1px solid #ccc;border-radius:3px;font:13px Tahoma}.rec-in.ok{border-color:#B1D2A4;background:#ECFFEC}.rec-in.bad{border-color:#EEB9B9;background:#FFFAF2;color:#E00}.rec-in.err{border-color:#e00;background:#ffecec}'
         .'.rec-fix{width:37px;height:20px;border:1px solid #B1D2A4;background:#ECFFEC;text-align:center;cursor:pointer;font:13px Tahoma}'
         .'.rec-save{text-align:right;padding:8px 0;border:1px solid #ddd;border-top:none;background:#fafafa;padding:6px 6px}.rec-save a{display:inline-block;color:#fff!important;text-decoration:none;font:13px Tahoma;padding:5px 12px;border-radius:3px;margin-left:5px}'
         .'.rec-save .sv{background:#3EA2E8;border:1px solid #2f8fd3;min-width:200px;text-align:center}.rec-save .cl{background:#F7B331;border:1px solid #e09a16}</style>';
@@ -644,7 +644,11 @@ function rows_task_study_record_Record()
         .'<div id="fx-sp" style="margin:10px 0 0 86px;clear:both"><label style="display:inline;font-family:Tahoma;font-size:13px;margin:0"><input type="checkbox" name="special" value="1" id="fx-special"/> กรณีพิเศษ</label></div>'
         .'<div style="display:flex;align-items:center;gap:10px;margin-top:10px;clear:both"><span style="width:76px;font-size:13px;white-space:nowrap">คะแนนแก้</span><input class="in" name="score" id="fx-score" style="width:150px" maxlength="5" oninput="var v=parseFloat(this.value),t=this;if(!isNaN(v)&&v>100){t.blur();recMsg(\'ไม่อนุญาตให้บันทึกคะแนนมากกว่า 100 คะแนน\',function(){t.value=\'\';t.focus()})}"/><span style="font-size:13px">คะแนน</span></div></div>'
         .'<div class="ft"><button type="submit" class="s">✎ บันทึก</button><button type="button" class="c" onclick="document.getElementById(\'fx-score\').value=\'\';document.getElementById(\'fx-special\').checked=false">✕ เคลียร์</button></div></form></div></div>'
-        .'<script>(function(){var tabs=document.querySelectorAll(".rec-tab");function show(id){tabs.forEach(function(t){t.classList.toggle("on",t.dataset.p===id)});document.querySelectorAll(".rec-pane").forEach(function(p){p.classList.toggle("on",p.id===id)});document.getElementById("rec-tab").value=id}'
+        .'<script>(function(){'
+        // เครื่องที่ไม่มีฟอนต์ TH Sarabun New ใช้ฟอนต์เริ่มต้นของเครื่อง ขนาดเล็กลงให้พอดีหัวตาราง
+        .'try{var c=document.createElement("canvas").getContext("2d"),t="กขคงabc123",w=function(f){c.font="40px "+f;return c.measureText(t).width};'
+        .'if(w("\\"TH Sarabun New\\",monospace")===w("monospace")&&w("\\"TH SarabunPSK\\",monospace")===w("monospace"))document.body.classList.add("no-sarabun")}catch(e){}})();'
+        .'(function(){var tabs=document.querySelectorAll(".rec-tab");function show(id){tabs.forEach(function(t){t.classList.toggle("on",t.dataset.p===id)});document.querySelectorAll(".rec-pane").forEach(function(p){p.classList.toggle("on",p.id===id)});document.getElementById("rec-tab").value=id}'
         .'tabs.forEach(function(t){t.addEventListener("click",function(){show(t.dataset.p)})});var m=location.search.match(/[?&]tab=(p\d+)/);show(m&&document.getElementById(m[1])?m[1]:tabs[tabs.length-1].dataset.p);'
         .'document.querySelectorAll(".rec-in").forEach(function(i){i.addEventListener("input",function(){recColor(i);recMax(i)})});recColor();'
         // กดบันทึก: ถ้ายังมีช่องที่เกินคะแนนเต็ม แจ้งเตือนและไม่บันทึก

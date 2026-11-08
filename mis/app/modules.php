@@ -32,7 +32,7 @@ function academic_menu(): array
             'tt_print' => 'พิมพ์ตารางสอน', 'room_tt' => 'พิมพ์ตารางการใช้ห้องเรียน', 'calendar' => 'ปฏิทินการเรียนการสอน'],
         'เกณฑ์ประเมินผล' => ['att_type' => 'ประเภทการเข้าชั้นเรียน', 'grade_scale' => 'กำหนดระดับผลการเรียน', 'rtw_crit' => 'เกณฑ์ประเมินการอ่าน คิดวิเคราะห์ฯ', 'char_crit' => 'เกณฑ์ประเมินคุณลักษณะฯ'],
         'รายงานผลการเรียน' => ['att_sum' => 'สรุปผลบันทึกเวลาเรียน', 'score_sum' => 'สรุปคะแนนสอบรายวิชา', 'activity' => 'สรุปผลประเมินกิจกรรมพัฒนาผู้เรียน', 'char_sum' => 'สรุปคะแนนคุณลักษณะฯ',
-            'rtw_sum' => 'สรุปคะแนนการอ่าน คิดวิเคราะห์ฯ', 'grade_report' => 'ผลการเรียนแบบแยกห้องเรียน', 'grade_person' => 'ผลการเรียนแบบรายบุคคล'],
+            'rtw_sum' => 'สรุปคะแนนการอ่าน คิดวิเคราะห์ฯ', 'grade_report' => 'ผลการเรียนแบบแยกห้องเรียน', 'grade_person' => 'ผลการเรียนแบบรายบุคคล', 'grade_edit' => 'บันทึกผลการเรียนรายบุคคล (ย้อนหลัง/ปัจจุบัน)'],
         'หลักฐานการศึกษา' => ['pp1' => 'ระเบียนแสดงผลการเรียน (ปพ.1)', 'pp2' => 'วุฒิการศึกษา (ปพ.2)', 'pp3' => 'รายงานผู้สำเร็จการศึกษา (ปพ.3)', 'pp5' => 'สมุดบันทึกพัฒนาคุณภาพฯ (ปพ.5)',
             'pp6' => 'สมุดรายงานผลการพัฒนาฯ (ปพ.6)', 'pp7' => 'ใบรับรองผลการศึกษา (ปพ.7)'],
         'แจ้งผลสอบ' => ['exam_result' => 'ประกาศผลสอบประจำรายวิชา', 'under80' => 'แจ้งรายชื่อนักเรียนไม่มีสิทธิ์สอบ', 'fail_list' => 'รายชื่อนักเรียนติด 0 ร มผ มส', 'remedial' => 'แจ้งผลการสอบแก้ตัว',
@@ -538,7 +538,7 @@ function adm_score_sum(bool $post)
 /** ผลการเรียนทุกภาคของนักเรียน */
 function student_grades(int $sid): array
 {
-    return q('SELECT G.*, C.`course_code`, C.`course_name`, C.`credit`, C.`year`, C.`term`, C.`type` ctype FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE G.`student_id`=? ORDER BY C.`year`, C.`term`, C.`course_code`', [$sid]);
+    return q('SELECT G.*, C.`course_code`, C.`course_name`, C.`credit`, C.`year`, C.`term`, C.`type` ctype, C.`class` cclass FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE G.`student_id`=? ORDER BY C.`year`, C.`term`, C.`course_code`', [$sid]);
 }
 
 function gpa_of(array $grades): ?float
@@ -569,9 +569,8 @@ function grade_table(array $grades): string
         $gpa = gpa_of($gs);
         $html .= '<tr><td colspan="4" style="text-align:right">ผลการเรียนเฉลี่ยภาคเรียนนี้</td><td class="c"><b>'.($gpa === null ? '-' : number_format($gpa, 2)).'</b></td></tr>';
     }
-    $all = gpa_of($grades);
     return '<table class="mis-gt"><tr><th>รหัสวิชา</th><th>รายวิชา</th><th>หน่วยกิต</th><th>คะแนน</th><th>ผลการเรียน</th></tr>'.($html ?: '<tr><td colspan="5" class="c">ไม่พบผลการเรียน</td></tr>')
-        .'<tr><td colspan="4" style="text-align:right"><b>ผลการเรียนเฉลี่ยสะสม (GPAX)</b></td><td class="c"><b>'.($all === null ? '-' : number_format($all, 2)).'</b></td></tr></table>';
+        .gpax_rows($grades, 4).'</table>';
 }
 
 function student_head(int $sid): ?array
@@ -634,7 +633,7 @@ function adm_pp1(bool $post)
 function adm_pp2(bool $post)
 {
     if (isset($_GET['print']) && ($s = student_head((int) ($_GET['student'] ?? 0)))) {
-        $gpa = gpa_of(student_grades((int) $s['id']));
+        $gpa = gpax_current(student_grades((int) $s['id']), $s['class']);
         print_page('ปพ.2', '<div style="border:6px double #0F5A9C;padding:30px;text-align:center">'.doc_head('ประกาศนียบัตร', 'ปพ.2')
             .'<p style="font-size:18px;margin-top:20px">ให้ไว้เพื่อแสดงว่า</p><p style="font-size:26px"><b>'.h($s['name']).'</b></p>'
             .'<p style="font-size:16px">เลขประจำตัวนักเรียน '.h($s['student_id']).' ได้สำเร็จการศึกษาตามหลักสูตรแกนกลางการศึกษาขั้นพื้นฐาน<br>ระดับชั้น '.h(cat('class', $s['class'])).' ผลการเรียนเฉลี่ยสะสม '.($gpa === null ? '-' : number_format($gpa, 2)).'</p>'
@@ -651,7 +650,7 @@ function adm_pp3(bool $post)
     $html = '';
     if ($sids) {
         foreach (q('SELECT S.*, U.`name` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`id` IN ('.implode(',', $sids).') ORDER BY S.`class`, S.`room`, S.`number`') as $i => $s) {
-            $gpa = gpa_of(student_grades((int) $s['id']));
+            $gpa = gpax_current(student_grades((int) $s['id']), $s['class']);
             $g = $gpa === null ? '-' : number_format($gpa, 2);
             $rows .= zrow([$i + 1, h($s['student_id']), name_nbsp($s['name']), h(class_room_short($s['class'], $s['room'])), [$g, ' align="center"']], $i);
             $html .= '<tr><td class="c">'.($i + 1).'</td><td>'.h($s['student_id']).'</td><td>'.h($s['name']).'</td><td>'.h(class_room_short($s['class'], $s['room'])).'</td><td class="c">'.$g.'</td></tr>';
@@ -667,7 +666,7 @@ function adm_pp3(bool $post)
 function adm_pp7(bool $post)
 {
     if (isset($_GET['print']) && ($s = student_head((int) ($_GET['student'] ?? 0)))) {
-        $gpa = gpa_of(student_grades((int) $s['id']));
+        $gpa = gpax_current(student_grades((int) $s['id']), $s['class']);
         $st = student_status()[(int) $s['id']]['status'] ?? 'ศึกษาอยู่';
         print_page('ปพ.7', doc_head('ใบรับรองผลการศึกษา', 'ปพ.7').student_info_table($s)
             .'<p style="text-indent:50px;margin-top:20px;font-size:15px">'.h(cfg('school_name', 'โรงเรียนดรุณราษฎร์วิทยา')).' ขอรับรองว่า '.h($s['name']).' '.(in_array($st, GRAD_STATUS, true) ? 'ได้สำเร็จการศึกษา' : 'กำลังศึกษาอยู่').'ในระดับชั้น '.h(cat('class', $s['class']))

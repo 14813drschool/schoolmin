@@ -563,7 +563,7 @@ function adm_student_View(bool $post)
         'มารดา' => trim(($in['mother_mobile'] ?? '').' '.($in['mother_home'] ?? '')), 'ที่อยู่' => $s['address']] as $k => $v) {
         $rows .= zrow([h($k), h((string) $v)], $i++);
     }
-    $gpa = gpa_of(student_grades($id));
+    $gpa = gpax_current(student_grades($id), $s['class']);
     $rows .= zrow(['ผลการเรียนเฉลี่ยสะสม', $gpa === null ? '-' : number_format($gpa, 2).' (<a href="'.a_url('grade_person', '&student='.$id).'">ดูผลการเรียน</a>)'], $i);
     return ['ข้อมูลนักเรียน', '<div style="width:983px;margin:0 auto 10px;text-align:left"><img src="'.h(avatar_url($id)).'" style="width:110px;height:130px;object-fit:cover;border:1px solid #ccc;border-radius:4px"/></div>'
         .list_table(h($s['name']), ['รายการ', 'ข้อมูล'], $rows, '', btn('แก้ไข', a_url('student', '&func=Edit&id='.$id), 'edit').' '.print_btn())];

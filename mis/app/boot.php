@@ -24,4 +24,5 @@ require MIS_APP.'reports.php';
 require MIS_APP.'design.php';
 require MIS_APP.'pp6.php';
 require MIS_APP.'stusys.php';
+require MIS_APP.'gradeedit.php';
 require MIS_APP.'pages.php';

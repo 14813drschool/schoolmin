@@ -166,7 +166,8 @@ function rpt_card_page(array $s, int $y, int $t, string $mode, array $att): stri
             .'<th style="width:48px">ปลายภาค</th><th style="width:40px">รวม</th><th style="width:48px">เวลาเรียน %</th><th style="width:52px">ผลการเรียน</th></tr>'.($tr ?: '<tr><td colspan="10" class="c">ยังไม่มีผลการเรียน</td></tr>')
             .'<tr><td colspan="4" class="r">หน่วยกิตที่ได้ / ผลการเรียนเฉลี่ยภาคเรียนนี้ (GPA)</td><td class="c">'.$credits.'</td><td colspan="4"></td><td class="c"><b>'.rpt_gpa_text(gpa_of($gs)).'</b></td></tr></table>';
     }
-    $gpax = gpa_of(array_filter(student_grades($sid), fn($g) => (int) $g['year'] < $y || ((int) $g['year'] === $y && (int) $g['term'] <= max(array_column($terms, 1)))));
+    $lvNow = class_level($s['class']);
+    $gpax = gpa_of(array_filter(student_grades($sid), fn($g) => ($lvNow === '' || in_array(grade_level($g), [$lvNow, ''], true)) && ((int) $g['year'] < $y || ((int) $g['year'] === $y && (int) $g['term'] <= max(array_column($terms, 1))))));
     $lv = fn($k) => ($a = score_avg($k, $sid)) === null ? '-' : level_text($a);
     $adv = array_map(fn($p) => personnel_options()[$p] ?? '', room_advisors()[(int) $s['room']] ?? []);
     $sum = '<table class="nb" style="margin-top:8px"><tr><td style="width:50%">ผลการเรียนเฉลี่ย'.($mode === 'year' ? 'ทั้งปี' : 'ภาคเรียนนี้').' <b>'.rpt_gpa_text(gpa_of($yearGrades)).'</b></td><td>ผลการเรียนเฉลี่ยสะสม (GPAX) <b>'.rpt_gpa_text($gpax).'</b></td></tr>'

@@ -114,9 +114,33 @@ function st_loader(): string
     return '<div class="ldr on" id="ldr" role="status" aria-live="polite"><div class="bg"></div><div class="ib"><div class="sk-wave"><div></div> <div></div> <div></div> <div></div> <div></div></div>Loading...</div></div>';
 }
 
+const ST_PRINT_JS = <<<'JS'
+/* หน้าพิมพ์เปิดเป็นหน้าต่าง popup แบบระบบต้นฉบับ: ปิดหน้าต่างแล้วกลับมาทำงานเดิมต่อได้ทันที */
+(function(){
+	var PRINT_RE = /([?&]print=1\b|[?&]func=Print|print_portrait|print_landscape|[?&]func=PrintDesign|[?&]func=PrintMattayomReport|[?&]func=PrintBy)/i;
+	function feat(){var w=Math.min(1100,screen.availWidth-40),h=Math.min(820,screen.availHeight-60);return "width="+w+",height="+h+",left="+Math.max(0,Math.round((screen.availWidth-w)/2))+",top="+Math.max(0,Math.round((screen.availHeight-h)/2))+",scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no";}
+	function pop(url){var w=window.open(url,"misprint",feat());if(w){try{w.focus();}catch(e){}return true;}return false;}
+	window.misPrintPopup=pop;
+	var nativeOpen=window.open;
+	window.open=function(url,name,features){if(url&&(!features)&&(name===undefined||name===""||name==="_blank")&&PRINT_RE.test(String(url))){return nativeOpen.call(window,url,"misprint",feat());}return nativeOpen.apply(window,arguments);};
+	document.addEventListener("click",function(e){
+		if(e.defaultPrevented||e.button!==0||e.ctrlKey||e.metaKey||e.shiftKey)return;
+		var a=e.target.closest?e.target.closest("a[href]"):null;if(!a)return;
+		var h=a.getAttribute("href")||"";if(h.indexOf("javascript:")===0||h.charAt(0)==="#")return;
+		if(PRINT_RE.test(a.href)&&pop(a.href)){e.preventDefault();}
+	});
+	document.addEventListener("submit",function(e){
+		var f=e.target;if(!f||f.target!=="_blank")return;
+		var u=f.getAttribute("action")||location.href;
+		var hasPrint=f.querySelector('[name="print"]')||PRINT_RE.test(u);if(!hasPrint)return;
+		var w=window.open("about:blank","misprint",feat());if(w){f.target="misprint";try{w.focus();}catch(x){}setTimeout(function(){f.target="_blank";},0);}
+	},true);
+})();
+JS;
+
 function st_js(): string
 {
-    return '<script>
+    return '<script>'.ST_PRINT_JS.'
 (function(){
  var L=document.getElementById("ldr");
  function hide(){if(L)L.classList.remove("on");}
@@ -131,7 +155,7 @@ function st_js(): string
   .then(function(h){BOX.innerHTML=h;run(BOX);if(push)history.pushState({u:url},"",url);document.querySelectorAll(".nav li.open").forEach(function(li){li.classList.remove("open");});var ul=document.querySelector(".nav ul");if(ul){ul.classList.remove("show");}var nv0=document.querySelector(".nav");if(nv0)nv0.classList.remove("mopen");hide();})
   .catch(function(){location.href=url;});}
  window.addEventListener("popstate",function(){if(BOX)go(location.pathname+location.search,false);});
- document.addEventListener("submit",function(e){if(!e.defaultPrevented&&e.target.checkValidity&&e.target.checkValidity()){show();}});
+ document.addEventListener("submit",function(e){var tg=e.target.target;if(!e.defaultPrevented&&(!tg||tg==="_self")&&e.target.checkValidity&&e.target.checkValidity()){show();}});
  document.addEventListener("click",function(e){
   var a=e.target.closest("a[href]");
   if(a&&!e.defaultPrevented&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&a.target!=="_blank"&&!a.hasAttribute("data-mo")&&!a.hasAttribute("download")){var h=a.getAttribute("href");if(h&&h.charAt(0)!=="#"&&h.indexOf("javascript:")!==0&&a.origin===location.origin){if(BOX&&a.pathname===location.pathname&&!/[?&]p=(logout|grade)\b/.test(a.search)&&!a.hasAttribute("data-full")){e.preventDefault();go(a.pathname+a.search,true);return;}show();}}

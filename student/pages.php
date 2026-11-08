@@ -284,9 +284,32 @@ function st_gpa(array $S, bool $post): string
         $crGot += $got;
         $rows .= '<tr><td class="c">'.(++$i).'</td><td>'.h($S['name']).'</td><td class="c">'.h($y).'</td><td class="c">'.h($t).'</td><td class="c">'.($ok ? st_n($cr) : '-').'</td><td class="c">'.($ok ? st_n($got) : '-').'</td><td class="c"><b>'.($gpa === null ? '-' : number_format($gpa, 2)).'</b></td></tr>';
     }
-    $gpax = gpa_of($all);
+    // GPAX แยกช่วงชั้น (ม.ต้น / ม.ปลาย) ไม่นำมารวมกัน
+    $byLv = [];
+    foreach ($all as $g) {
+        if ((int) ($g['ctype'] ?? 1) !== 9) {
+            $byLv[grade_level($g)][] = $g;
+        }
+    }
+    $real = array_filter(array_keys($byLv), fn($k) => $k !== '');
+    $foot = '';
+    $sumRow = function (string $label, array $gs) {
+        $cr = array_sum(array_map(fn($g) => (float) $g['credit'], $gs));
+        $got = array_sum(array_map(fn($g) => is_numeric($g['grade']) && (float) $g['grade'] > 0 ? (float) $g['credit'] : 0, $gs));
+        $v = gpa_of($gs);
+        return '<tr><td colspan="4" class="r">'.h($label).'</td><td class="c">'.st_n($cr).'</td><td class="c">'.st_n($got).'</td><td class="c"><b>'.($v === null ? '-' : number_format($v, 2)).'</b></td></tr>';
+    };
+    if (count($real) > 1) {
+        foreach (['p', 'j', 's'] as $k) {
+            if (isset($byLv[$k])) {
+                $foot .= $sumRow('ระดับคะแนนเฉลี่ยสะสม ระดับ'.LEVEL_NAME[$k], array_merge($byLv[$k], $k === class_level($S['class']) ? ($byLv[''] ?? []) : []));
+            }
+        }
+    } else {
+        $foot = $sumRow('ระดับคะแนนเฉลี่ยสะสม'.($real ? ' ('.LEVEL_SHORT[reset($real)].')' : ''), array_merge(...array_values($byLv ?: [[]])));
+    }
     return '<div class="tbw"><table class="tb st"><tr><th>ลำดับ</th><th>ชื่อ-นามสกุล</th><th>ปีการศึกษา</th><th>เทอม</th><th>หน่วยกิตรวม</th><th>หน่วยกิตที่ได้</th><th>เกรด GPA</th></tr>'.$rows
-        .'<tr><td colspan="4" class="r">ระดับคะแนนเฉลี่ยสะสม</td><td class="c">'.st_n($crAll).'</td><td class="c">'.st_n($crGot).'</td><td class="c"><b>'.($gpax === null ? '-' : number_format($gpax, 2)).'</b></td></tr></table></div>'
+        .$foot.'</table></div>'
         .'<p style="margin:12px 0 0"><a class="btn info sm" href="?p=grade"><i class="fa fa-print"></i> พิมพ์ใบรายงานผลการเรียน / ผลการสอบแก้ตัว</a></p>';
 }
 

@@ -664,21 +664,121 @@ function rows_task_design_measurement()
     return ['TBODY0' => $rows];
 }
 
+/** สถานะผลการเรียนของรายวิชา-ห้อง: [รหัส, จำนวนที่มีเกรด, จำนวนทั้งหมด] รหัส = not|wait|ask|ok */
+function record_status(array $c, int $room, array $done, int $n): array
+{
+    $cid = (int) $c['id'];
+    if (md_get('approved', $cid) !== null) {
+        return ['ok', $done[$cid][$room] ?? 0, $n];
+    }
+    if (md_get('ask', $cid, $room) !== null || md_get('ask', $cid) !== null) {
+        return ['ask', $done[$cid][$room] ?? 0, $n];
+    }
+    $d = $done[$cid][$room] ?? 0;
+    return [$n && $d >= $n ? 'wait' : 'not', $d, $n];
+}
+
+/** ห้องนี้ล็อกการแก้ไขหรือไม่ (ยืนยันแล้ว/อนุมัติแล้ว) */
+function record_locked(array $c, int $room): bool
+{
+    return md_get('approved', (int) $c['id']) !== null || md_get('ask', (int) $c['id'], $room) !== null || md_get('ask', (int) $c['id']) !== null;
+}
+
+const RECORD_STATUS = ['not' => ['alert-square-red.png', 'ไม่พร้อมยืนยัน'], 'wait' => ['1352714924_info.png', 'รอยืนยัน'], 'ask' => ['001_11.png', 'รออนุมัติ'], 'ok' => ['1347351892_yes.png', 'อนุมัติ']];
+
+function record_status_cell(array $st): string
+{
+    [$k, $d, $n] = $st;
+    [$img, $label] = RECORD_STATUS[$k];
+    $tip = $k === 'not' ? 'บันทึกผลการเรียนยังไม่ครบตามจำนวน นร.ลงทะเบียน '.$d.'/'.$n.' คน' : $label;
+    return "<img src='../images/".$img."' border='0' height='16' class='icontooltip' title='".h($tip)."' align='absmiddle'/> ".$label;
+}
+
 function rows_task_study_record()
 {
-    $courses = my_courses();
-    $gc = [];
-    foreach ($courses ? q('SELECT `course_id`,`room`,COUNT(*) n, SUM(`grade` IS NOT NULL AND `grade`<>\'\') done FROM {grade} WHERE `course_id` IN ('.implode(',', array_map(fn($c) => (int) $c['id'], $courses)).') GROUP BY `course_id`,`room`') : [] as $r) {
-        $gc[(int) $r['course_id']][(int) $r['room']] = (int) $r['done'];
+    $all = my_courses();
+    $ids = array_map(fn($c) => (int) $c['id'], $all);
+    $done = [];
+    foreach ($ids ? q('SELECT `course_id`,`room`,SUM(`grade` IS NOT NULL AND `grade`<>\'\') d FROM {grade} WHERE `course_id` IN ('.implode(',', $ids).') GROUP BY `course_id`,`room`') : [] as $r) {
+        $done[(int) $r['course_id']][(int) $r['room']] = (int) $r['d'];
     }
-    return course_room_rows(8, function ($c, $room, $n, $i, $first) use ($gc) {
-        $done = $gc[(int) $c['id']][$room] ?? 0;
-        $st = $n && $done >= $n ? '<span style="color:#00AA00">บันทึกครบแล้ว</span>' : ($done ? "บันทึกแล้ว $done/$n" : '<span style="color:#FF0000">ยังไม่บันทึก</span>');
-        $ask = md_get('ask', $c['id']);
-        return [$i, [$first ? h($c['course_code'].' '.$c['course_name']) : '', ' style="white-space:nowrap"'], [$first ? (COURSE_TYPES[(int) $c['type']] ?? '') : '', ' align="center"'],
-            h(class_room_short($c['class'], $room)), [$n, ' align="center"'], $st, [$ask ? '<img src="../icon_tools/vec_check_dark.png" height="16"/>' : '-', ' align="center"'],
-            [icon_link('?module=task&option=study_record&func=Record&SubjectNum='.(int) $c['id'].'&RoomNum='.$room, 'บันทึกผลการเรียน', 'pencil'), ' align="center"']];
-    });
+    $rooms = course_rooms($all);
+    $cb = fn($name, $v) => ['<input type="checkbox" name="'.$name.'[]" value="'.h($v).'"/>', ' align="center"'];
+    $edit = fn($c, $room) => ['<a href="?module=task&option=study_record&func=Record&TeacherId='.(int) $c['teacher_id'].'&SubjectNum='.(int) $c['id'].'&RecordType=subject&Elective=0&RoomNum='.$room.'" class="icontooltip" title="บันทึกผลการเรียน"><img src="../icon_tools/vec_add_dark.png" border="0" width="20" height="20"/></a>', ' align="center"'];
+    // รายวิชา (ไม่รวมกิจกรรม)
+    $courses = array_values(array_filter($all, fn($c) => (int) $c['type'] !== 9));
+    $o = '';
+    $group = null;
+    $i = 0;
+    foreach ($courses as $c) {
+        if ($group !== (int) $c['type']) {
+            $group = (int) $c['type'];
+            $o .= group_row(GROUP_TITLES[$group] ?? 'หมวดวิชาอื่น ๆ', 9);
+        }
+        $first = true;
+        foreach (($rooms[(int) $c['id']] ?? [0 => 0]) as $room => $n) {
+            $st = record_status($c, (int) $room, $done, (int) $n);
+            $o .= tr([++$i, [$first ? h($c['course_code'].' '.$c['course_name']) : '', ' style="white-space:nowrap"'], [$first ? (COURSE_TYPES[(int) $c['type']] ?? '') : '', ' align="center"'],
+                h(class_room_short($c['class'], $room)), [$n, ' align="center"'], [record_status_cell($st), ' style="white-space:nowrap"'],
+                $st[0] === 'wait' ? $cb('subjectconfirm', $c['id'].'-'.$room) : '', $st[0] === 'ask' ? $cb('subjectcancel', $c['id'].'-'.$room) : '', $edit($c, (int) $room)]);
+            $first = false;
+        }
+    }
+    // กิจกรรมพัฒนาผู้เรียน
+    $acts = '';
+    $j = 0;
+    foreach (array_filter($all, fn($c) => (int) $c['type'] === 9) as $c) {
+        $rs = $rooms[(int) $c['id']] ?? [];
+        $n = array_sum($rs);
+        $d = array_sum($done[(int) $c['id']] ?? []);
+        $st = md_get('approved', (int) $c['id']) !== null ? ['ok', $d, $n] : (md_get('ask', (int) $c['id']) !== null ? ['ask', $d, $n] : [$n && $d >= $n ? 'wait' : 'not', $d, $n]);
+        $acts .= tr([++$j, h($c['course_code']), h($c['course_name']), h(implode(', ', array_map(fn($r) => class_room_short($c['class'], $r), array_keys($rs)))), [$n, ' align="center"'],
+            [record_status_cell($st), ' style="white-space:nowrap"'], $st[0] === 'wait' ? $cb('subjectconfirm', $c['id'].'-0') : '', $st[0] === 'ask' ? $cb('subjectcancel', $c['id'].'-0') : '', $edit($c, 0)]);
+    }
+    $btn = fn($id, $title, $msg, $none, $field, $func, $label) => '<th style="width:24px;text-align:center;height:35px" class="nosort"><div style="float:left;margin:0px 5px"><span style="float:left"><a class="icontooltip" title="'.$title.'" href="javascript:void(0);" onclick="CheckSelectboxes(\'<br>'.$msg.'\',\'<br>'.$none.'\',\''.$field.'[]\',\'task\',\'study_record\',\''.$func.'\');return false;" id="'.$id.'">&nbsp;&nbsp;'.$label.'&nbsp;&nbsp;</a></span></div></th>';
+    $actTable = '<tr><td>&nbsp;</td></tr><tr id="titleList2"><td><div class="titlenav" style="width:969px"><span style="float:left;white-space:nowrap"><span id="Listtitle">&nbsp;</span><h1 style="font-size:23px; white-space:nowrap">กิจกรรมพัฒนาผู้เรียนที่สอน</h1></span></div></td></tr>'
+        .'<tr id="contentList3"><td><span id="tablewrapper"><span id="tableheader"><table border="0" cellpadding="0" cellspacing="0" class="tinytable" id="table_activity" align="left" style="width:983px"><thead><tr>'
+        .'<th width="24" class="nosort"><h3>#</h3></th><th style="width:70px"><h3>รหัส</h3></th><th><h3>กิจกรรมพัฒนาผู้เรียน</h3></th><th style="width:155px"><h3>ห้องเรียน</h3></th><th style="width:80px"><h3>จำนวน นร.</h3></th><th style="width:90px" class="nosort"><h3>สถานะ</h3></th>'
+        .$btn('Savebtns', 'ยืนยันผลการเรียน', 'ยืนยันผลการเรียนไปยังฝ่ายวัดผล', 'กรุณาเลือกรายการที่ต้องการยืนยันอย่างน้อย 1 รายการ', 'subjectconfirm', 'ConfirmSubject', 'ยืนยัน')
+        .$btn('Clearbtns', 'ยกเลิกการยืนยันผลการเรียน', 'ยกเลิกการยืนยันผลประเมิน', 'กรุณาเลือกรายการที่ต้องการยกเลิกอย่างน้อย 1 รายการ', 'subjectcancel', 'CancelSubject', 'ยกเลิก')
+        .'<th class="nosort"><h3>&nbsp;</h3></th></tr></thead><tbody>'.($acts ?: '<tr><td colspan="9" align="center">ไม่มีกิจกรรมพัฒนาผู้เรียนที่สอน</td></tr>').'</tbody></table></span></span></td></tr>'
+        .'<tr><td><div class="pagenav" style="width:969px"></div></td></tr>';
+    return ['TBODY0' => $o ?: '<tr><td colspan="9" align="center">ไม่มีรายวิชาที่สอน</td></tr>', '__REPLACE__' => ['<tr id="PaginationList">' => $actTable.'<tr id="PaginationList" style="display:none">']];
+}
+
+/** ยืนยัน/ยกเลิกการยืนยันผลการเรียน (รายห้อง) */
+function study_record_confirm(string $field, bool $on): void
+{
+    foreach ((array) ($_POST[$field] ?? []) as $v) {
+        [$cid, $room] = array_map('intval', explode('-', (string) $v) + [1 => 0]);
+        $_GET['SubjectNum'] = $cid;
+        $c = att_course();
+        if (!$c || md_get('approved', $cid) !== null) {
+            continue;
+        }
+        if ($on) {
+            md_set('ask', $cid, $room, '', th_date('', ' '));
+            // ทุกห้องยืนยันแล้ว = ส่งขออนุมัติทั้งรายวิชา
+            $rs = array_keys(course_rooms([$c])[$cid] ?? []);
+            if ($room === 0 || !array_filter($rs, fn($r) => md_get('ask', $cid, $r) === null)) {
+                md_set('ask', $cid, '', '', th_date('', ' '));
+            }
+        } else {
+            md_set('ask', $cid, $room, '', null);
+            md_set('ask', $cid, '', '', null);
+        }
+    }
+    redirect('?module=task&option=study_record');
+}
+
+function act_task_study_record_ConfirmSubject(): void
+{
+    study_record_confirm('subjectconfirm', true);
+}
+
+function act_task_study_record_CancelSubject(): void
+{
+    study_record_confirm('subjectcancel', false);
 }
 
 /** ห้องทั้งหมดที่มีนักเรียน (ผู้ดูแลเห็นทุกห้อง ครูเห็นห้องที่ปรึกษา) */

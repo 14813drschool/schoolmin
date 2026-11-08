@@ -531,7 +531,8 @@ function rows_task_study_record_Record()
     }
     $students = q($sql.' ORDER BY G.`room`, G.`number`, S.`student_id`', $p);
     $ts = task_scores(array_map(fn($s) => (int) $s['gid'], $students));
-    $in = fn($n, $v, $max) => '<input type="text" name="'.$n.'" value="'.h($v).'" class="rec-in" maxlength="5" data-max="'.h((string) $max).'"/>';
+    $locked = record_locked($c, $room);
+    $in = fn($n, $v, $max) => $locked ? h($v) : '<input type="text" name="'.$n.'" value="'.h($v).'" class="rec-in" maxlength="5" data-max="'.h((string) $max).'"/>';
     $nameCell = function ($s) {
         $np = preg_split('/\s+/u', trim((string) $s['name']), 2);
         return '<td class="c">'.h($s['number'] ?: $s['sno']).'</td><td class="c">'.h($s['code']).'</td><td style="white-space:nowrap"><span style="display:inline-block;min-width:150px">'.h($np[0]).'</span>'.h($np[1] ?? '').'</td>';
@@ -621,12 +622,14 @@ function rows_task_study_record_Record()
         .'table.rec td{border:1px solid #9CCFD6;padding:4px 5px;height:26px;color:#000}table.rec .c{text-align:center}table.rec .sum{background:#F3F5FF}table.rec .fix{background:#FFFDE8}table.rec .u-sum{background:#F8FDE8}'
         .'table.rec tr.max td{background:#F7F7F7;text-align:center;font-size:14px}table.rec b.ok{color:#1BA826}table.rec b.bad{color:#E00}'
         .'.rec-in{width:40px;height:20px;text-align:center;border:1px solid #ccc;border-radius:3px;font:13px Tahoma}.rec-in.err{border-color:#e00;background:#ffecec}.rec-btn{text-align:right;padding:8px 0}</style>';
-    $body = d_css().$style.saved_msg().'<div class="dz"><div class="rec-bar"><h2><i class="fa fa-list-ul"></i>โอนคะแนนและผลการเรียน</h2><select onchange="location.href=this.value" style="height:24px;min-width:160px">'.$opts.'</select></div>'
+    $lockMsg = $locked ? msg_box(md_get('approved', (int) $c['id']) !== null ? 'ผลการเรียนได้รับการอนุมัติแล้ว ไม่สามารถแก้ไขได้ หากต้องการแก้ไขให้แจ้งแอดมินยกเลิกการอนุมัติ'
+        : 'ยืนยันผลการเรียนแล้ว (รออนุมัติ) ไม่สามารถแก้ไขข้อมูลได้ จนกว่าจะยกเลิกการยืนยันที่หน้ารายงานผลการเรียน', false) : '';
+    $body = d_css().$style.saved_msg().$lockMsg.'<div class="dz"><div class="rec-bar"><h2><i class="fa fa-list-ul"></i>โอนคะแนนและผลการเรียน</h2><select onchange="location.href=this.value" style="height:24px;min-width:160px">'.$opts.'</select></div>'
         .d_info($c, $level, '<div class="ratio">อัตราส่วนคะแนนรายวิชา '.$r1.' : '.$r2.' : '.$r3.'</div>')
         .'<form name="rec" method="post" action="?module=task&option=study_record&func=SaveRecord&SubjectNum='.(int) $c['id'].'&RoomNum='.$room.'"><input type="hidden" name="tab" id="rec-tab" value=""/>'
         .'<div class="rec-tabs">'.$tabs.'</div><div class="rec-line"></div>'.$panes
         .'<div class="rec-btn">'.btn('กลับ', '?module=task&option=study_record', 'back')
-        .'<a href="javascript:void(0);" onclick="document.forms.rec.submit();" id="pinkgreenbtns" style="margin-left:4px"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึกผลการเรียน</a></div></form></div>'
+        .($locked ? '' : '<a href="javascript:void(0);" onclick="document.forms.rec.submit();" id="pinkgreenbtns" style="margin-left:4px"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึกผลการเรียน</a>').'</div></form></div>'
         .'<script>(function(){var tabs=document.querySelectorAll(".rec-tab");function show(id){tabs.forEach(function(t){t.classList.toggle("on",t.dataset.p===id)});document.querySelectorAll(".rec-pane").forEach(function(p){p.classList.toggle("on",p.id===id)});document.getElementById("rec-tab").value=id}'
         .'tabs.forEach(function(t){t.addEventListener("click",function(){show(t.dataset.p)})});var m=location.search.match(/[?&]tab=(p\d+)/);show(m&&document.getElementById(m[1])?m[1]:tabs[tabs.length-1].dataset.p);'
         .'document.querySelectorAll(".rec-in").forEach(function(i){i.addEventListener("input",function(){var mx=parseFloat(i.dataset.max),v=parseFloat(i.value);i.classList.toggle("err",i.value!==""&&(isNaN(v)||v<0||(mx>0&&v>mx)))})})})();</script>';
@@ -639,7 +642,7 @@ function act_task_study_record_SaveRecord(): void
 {
     $c = att_course();
     $tab = preg_replace('/[^a-z0-9]/', '', (string) ($_POST['tab'] ?? ''));
-    if ($c) {
+    if ($c && !record_locked($c, (int) ($_GET['RoomNum'] ?? 0))) {
         $units = d_units($c);
         $mid = d_exam($c, 'mid');
         $fin = d_exam($c, 'final');

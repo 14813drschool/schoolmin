@@ -24,14 +24,14 @@ function st_css(): string
     $hex = rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" width="112" height="194" viewBox="0 0 112 194"><g fill="none" stroke="#9fd8ee" stroke-width="2" opacity=".55">'
         .'<path d="M56 2l52 30v60l-52 30-52-30V32z"/><path d="M56 99l52 30v60l-52 30-52-30v-60z" opacity=".6"/></g><path d="M56 22l34 20v40l-34 20-34-20V42z" fill="#ffffff" opacity=".35"/></svg>');
     return '<style>
-:root{--nav:#343a40;--teal:#5f9ea0;--teal2:#4e8a8c;--bg:#e9ecef;--line:#dee2e6;--txt:#212529;--mut:#6c757d;--blue:#007bff;--info:#17a2b8;--ok:#28a745;--bad:#dc3545;--warn:#ffc107}
+:root{--nav:#343a40;--teal:#5b9aa0;--teal2:#5b9aa0;--bg:#e9ecef;--line:#dee2e6;--txt:#212529;--mut:#6c757d;--blue:#007bff;--info:#17a2b8;--ok:#28a745;--bad:#dc3545;--warn:#ffc107}
 @font-face{font-family:"Niramit";font-style:normal;font-weight:400;font-display:swap;src:url(/mis/root/fonts/niramit/niramit-thai-400-normal.woff2) format("woff2");unicode-range:U+0E01-0E5B,U+200C-200D,U+25CC}
 @font-face{font-family:"Niramit";font-style:normal;font-weight:400;font-display:swap;src:url(/mis/root/fonts/niramit/niramit-latin-400-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:"Niramit";font-style:normal;font-weight:500;font-display:swap;src:url(/mis/root/fonts/niramit/niramit-thai-500-normal.woff2) format("woff2");unicode-range:U+0E01-0E5B,U+200C-200D,U+25CC}
 @font-face{font-family:"Niramit";font-style:normal;font-weight:500;font-display:swap;src:url(/mis/root/fonts/niramit/niramit-latin-500-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:"Niramit";font-style:normal;font-weight:700;font-display:swap;src:url(/mis/root/fonts/niramit/niramit-thai-700-normal.woff2) format("woff2");unicode-range:U+0E01-0E5B,U+200C-200D,U+25CC}
 @font-face{font-family:"Niramit";font-style:normal;font-weight:700;font-display:swap;src:url(/mis/root/fonts/niramit/niramit-latin-700-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
-*{box-sizing:border-box}html,body{margin:0}body{background:#fff;color:var(--txt);font:16px/1.5 "Niramit",sans-serif}
+*{box-sizing:border-box}html,body{margin:0}html{min-height:100%;background:#efefef url(/mis/images/bg2.png) center top/cover no-repeat fixed}body{background:transparent;color:var(--txt);font:16px/1.5 "Niramit",sans-serif;min-height:100vh}
 a{color:var(--blue);text-decoration:none}
 .nav{position:fixed;top:0;left:0;right:0;z-index:50;background:transparent;padding:8px 0;transition:background-color .3s}.nav.dark,.nav.mopen{background:#343a40}
 .nav .nin{max-width:1140px;margin:0 auto;padding:0 15px;display:flex;align-items:center;justify-content:space-between;min-height:40px}
@@ -46,24 +46,24 @@ a{color:var(--blue);text-decoration:none}
 .nav li.open .dd{display:block}
 .dd a{display:block;padding:6px 20px;color:var(--txt);white-space:nowrap}.dd a:hover,.dd a.on{background:#f1f3f5;color:#16181b}.dd hr{border:0;border-top:1px solid #e9ecef;margin:6px 0}
 .tog{display:none;background:none;border:1px solid rgba(0,0,0,.1);border-radius:4px;color:rgba(0,0,0,.5);font-size:20px;padding:3px 10px;cursor:pointer}.nav.dark .tog,.nav.mopen .tog{border-color:rgba(255,255,255,.1);color:rgba(255,255,255,.5)}
-.hero{height:202px;background:#eaf6fd url(/mis/images/bg2.png) center 62%/cover no-repeat;padding:80px 15px 0;text-align:center}
+.hero{height:202px;background:transparent;padding:80px 15px 0;text-align:center}
 .hero h1{margin:0 auto;font:700 40px/48px "Niramit",sans-serif;letter-spacing:8px;text-transform:uppercase;color:#212529}.hero hr{max-width:888px;margin:22px auto 0;border:0;border-top:2px solid #09f}
-.wrap{max-width:1140px;margin:6px auto 40px;padding:0 15px}
-.box{background:var(--bg);padding:20px;border-radius:2px}
-.card{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:4px;padding:16px 18px;margin-bottom:18px}
+.wrap{max-width:1140px;margin:50px auto 48px;padding:0 15px}
+.box{background:var(--bg);padding:32px;border-radius:4.8px}
+.card{background:#fff;border:0;border-radius:4px;padding:20px;margin-bottom:16px}
 .card:last-child{margin-bottom:0}
 .card h4,.ttl{margin:0 0 12px;font-size:24px;line-height:1.2;font-weight:500}.card h4 i,.ttl i{margin-right:6px}
-.row{display:grid;gap:18px;margin-bottom:18px}.row:last-child{margin-bottom:0}.row>.card{margin:0}.r2{grid-template-columns:1fr 1fr}.rside{grid-template-columns:200px 1fr}
-.kv{display:grid;grid-template-columns:1fr 1fr;gap:9px 24px;margin:14px 0 12px;padding-left:24px;font-size:16px;line-height:24px}.kv div b{font-weight:700}
+.row{display:grid;gap:16px 30px;margin-bottom:16px}.row:last-child{margin-bottom:0}.row>.card{margin:0}.r2{grid-template-columns:1fr 1fr}.rside{grid-template-columns:239px 1fr}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin:20px 0 12px;padding-left:24px;font-size:16px;line-height:24px}.kv div b{font-weight:700}
 .kv1{grid-template-columns:1fr}
-.photo{text-align:center}.photo img{width:150px;height:180px;object-fit:contain;border:1px solid var(--line);border-radius:4px;padding:4px;background:#fff}
+.photo{text-align:center}.photo img{width:199px;height:250px;object-fit:cover;border:1px solid var(--line);border-radius:4px;padding:4px;background:#fff}
 .btn{display:inline-block;border:1px solid transparent;border-radius:4px;padding:6px 14px;font:inherit;font-size:14px;line-height:1.4;cursor:pointer;color:#fff;background:var(--blue);text-align:center}
 .btn.sm{padding:4px 8px;font-size:14px;line-height:1.5;border-radius:3.2px}.btn.info{background:var(--info)}.btn.ok{background:var(--ok)}.btn.bad{background:var(--bad)}.btn.warn{background:var(--warn);color:#212529}.btn.gray{background:#6c757d}.btn.lt{background:#f8f9fa;color:#212529;border-color:#ddd}
 .btn:hover{filter:brightness(.93)}.btn[disabled]{opacity:.55;cursor:default}
-table.tb{width:100%;border-collapse:collapse;font-size:15px;background:#fff}
-table.tb th{background:var(--teal);color:#fff;font-weight:700;padding:7px 8px;border:1px solid #fff;text-align:center}
-table.tb td{padding:7px 8px;border:1px solid var(--line);vertical-align:middle}
-table.tb td.c{text-align:center}table.tb td.r{text-align:right}table.tb tr.cap th{background:var(--teal2);font-size:15px}
+table.tb{width:100%;border-collapse:collapse;font-size:16px;background:#fff}table.tb.sm,table.tb.sm th{font-size:12px}table.tb.sm tr.cap th{font-size:16px}
+table.tb th{background:var(--teal);color:#fff;font-weight:700;padding:4.8px;border:1px solid #dee2e6;text-align:center}
+table.tb td{padding:4.8px;border:1px solid var(--line);vertical-align:middle}
+table.tb td.c{text-align:center}table.tb td.r{text-align:right}table.tb tr.cap th{background:var(--teal2);font-size:16px}
 table.tb.st tbody tr:nth-child(odd) td{background:#f7f9fa}
 .msg{padding:12px 16px;border-radius:4px;margin:0 0 14px}.msg.ok{background:#d4edda;color:#155724}.msg.no{background:#f8d7da;color:#721c24}.msg.wa{background:#fff3cd;color:#856404}.msg.in{background:#d1ecf1;color:#0c5460}.msg.ok2{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
 .empty{text-align:center;font-size:18px;padding:30px 10px}
@@ -124,10 +124,17 @@ function st_js(): string
  if(document.readyState==="complete"){hide();}else{window.addEventListener("load",hide);setTimeout(hide,8000);}
  window.addEventListener("pageshow",hide);
  var N=document.querySelector(".nav");function nv(){if(N)N.classList.toggle("dark",window.pageYOffset>50);}nv();window.addEventListener("scroll",nv,{passive:true});
+ var BOX=document.querySelector(".wrap .box");
+ function run(el){var L0=[].slice.call(el.querySelectorAll("script"));(function nx(){var o=L0.shift();if(!o)return;var s=document.createElement("script");if(o.src){s.src=o.src;s.onload=nx;s.onerror=nx;o.parentNode.replaceChild(s,o);}else{s.text=o.text;o.parentNode.replaceChild(s,o);nx();}})();}
+ function go(url,push){show();var u=url+(url.indexOf("?")<0?"?":"&")+"frag=1";
+  fetch(u,{credentials:"same-origin"}).then(function(r){if(!r.ok||r.redirected)throw 0;var t=r.headers.get("X-Page-Title");if(t)document.title=decodeURIComponent(t);return r.text();})
+  .then(function(h){BOX.innerHTML=h;run(BOX);if(push)history.pushState({u:url},"",url);document.querySelectorAll(".nav li.open").forEach(function(li){li.classList.remove("open");});var ul=document.querySelector(".nav ul");if(ul){ul.classList.remove("show");}var nv0=document.querySelector(".nav");if(nv0)nv0.classList.remove("mopen");hide();})
+  .catch(function(){location.href=url;});}
+ window.addEventListener("popstate",function(){if(BOX)go(location.pathname+location.search,false);});
  document.addEventListener("submit",function(e){if(!e.defaultPrevented&&e.target.checkValidity&&e.target.checkValidity()){show();}});
  document.addEventListener("click",function(e){
   var a=e.target.closest("a[href]");
-  if(a&&!e.defaultPrevented&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&a.target!=="_blank"&&!a.hasAttribute("data-mo")&&!a.hasAttribute("download")){var h=a.getAttribute("href");if(h&&h.charAt(0)!=="#"&&h.indexOf("javascript:")!==0&&a.origin===location.origin){show();}}
+  if(a&&!e.defaultPrevented&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&a.target!=="_blank"&&!a.hasAttribute("data-mo")&&!a.hasAttribute("download")){var h=a.getAttribute("href");if(h&&h.charAt(0)!=="#"&&h.indexOf("javascript:")!==0&&a.origin===location.origin){if(BOX&&a.pathname===location.pathname&&!/[?&]p=(logout|grade)\b/.test(a.search)&&!a.hasAttribute("data-full")){e.preventDefault();go(a.pathname+a.search,true);return;}show();}}
   var b=e.target.closest(".nav li>button");
   document.querySelectorAll(".nav li.open").forEach(function(li){if(!b||li!==b.parentNode)li.classList.remove("open");});
   if(b){b.parentNode.classList.toggle("open");e.preventDefault();}
@@ -216,6 +223,14 @@ function st_nav(string $cur): string
 function st_layout(string $p, string $title, string $body, array $S): void
 {
     mis_headers();
-    $inner = $title === '' ? $body : '<div class="card"><h4 class="ttl"><i class="fa fa-filter"></i>'.h($title).'</h4>'.$body.'</div>';
+    // หน้าที่ต้นฉบับไม่มีหัวข้อการ์ด (มีหัวตาราง/กล่องหัวเรื่องของตัวเอง)
+    $bare = in_array($p, ['schedule', 'subject', 'evalt', 'evala', 'chars', 'charp', 'docreq', 'q9', 'sdqp', 'att'], true);
+    $inner = $title === '' ? $body : '<div class="card">'.($bare ? '' : '<h4 class="ttl"><i class="fa fa-filter"></i>'.h($title).'</h4>').$body.'</div>';
+    if (isset($_GET['frag'])) {
+        // โหลดเนื้อหาในหน้าเดิม (เหมือนระบบต้นฉบับ): ส่งเฉพาะเนื้อหา
+        header('X-Page-Title: '.rawurlencode(($title ?: 'Information Student').' | Student System'));
+        echo $inner;
+        return;
+    }
     echo st_doc(($title ?: 'Information Student').' | Student System', st_nav($p).'<header class="hero"><h1>Information Student</h1><hr></header><main class="wrap"><div class="box">'.$inner.'</div></main>');
 }

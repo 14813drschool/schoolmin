@@ -253,7 +253,7 @@ function st_subject(array $S, bool $post): string
         $mo .= st_modal($id, '<b>รายละเอียดคะแนน '.h($c['course_code']).' วิชา '.h($c['course_name']).'</b>', '<table class="tb"><tr><th>รายการ</th><th>คะแนนเต็ม</th><th>คะแนนที่ได้</th></tr>'.$pr
             .'<tr><td><b>รวมคะแนน</b></td><td class="c"><b>'.st_n($full ?: null).'</b></td><td class="c"><b>'.($got ? st_n(array_sum($got)) : '-').'</b></td></tr></table>', '<button type="button" class="btn warn" data-x="1">Close</button>', 'lg');
     }
-    return '<div class="tbw"><table class="tb st"><tr class="cap"><th colspan="7">ภาคเรียนที่ '.$t.' ปีการศึกษา '.$y.'<br>รหัส '.h($S['student_id']).' '.h($S['name']).'</th></tr>'
+    return '<div class="tbw"><table class="tb st sm"><tr class="cap"><th colspan="7">ภาคเรียนที่ '.$t.' ปีการศึกษา '.$y.'<br>รหัส '.h($S['student_id']).' '.h($S['name']).'</th></tr>'
         .'<tr><th>รหัสวิชา</th><th>ชื่อวิชา</th><th>ผู้สอน</th><th>คะแนนเต็ม</th><th>คะแนนที่ได้</th><th>เกรด</th><th>รายละเอียด</th></tr>'.$rows.'</table></div>'
         .'<p class="mut" style="font-size:13px;margin:10px 0 0">ผลการเรียน (เกรด) จะแสดงเมื่อรายวิชาได้รับการอนุมัติผลการเรียนแล้ว</p>'.$mo;
 }
@@ -561,7 +561,7 @@ function st_bank(array $S, bool $post): string
     $qr = '';
     if ($b['promptpay'] !== '') {
         $qr = '<div id="ppqr" data-p="'.h(promptpay_payload($b['promptpay'], $sum)).'" style="width:200px;height:200px;margin:0 auto"></div><div style="text-align:center;font-size:13px" class="mut">สแกนจ่ายผ่าน PromptPay '.money($sum).' บาท</div>'
-            .'<script src="/mis/scripts/qrcode.js"></script><script>(function(){var e=document.getElementById("ppqr");var q=qrcode(0,"M");q.addData(e.getAttribute("data-p"));q.make();e.innerHTML=q.createSvgTag({cellSize:4,margin:2,scalable:true});})();</script>';
+            .'<script src="/mis/scripts/qrcode.js"></script><script>(function f(n){var e=document.getElementById("ppqr");if(!e)return;if(!window.qrcode){if((n||0)<100)setTimeout(function(){f((n||0)+1);},50);return;}var q=qrcode(0,"M");q.addData(e.getAttribute("data-p"));q.make();e.innerHTML=q.createSvgTag({cellSize:4,margin:2,scalable:true});})();</script>';
     } elseif ($b['qr'] !== '') {
         $qr = '<div style="text-align:center"><img src="/datas/mis/'.h($b['qr']).'" alt="QR ชำระเงิน" style="width:200px;height:200px;object-fit:contain"></div>';
     }

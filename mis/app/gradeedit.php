@@ -181,6 +181,13 @@ function adm_grade_edit(bool $post)
         .'if(a===""&&b===""){t.text("-");g.text("-").css("color","#1F618D");return}var s=Math.round((parseFloat(a)||0)+(parseFloat(b)||0));t.text(s);var r;'
         .'if(g.attr("data-type")==="9"){r=s>=50?"ผ":"มผ"}else if(s<50){r="0"}else{r="0";for(var k=0;k<GE_SCALE.length;k++){if(s>=GE_SCALE[k][0]){r=GE_SCALE[k][1];break}}}'
         .'g.text(r).css("color",(r==="0"||r==="มผ")?"#C0392B":"#1F618D")}'
+        // วางคะแนนจาก Excel / Google Sheets: กระจายลงช่อง (ระหว่างภาค, ปลายภาค) ตามแถวและคอลัมน์ เริ่มจากช่องที่วาง
+        .'document.addEventListener("paste",function(e){var i=e.target;if(!i.classList||!i.classList.contains("ge-n"))return;var tx=(e.clipboardData||window.clipboardData).getData("text");if(!/[\\t\\n]/.test(tx.trim()))return;e.preventDefault();'
+        .'var rows=tx.replace(/\\r/g,"").replace(/\\n+$/,"").split("\\n").map(function(r){return r.split("\\t")});var trs=$(i).closest("table").find("tr").filter(function(){return $(this).find(".ge-n").length>0}).get();'
+        .'var r0=trs.indexOf($(i).closest("tr")[0]),c0=$(i).closest("tr").find(".ge-n").index(i),bad=[],over=[];'
+        .'rows.forEach(function(cells,ri){var tr=trs[r0+ri];if(!tr)return;var ins=$(tr).find(".ge-n");cells.forEach(function(v,ci){var x=ins.get(c0+ci);if(!x)return;v=v.trim();'
+        .'if(v!==""&&!/^\\d+(\\.\\d+)?$/.test(v)){bad.push(v);x.value="";return}var mx=parseFloat($(x).attr("data-max"));if(v!==""&&mx>0&&parseFloat(v)>mx){over.push(v);x.value="";return}x.value=v});geGrade($(tr))});'
+        .'if(bad.length){geMsg("โปรดระบุคะแนนเป็นตัวเลขเท่านั้น",function(){})}else if(over.length){geMsg("มีคะแนนเกินคะแนนเต็ม "+over.length+" ช่อง ระบบเว้นว่างไว้ให้",function(){})}});'
         .'$(function(){$(".ge-n").bind("keyup change",function(){geGrade($(this).closest("tr"))}).bind("blur",function(){var i=this,v=i.value.trim(),mx=parseFloat($(i).attr("data-max"));'
         .'if(v!==""&&!/^\\d+(\\.\\d+)?$/.test(v)){geMsg("โปรดระบุคะแนนเป็นตัวเลขเท่านั้น",function(){i.value="";geGrade($(i).closest("tr"));i.focus()});return}'
         .'if(v!==""&&mx>0&&parseFloat(v)>mx){geMsg("ไม่อนุญาตให้บันทึกคะแนนมากกว่า "+(Math.round(mx*100)/100)+" คะแนน",function(){i.value="";geGrade($(i).closest("tr"));i.focus()})}})});</script>';

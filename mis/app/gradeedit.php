@@ -185,6 +185,11 @@ function adm_grade_edit(bool $post)
         $gt = (string) $g['grade'];
         $tot = (int) $g['midterm'] + (int) $g['final'];
         $bad = in_array($gt, ['0', 'ร', 'มส', 'มผ'], true);
+        // หัวหมวดแบบหน้าบันทึกผลการเรียนของครู: หมวดวิชาบังคับ / หมวดวิชาเลือก / หมวดกิจกรรมพัฒนาผู้เรียน
+        if (($grp ?? null) !== (int) $g['ctype']) {
+            $grp = (int) $g['ctype'];
+            $rows .= group_row(GROUP_TITLES[$grp] ?? 'หมวดวิชาอื่น ๆ', 11);
+        }
         $rows .= '<tr><td class="c">'.($i + 1).'</td><td class="c">'.h($g['course_code']).'</td><td>'.h($g['course_name']).'</td><td class="c">'.h(COURSE_TYPES[(int) $g['ctype']] ?? '').'</td><td class="c">'.h((string) $g['credit']).'</td>'
             .'<td class="c">'.$num('unit', $uOld, $unitMax, $lockU).($lockU ? '<input type="hidden" name="g['.$gid.'][locked]" value="1"/>' : '').'</td><td class="c">'.$num('mid', $mOld, $midMax).'</td><td class="c">'.$num('fin', $blank ? '' : $g['final'], $finMax).'</td>'
             .'<td class="c sum"><b class="ge-t '.($tot < PASS_SCORE ? 'bad' : 'ok').'">'.($blank ? '' : $tot).'</b></td>'

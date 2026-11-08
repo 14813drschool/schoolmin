@@ -967,52 +967,6 @@ function advisor_student(int $id): ?array
     return null;
 }
 
-function rows_task_info_pp6_Edit()
-{
-    $s = advisor_student((int) ($_GET['StudentId'] ?? 0)) ?? redirect('?module=task&option=info_pp6');
-    $d = json_decode((string) md_get('pp6', $s['id'], yt()), true) ?: [];
-    $in = fn($n, $w = 80) => '<input type="text" name="'.$n.'" value="'.h($d[$n] ?? '').'" class="general radius" style="width:'.$w.'px;height:19px"/>';
-    $rows = zrow(['น้ำหนัก (กก.)', $in('weight')], 0).zrow(['ส่วนสูง (ซม.)', $in('height')], 1)
-        .zrow(['ความเห็นของครูที่ปรึกษา', '<textarea name="comment" class="general radius" style="width:600px;height:80px">'.h($d['comment'] ?? '').'</textarea>'], 0);
-    $body = '<form name="pp6" method="post" action="?module=task&option=info_pp6&func=Save&StudentId='.(int) $s['id'].'">'
-        .list_table('ข้อมูลนักเรียนใน ปพ.6 : '.name_nbsp($s['name']), ['รายการ', 'ข้อมูล'], $rows, '', btn('กลับ', '?module=task&option=info_pp6', 'back')
-            .'<a href="javascript:void(0);" onclick="document.forms.pp6.submit();" id="pinkgreenbtns" style="margin-left:4px"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึก</a>').'</form>';
-    return sub_page('task_info_pp6', $body);
-}
-
-function act_task_info_pp6_Save(): void
-{
-    $s = advisor_student((int) ($_GET['StudentId'] ?? 0));
-    if ($s) {
-        md_set('pp6', $s['id'], yt(), '', json_encode(['weight' => mb_substr((string) ($_POST['weight'] ?? ''), 0, 10), 'height' => mb_substr((string) ($_POST['height'] ?? ''), 0, 10),
-            'comment' => mb_substr((string) ($_POST['comment'] ?? ''), 0, 1000)], JSON_UNESCAPED_UNICODE));
-    }
-    redirect('?module=task&option=info_pp6');
-}
-
-function act_task_report_pp6_Print(): void
-{
-    $s = advisor_student((int) ($_GET['StudentId'] ?? 0)) ?? redirect('?module=task&option=report_pp6');
-    [$y, $t] = term();
-    $grades = q('SELECT G.*, C.`course_code`, C.`course_name`, C.`credit`, C.`type` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE G.`student_id`=? AND C.`year`=? AND C.`term`=? ORDER BY C.`type`, C.`course_code`', [(int) $s['id'], $y, $t]);
-    $d = json_decode((string) md_get('pp6', $s['id'], yt()), true) ?: [];
-    $h = '<h1>แบบรายงานประจำตัวนักเรียน (ปพ.6)</h1><h2>'.h(cfg('web_title', 'โรงเรียนดรุณราษฎร์วิทยา')).'</h2><p>ชื่อ '.h($s['name']).' &nbsp; รหัส '.h($s['student_id']).' &nbsp; ชั้น '.h(advisor_short()).' เลขที่ '.h($s['number'])
-        .' &nbsp; ภาคเรียนที่ '.$t.' ปีการศึกษา '.$y.'</p><table><tr><th>รหัสวิชา</th><th>รายวิชา</th><th>ประเภท</th><th>หน่วยกิต</th><th>ผลการเรียน</th></tr>';
-    $pts = $cr = 0;
-    foreach ($grades as $g) {
-        $h .= '<tr><td>'.h($g['course_code']).'</td><td>'.h($g['course_name']).'</td><td class="c">'.(COURSE_TYPES[(int) $g['type']] ?? '').'</td><td class="c">'.h((float) $g['credit']).'</td><td class="c"><b>'.h($g['grade']).'</b></td></tr>';
-        if (is_numeric($g['grade'])) {
-            $pts += (float) $g['grade'] * (float) $g['credit'];
-            $cr += (float) $g['credit'];
-        }
-    }
-    $h .= '<tr><th colspan="3" style="text-align:right">ผลการเรียนเฉลี่ย</th><th>'.$cr.'</th><th>'.($cr ? number_format($pts / $cr, 2) : '-').'</th></tr></table>';
-    $h .= '<table><tr><th>คุณลักษณะอันพึงประสงค์</th><th>การอ่าน คิดวิเคราะห์และเขียน</th><th>น้ำหนัก/ส่วนสูง</th></tr><tr><td class="c">'.h(level_text(score_avg('char', (int) $s['id'])))
-        .'</td><td class="c">'.h(level_text(score_avg('skill', (int) $s['id']))).'</td><td class="c">'.h(($d['weight'] ?? '-').' กก. / '.($d['height'] ?? '-').' ซม.').'</td></tr></table>';
-    $h .= '<p><b>ความเห็นของครูที่ปรึกษา</b><br>'.nl2br(h($d['comment'] ?? '')).'</p><p style="margin-top:40px">ลงชื่อ ........................................ ครูที่ปรึกษา &nbsp;&nbsp;&nbsp; ลงชื่อ ........................................ ผู้ปกครอง</p>';
-    print_page('ปพ.6', $h);
-}
-
 /* ================================================================ แบบประเมิน (คุณลักษณะ / อ่านคิดเขียน / สมรรถนะ) */
 
 const SCORE_SETS = [

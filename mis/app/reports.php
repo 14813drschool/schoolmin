@@ -499,7 +499,8 @@ function rpt_record_print(string $func): void
         rpt_print('ไม่สามารถพิมพ์ได้', '<div class="page"><h3>ไม่มีสิทธิ์พิมพ์เอกสารของรายวิชานี้</h3></div>');
     }
     $room = (int) ($_GET['RoomNum'] ?? 0);
-    $d = json_decode((string) md_get('design', $c['id']), true) ?: ['work' => 50, 'mid' => 20, 'final' => 30];
+    [$rw, $rm, $rf] = score_ratio();
+    $d = ['work' => $rw, 'mid' => $rm, 'final' => $rf];
     $sql = 'SELECT G.*, S.`student_id` code, S.`number` sno, U.`name` FROM {grade} G JOIN {student} S ON S.`id`=G.`student_id` JOIN {user} U ON U.`id`=G.`student_id` WHERE G.`course_id`=?';
     $p = [(int) $c['id']];
     if ($room) {

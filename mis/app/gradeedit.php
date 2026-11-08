@@ -162,6 +162,7 @@ function adm_grade_edit(bool $post)
         admin_done('grade_edit', '&student='.$sid.'&yt='.rawurlencode($ytk));
     }
     $gs = q('SELECT G.*, C.`course_code`, C.`course_name`, C.`credit`, C.`type` ctype, C.`class` cclass, C.`year`, C.`term` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE G.`student_id`=? AND C.`year`=? AND C.`term`=? ORDER BY C.`type`, C.`course_code`', [$sid, $y, $t]);
+    usort($gs, fn($a, $b) => [(int) $a['ctype'], sara_rank((string) $a['course_code']), (string) $a['course_code']] <=> [(int) $b['ctype'], sara_rank((string) $b['course_code']), (string) $b['course_code']]);
     $base = a_url('grade_edit', '&student='.$sid.'&yt='.rawurlencode($ytk));
     $rows = '';
     $maxs = null;
@@ -255,6 +256,14 @@ function adm_grade_edit(bool $post)
         .'รหัสวิชา '.inp('code', '', 90).' ชื่อวิชา '.inp('name', '', 200).' หน่วยกิต '.inp('credit', '1.0', 40).' ประเภท '.sel('type', COURSE_TYPES, 1, 'style="height:22px"')
         .' ระดับชั้น '.sel('class', cats('class'), (int) $s['class'], 'style="height:22px"').' <input type="submit" value="สร้างและเพิ่ม" class="general radius" style="height:25px"/></form>';
     return d_css().rec_css().'<div class="dz">'.$bar.$info.$table.$add.'<p class="gray_12" style="margin-top:8px">ระบบคิดผลการเรียนให้อัตโนมัติจากคะแนนรวมเหมือนหน้าบันทึกผลการเรียนของครู (ขาดช่องใดช่องหนึ่ง = ร, รวมต่ำกว่า 50 = 0, กิจกรรม = ผ/มผ) วางคะแนนจาก Excel ได้ 3 คอลัมน์ (คะแนนเก็บ, กลางภาค, ปลายภาค) — รายวิชาที่ไม่ได้แก้คะแนนจะคงผลการเรียนเดิม (เช่น ร, มส, ผลสอบแก้ตัว)</p></div>';
+}
+
+/** ลำดับกลุ่มสาระการเรียนรู้ตามอักษรนำรหัสวิชา: ไทย คณิต วิทย์ สังคม สุขศึกษา ศิลปะ การงาน แล้วภาษาต่างประเทศ (อังกฤษไว้ท้าย) */
+function sara_rank(string $code): int
+{
+    $c = mb_substr(trim($code), 0, 1);
+    $order = ['ท' => 1, 'ค' => 2, 'ว' => 3, 'ส' => 4, 'พ' => 5, 'ศ' => 6, 'ง' => 7, 'อ' => 9];
+    return $order[$c] ?? (preg_match('/^\p{Thai}$/u', $c) ? 8 : 10);
 }
 
 /** ผลการเรียนอัตโนมัติจากคะแนน (เหมือนหน้าบันทึกผลการเรียนของครู: ขาดช่องใดช่องหนึ่ง = ร, รวมต่ำกว่า 50 = 0) */

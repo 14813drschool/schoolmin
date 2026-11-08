@@ -25,7 +25,11 @@ function st_css(): string
         .'<path d="M56 2l52 30v60l-52 30-52-30V32z"/><path d="M56 99l52 30v60l-52 30-52-30v-60z" opacity=".6"/></g><path d="M56 22l34 20v40l-34 20-34-20V42z" fill="#ffffff" opacity=".35"/></svg>');
     return '<style>
 :root{--nav:#343a40;--teal:#5f9ea0;--teal2:#4e8a8c;--bg:#e9ecef;--line:#dee2e6;--txt:#212529;--mut:#6c757d;--blue:#007bff;--info:#17a2b8;--ok:#28a745;--bad:#dc3545;--warn:#ffc107}
-*{box-sizing:border-box}html,body{margin:0}body{background:#fff;color:var(--txt);font:15px/1.5 "Leelawadee UI","Sarabun","Tahoma",sans-serif}
+@font-face{font-family:"Niramit";font-style:normal;font-weight:400;font-display:swap;src:url(/mis/root/fonts/niramit/niramit-thai-400-normal.woff2) format("woff2");unicode-range:U+0E01-0E5B,U+200C-200D,U+25CC}
+@font-face{font-family:"Niramit";font-style:normal;font-weight:400;font-display:swap;src:url(/mis/root/fonts/niramit/niramit-latin-400-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Niramit";font-style:normal;font-weight:700;font-display:swap;src:url(/mis/root/fonts/niramit/niramit-thai-700-normal.woff2) format("woff2");unicode-range:U+0E01-0E5B,U+200C-200D,U+25CC}
+@font-face{font-family:"Niramit";font-style:normal;font-weight:700;font-display:swap;src:url(/mis/root/fonts/niramit/niramit-latin-700-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+*{box-sizing:border-box}html,body{margin:0}body{background:#fff;color:var(--txt);font:16px/1.5 "Niramit",sans-serif}
 a{color:var(--blue);text-decoration:none}
 .nav{position:sticky;top:0;z-index:50;background:var(--nav);color:#fff}
 .nav .nin{max-width:1110px;margin:0 auto;padding:0 15px;display:flex;align-items:center;justify-content:space-between;min-height:56px}
@@ -41,7 +45,7 @@ a{color:var(--blue);text-decoration:none}
 .dd a{display:block;padding:6px 20px;color:var(--txt);white-space:nowrap}.dd a:hover,.dd a.on{background:#f1f3f5;color:#16181b}.dd hr{border:0;border-top:1px solid #e9ecef;margin:6px 0}
 .tog{display:none;background:none;border:1px solid rgba(255,255,255,.2);border-radius:4px;color:rgba(255,255,255,.8);font-size:20px;padding:3px 10px;cursor:pointer}
 .hero{background:linear-gradient(180deg,rgba(214,240,251,.9),rgba(255,255,255,.95)),url("data:image/svg+xml,'.$hex.'");background-size:auto,112px 194px;padding:34px 15px 30px;text-align:center}
-.hero h1{margin:0 auto;display:inline-block;font:700 34px/1.2 "Leelawadee UI",Tahoma,sans-serif;letter-spacing:7px;text-transform:uppercase;color:#1d1d1d;padding:0 60px 14px;border-bottom:2px solid #2aa3cf}
+.hero h1{margin:0 auto;display:inline-block;font:700 34px/1.2 "Niramit",sans-serif;letter-spacing:7px;text-transform:uppercase;color:#1d1d1d;padding:0 60px 14px;border-bottom:2px solid #2aa3cf}
 .wrap{max-width:1110px;margin:28px auto 40px;padding:0 15px}
 .box{background:var(--bg);padding:20px;border-radius:2px}
 .card{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:4px;padding:16px 18px;margin-bottom:18px}
@@ -88,18 +92,39 @@ table.tt td{height:74px;text-align:center;font-size:13px;vertical-align:middle}t
 .lgbox .l2{padding:46px 40px}.lgbox .l2 h3{font-size:24px;margin:0 0 6px;text-align:center}.lgbox .l2 .sub{text-align:center;color:var(--mut);font-size:13px;margin-bottom:20px}
 .lgbox .l2 .in{height:44px;margin-bottom:14px}.lgbox .l2 .btn{width:100%;height:44px;font-size:16px}
 .lgbox .help{font-size:13px;color:var(--mut);margin-top:16px}.lgbox table.tb{margin-top:14px;font-size:12px}
+/* หน้า Loading (แบบต้นฉบับ: พื้นดำโปร่ง + แท่งคลื่น 5 แท่ง) */
+.ldr{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center}.ldr.on{display:flex}
+.ldr .bg{position:absolute;inset:0;background:#000;opacity:.5}.ldr .ib{position:relative;z-index:2;text-align:center;color:#fff;font-size:16px}
+.sk-wave{width:62.5px;height:50px;margin:0 auto 30px;font-size:10px}.sk-wave div{background:#fff;height:100%;width:6px;margin:0 1px;display:inline-block;animation:skw 1.2s infinite ease-in-out}
+.sk-wave div:nth-child(2){animation-delay:-1.1s}.sk-wave div:nth-child(3){animation-delay:-1s}.sk-wave div:nth-child(4){animation-delay:-.9s}.sk-wave div:nth-child(5){animation-delay:-.8s}.sk-wave div:nth-child(1){animation-delay:-1.2s}
+@keyframes skw{0%,40%,100%{transform:scaleY(.4)}20%{transform:scaleY(1)}}
+@media (prefers-reduced-motion:reduce){.sk-wave div{animation:none}}
 @media (max-width:860px){.nav ul{display:none;position:absolute;left:0;right:0;top:56px;flex-direction:column;align-items:stretch;background:var(--nav);padding:6px 0}.nav ul.show{display:flex}.tog{display:block}
  .dd{position:static;box-shadow:none;border:0;border-radius:0;margin:0 0 6px}.nav li>a,.nav li>button{padding:9px 18px;text-align:left;width:100%}
  .r2,.rside,.lgbox{grid-template-columns:1fr}.g4,.g3{grid-template-columns:1fr 1fr}.kv{grid-template-columns:1fr}.hero h1{font-size:22px;letter-spacing:4px;padding:0 10px 10px}.tbw{overflow-x:auto}}
-@media print{.nav,.hero,.noprint{display:none!important}.box{background:none;padding:0}.wrap{margin:0}}
+@media print{.nav,.hero,.noprint,.ldr{display:none!important}.box{background:none;padding:0}.wrap{margin:0}}
 </style>';
+}
+
+/** หน้า Loading: แสดงตอนเปิดหน้า และตอนกดเมนู/ส่งฟอร์ม จนกว่าหน้าใหม่จะโหลดเสร็จ */
+function st_loader(): string
+{
+    return '<div class="ldr on" id="ldr" role="status" aria-live="polite"><div class="bg"></div><div class="ib"><div class="sk-wave"><div></div> <div></div> <div></div> <div></div> <div></div></div>Loading...</div></div>';
 }
 
 function st_js(): string
 {
     return '<script>
 (function(){
+ var L=document.getElementById("ldr");
+ function hide(){if(L)L.classList.remove("on");}
+ function show(){if(L)L.classList.add("on");}
+ if(document.readyState==="complete"){hide();}else{window.addEventListener("load",hide);setTimeout(hide,8000);}
+ window.addEventListener("pageshow",hide);
+ document.addEventListener("submit",function(e){if(!e.defaultPrevented&&e.target.checkValidity&&e.target.checkValidity()){show();}});
  document.addEventListener("click",function(e){
+  var a=e.target.closest("a[href]");
+  if(a&&!e.defaultPrevented&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&a.target!=="_blank"&&!a.hasAttribute("data-mo")&&!a.hasAttribute("download")){var h=a.getAttribute("href");if(h&&h.charAt(0)!=="#"&&h.indexOf("javascript:")!==0&&a.origin===location.origin){show();}}
   var b=e.target.closest(".nav li>button");
   document.querySelectorAll(".nav li.open").forEach(function(li){if(!b||li!==b.parentNode)li.classList.remove("open");});
   if(b){b.parentNode.classList.toggle("open");e.preventDefault();}
@@ -128,7 +153,7 @@ function st_card(string $title, string $icon, string $body): string
 function st_doc(string $title, string $body): string
 {
     return '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>'.h($title).'</title>'
-        .'<link rel="shortcut icon" href="/mis/images/favicon.ico"><link rel="stylesheet" href="/mis/root/css/font-awesome.css">'.st_css().'</head><body>'.$body.st_js().'</body></html>';
+        .'<link rel="shortcut icon" href="/mis/images/favicon.ico"><link rel="stylesheet" href="/mis/root/css/font-awesome.css">'.st_css().'</head><body>'.st_loader().$body.st_js().'</body></html>';
 }
 
 /* ================================================================ หน้าเข้าสู่ระบบ */

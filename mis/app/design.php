@@ -542,6 +542,7 @@ function rows_task_study_record_Record()
         return '<td class="c">'.$pr.'</td><td class="c">'.($n ? number_format($pr * 100 / $n, 0) : '100').'</td>';
     };
     $unitMarkAll = array_sum(array_map(fn($u) => (float) $u['mark'], $units));
+    $saveBar = fn($label) => $locked ? '' : '<div class="rec-save"><a href="javascript:void(0)" class="sv" onclick="document.forms.rec.submit()"><i class="fa fa-pencil-square-o"></i> '.h($label).'</a><a href="javascript:void(0)" class="cl" onclick="document.forms.rec.reset();recColor()">✕ เคลียร์</a></div>';
     // แท็บรายหน่วย
     $tabs = '';
     $panes = '';
@@ -577,7 +578,7 @@ function rows_task_study_record_Record()
             .'<tr><th colspan="2">เวลาเรียน</th><th colspan="'.($n + 1).'">'.h($u['title']).'</th><th>รวม</th></tr>'
             .'<tr><th class="b">คาบ</th><th class="b">ร้อยละ</th>'.$th.'<th class="b">รวม</th><th class="b">เต็ม</th></tr>'
             .'<tr class="max"><td colspan="3" style="background:#EDFCBE"></td><td>'.$total.'</td><td>100</td>'.$mx.'<td>'.h((string) (float) $u['mark']).'</td><td>'.h((string) $unitMarkAll).'</td></tr>'
-            .($rows ?: '<tr><td colspan="'.(6 + $n).'" class="c">ไม่มีนักเรียนลงทะเบียน</td></tr>').'</table></div>';
+            .($rows ?: '<tr><td colspan="'.(6 + $n).'" class="c">ไม่มีนักเรียนลงทะเบียน</td></tr>').'</table>'.$saveBar('บันทึกคะแนนหน่วยที่ '.$un).'</div>';
         $ti++;
     }
     // แท็บสรุป
@@ -599,16 +600,22 @@ function rows_task_study_record_Record()
         }
         $has = $s['midterm'] !== null || $s['final'] !== null;
         $grade = (string) ($fix['old'] ?? $s['grade']);
+        $tot = (int) $s['midterm'] + (int) $s['final'];
+        // ช่อง "แก้" ขึ้นเฉพาะผู้ที่ติด 0 หรือ ร (กดเพื่อบันทึกคะแนนสอบแก้ไข)
+        $np = preg_split('/\s+/u', trim((string) $s['name']), 2);
+        $fixCell = in_array($grade, ['0', 'ร'], true) ? ($locked ? h((string) ($fix['score'] ?? ''))
+            : '<input type="text" readonly class="rec-fix" value="'.h((string) ($fix['score'] ?? '')).'" title="บันทึกคะแนนสอบแก้ไข" onclick="recFix('.$gid.','.h(json_encode(trim(($np[0] ?? '').' '.($np[1] ?? '')), JSON_UNESCAPED_UNICODE)).','
+                .h(json_encode((string) ($s['number'] ?: $s['sno']))).','.($grade === 'ร' ? 1 : 0).','.h(json_encode((string) ($fix['score'] ?? ''))).','.(!empty($fix['special']) ? 1 : 0).')"/>') : '';
         $rows .= '<tr>'.$nameCell($s).$attCells($s).$unitCell.'<td class="c">'.$in('mid['.$gid.']', $mOld, (float) $mid['mark']).'</td><td class="c">'.$in('fin['.$gid.']', (string) $s['final'], (float) $fin['mark']).'</td>'
-            .'<td class="c sum">'.($has ? (int) $s['midterm'] + (int) $s['final'] : '').'</td><td class="c sum"><b class="'.(in_array($grade, ['0', 'ร', 'มส'], true) ? 'bad' : 'ok').'">'.h($grade).'</b></td>'
-            .'<td class="c fix">'.$in('fix['.$gid.']', (string) ($fix['score'] ?? ''), 100).'</td><td class="c fix">'.h((string) ($fix['score'] ?? '')).'</td><td class="c fix"><b>'.h((string) ($fix['new'] ?? '')).'</b></td></tr>';
+            .'<td class="c sum"><b class="'.($tot < PASS_SCORE ? 'bad' : 'ok').'">'.($has ? $tot : '').'</b></td><td class="c sum"><b class="'.(in_array($grade, ['0', 'ร', 'มส'], true) ? 'bad' : 'ok').'">'.h($grade).'</b></td>'
+            .'<td class="c fix">'.$fixCell.'</td><td class="c fix"><b class="'.(isset($fix['score']) && (float) $fix['score'] < PASS_SCORE ? 'bad' : 'ok').'">'.h((string) ($fix['score'] ?? '')).'</b></td><td class="c fix"><b class="'.(($fix['new'] ?? '') === '0' ? 'bad' : 'ok').'">'.h((string) ($fix['new'] ?? '')).'</b></td></tr>';
     }
     $tabs .= '<span class="rec-tab" data-p="p'.$ti.'">กลางภาค ปลายภาค และสรุปรวม</span>';
     $panes .= '<div class="rec-pane" id="p'.$ti.'"><table class="rec"><tr><th rowspan="3" style="width:46px">เลขที่</th><th rowspan="3" style="width:56px">รหัส</th><th rowspan="3">ชื่อ-นามสกุล</th><th colspan="10" style="font-size:21px">คะแนนสอบและผลการเรียน ประจำภาคเรียนที่ '.(int) $c['term'].' ปีการศึกษา '.(int) $c['year'].'</th></tr>'
         .'<tr><th colspan="2">เวลาเรียน</th><th>รายหน่วย</th><th>กลางภาค</th><th>ปลายภาค</th><th colspan="2">คะแนนรวมและสรุปผล</th><th colspan="3">แก้ไข</th></tr>'
         .'<tr><th class="b">คาบ</th><th class="b">ร้อยละ</th><th class="b">รวม</th><th class="b">คะแนน</th><th class="b">คะแนน</th><th class="b">รวม</th><th class="b">เกรด</th><th rowspan="2" class="b">แก้</th><th class="b">รวม</th><th class="b">เกรด</th></tr>'
         .'<tr class="max"><td colspan="3" style="background:#FDE5DA"></td><td>'.$total.'</td><td>100</td><td>'.h((string) ($units ? $unitMarkAll : $rw)).'</td><td>'.h((string) (float) $mid['mark']).'</td><td>'.h((string) (float) $fin['mark']).'</td><td>100</td><td>4</td><td>100</td><td>4</td></tr>'
-        .($rows ?: '<tr><td colspan="13" class="c">ไม่มีนักเรียนลงทะเบียน</td></tr>').'</table></div>';
+        .($rows ?: '<tr><td colspan="13" class="c">ไม่มีนักเรียนลงทะเบียน</td></tr>').'</table>'.$saveBar('บันทึกคะแนนกลางภาค และปลายภาค').'</div>';
     $rn = room_short($room);
     $level = 'ระดับชั้น'.cat('class', $c['class']).($room ? '/'.(strpos($rn, '/') !== false ? substr($rn, strrpos($rn, '/') + 1) : $rn) : '');
     [$r1, $r2, $r3] = score_ratio();
@@ -621,18 +628,31 @@ function rows_task_study_record_Record()
         .'table.rec th.vt{height:240px;vertical-align:bottom;padding:6px 2px;width:46px}table.rec th.vt div{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;margin:0 auto;font-size:16px;max-height:230px;overflow:hidden}'
         .'table.rec td{border:1px solid #9CCFD6;padding:4px 5px;height:26px;color:#000}table.rec .c{text-align:center}table.rec .sum{background:#F3F5FF}table.rec .fix{background:#FFFDE8}table.rec .u-sum{background:#F8FDE8}'
         .'table.rec tr.max td{background:#F7F7F7;text-align:center;font-size:14px}table.rec b.ok{color:#1BA826}table.rec b.bad{color:#E00}'
-        .'.rec-in{width:40px;height:20px;text-align:center;border:1px solid #ccc;border-radius:3px;font:13px Tahoma}.rec-in.err{border-color:#e00;background:#ffecec}.rec-btn{text-align:right;padding:8px 0}</style>';
+        .'.rec-in{width:40px;height:20px;text-align:center;border:1px solid #ccc;border-radius:3px;font:13px Tahoma}.rec-in.ok{border-color:#B1D2A4;background:#ECFFEC}.rec-in.bad{border-color:#EEB9B9;background:#FFFAF2;color:#E00}.rec-in.err{border-color:#e00;background:#ffecec}'
+        .'.rec-fix{width:37px;height:20px;border:1px solid #B1D2A4;background:#ECFFEC;text-align:center;cursor:pointer;font:13px Tahoma}'
+        .'.rec-save{text-align:right;padding:8px 0;border:1px solid #ddd;border-top:none;background:#fafafa;padding:6px 6px}.rec-save a{display:inline-block;color:#fff!important;text-decoration:none;font:13px Tahoma;padding:5px 12px;border-radius:3px;margin-left:5px}'
+        .'.rec-save .sv{background:#3EA2E8;border:1px solid #2f8fd3;min-width:200px;text-align:center}.rec-save .cl{background:#F7B331;border:1px solid #e09a16}</style>';
     $lockMsg = $locked ? msg_box(md_get('approved', (int) $c['id']) !== null ? 'ผลการเรียนได้รับการอนุมัติแล้ว ไม่สามารถแก้ไขได้ หากต้องการแก้ไขให้แจ้งแอดมินยกเลิกการอนุมัติ'
         : 'ยืนยันผลการเรียนแล้ว (รออนุมัติ) ไม่สามารถแก้ไขข้อมูลได้ จนกว่าจะยกเลิกการยืนยันที่หน้ารายงานผลการเรียน', false) : '';
     $body = d_css().$style.saved_msg().$lockMsg.'<div class="dz"><div class="rec-bar"><h2><i class="fa fa-list-ul"></i>โอนคะแนนและผลการเรียน</h2><select onchange="location.href=this.value" style="height:24px;min-width:160px">'.$opts.'</select></div>'
         .d_info($c, $level, '<div class="ratio">อัตราส่วนคะแนนรายวิชา '.$r1.' : '.$r2.' : '.$r3.'</div>')
         .'<form name="rec" method="post" action="?module=task&option=study_record&func=SaveRecord&SubjectNum='.(int) $c['id'].'&RoomNum='.$room.'"><input type="hidden" name="tab" id="rec-tab" value=""/>'
         .'<div class="rec-tabs">'.$tabs.'</div><div class="rec-line"></div>'.$panes
-        .'<div class="rec-btn">'.btn('กลับ', '?module=task&option=study_record', 'back')
-        .($locked ? '' : '<a href="javascript:void(0);" onclick="document.forms.rec.submit();" id="pinkgreenbtns" style="margin-left:4px"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึกผลการเรียน</a>').'</div></form></div>'
+        .'</form></div>'
+        .'<div class="dz-ov" id="mfix"><div class="dz-m" style="width:430px"><form method="post" action="?module=task&option=study_record&func=SaveFix&SubjectNum='.(int) $c['id'].'&RoomNum='.$room.'"><input type="hidden" name="gid" id="fx-gid"/>'
+        .'<div class="hd"><i class="fa fa-list-ul"></i>บันทึกคะแนนสอบแก้ไข<span class="x" onclick="dzClose(\'mfix\')">✕</span></div><div class="bd"><div style="display:flex;gap:10px;align-items:center;background:#F7F7F7;border:1px solid #eee;padding:8px;font-size:13px;clear:both;float:none;width:auto"><i class="fa fa-commenting" style="color:#2BC3C9;font-size:22px"></i><span id="fx-name"></span></div>'
+        .'<div id="fx-sp" style="margin:10px 0 0 86px;clear:both"><label style="display:inline;font-family:Tahoma;font-size:13px;margin:0"><input type="checkbox" name="special" value="1" id="fx-special"/> กรณีพิเศษ</label></div>'
+        .'<div style="display:flex;align-items:center;gap:10px;margin-top:10px;clear:both"><span style="width:76px;font-size:13px;white-space:nowrap">คะแนนแก้</span><input class="in" name="score" id="fx-score" style="width:150px" maxlength="5"/><span style="font-size:13px">คะแนน</span></div></div>'
+        .'<div class="ft"><button type="submit" class="s">✎ บันทึก</button><button type="button" class="c" onclick="document.getElementById(\'fx-score\').value=\'\';document.getElementById(\'fx-special\').checked=false">✕ เคลียร์</button></div></form></div></div>'
         .'<script>(function(){var tabs=document.querySelectorAll(".rec-tab");function show(id){tabs.forEach(function(t){t.classList.toggle("on",t.dataset.p===id)});document.querySelectorAll(".rec-pane").forEach(function(p){p.classList.toggle("on",p.id===id)});document.getElementById("rec-tab").value=id}'
         .'tabs.forEach(function(t){t.addEventListener("click",function(){show(t.dataset.p)})});var m=location.search.match(/[?&]tab=(p\d+)/);show(m&&document.getElementById(m[1])?m[1]:tabs[tabs.length-1].dataset.p);'
-        .'document.querySelectorAll(".rec-in").forEach(function(i){i.addEventListener("input",function(){var mx=parseFloat(i.dataset.max),v=parseFloat(i.value);i.classList.toggle("err",i.value!==""&&(isNaN(v)||v<0||(mx>0&&v>mx)))})})})();</script>';
+        .'document.querySelectorAll(".rec-in").forEach(function(i){i.addEventListener("input",function(){recColor(i)})});recColor()})();'
+        // สีช่องคะแนน: ได้ตั้งแต่ครึ่งหนึ่งของคะแนนเต็ม = เขียว, ต่ำกว่า = แดง, เกินคะแนนเต็ม/ไม่ใช่ตัวเลข = ผิดพลาด
+        .'function recColor(one){(one?[one]:document.querySelectorAll(".rec-in")).forEach(function(i){var mx=parseFloat(i.dataset.max),v=parseFloat(i.value),e=i.value!==""&&(isNaN(v)||v<0||(mx>0&&v>mx));'
+        .'i.classList.toggle("err",e);i.classList.toggle("ok",!e&&i.value!==""&&mx>0&&v>=mx/2);i.classList.toggle("bad",!e&&i.value!==""&&mx>0&&v<mx/2)})}'
+        .'function recFix(g,n,no,isR,sc,sp){document.getElementById("fx-gid").value=g;document.getElementById("fx-name").textContent=n+" เลขที่ "+no;document.getElementById("fx-sp").style.display=isR?"":"none";'
+        .'document.getElementById("fx-special").checked=!!sp;document.getElementById("fx-score").value=sc;dzOpen("mfix");document.getElementById("fx-score").focus()}'
+        .'function dzOpen(i){document.getElementById(i).classList.add("on")}function dzClose(i){document.getElementById(i).classList.remove("on")}document.addEventListener("keydown",function(e){if(e.key==="Escape")dzClose("mfix")});</script>';
     $page = sub_page('task_study_record', $body, 'รายงานผลการเรียน');
     $back = "<div style='float:left;margin:0px 2px'> <a href='?module=task&option=study_record' onMouseOver=\"MM_swapImage('icon_back','','../icon_tools/icon_back.png',1);\" onMouseOut=\"MM_swapImgRestore();\"><img id='icon_back' name='icon_back' src='../icon_tools/hicon_back.png' border='0' title='กลับ' align='top'/></a> </div>";
     return d_with_buttons($page, rpt_record_buttons($c, $room).$back);
@@ -691,20 +711,60 @@ function act_task_study_record_SaveRecord(): void
             $midterm = $u === null && $m === null ? null : (int) round((float) $u + (float) $m);
             $final = $f === null ? null : (int) round($f);
             $grade = auto_grade($any, $missing, (float) $midterm + (float) $final, $attPct[(int) $row['student_id']] ?? null);
-            // สอบแก้ตัว: ถึงเกณฑ์ 50 ได้ 1 ไม่ถึงได้ 0
-            $fx = $num($_POST['fix'][$gid] ?? '', 100);
-            if ($fx === null) {
-                md_set('remedial', 'g'.$gid, $yt, '', null);
-            } else {
-                $new = $fx >= PASS_SCORE ? '1' : '0';
-                md_set('remedial', 'g'.$gid, $yt, '', json_encode(['student' => (int) $row['student_id'], 'course' => (int) $c['id'], 'old' => $grade, 'new' => $new,
-                    'date' => date('Y-m-d'), 'apply' => 'ใช่', 'score' => (string) (int) round($fx)], JSON_UNESCAPED_UNICODE));
-                $grade = $new;
+            // คะแนนสอบแก้ไขเดิม: ยังติด 0/ร = ใช้ผลแก้ไข, ไม่ติดแล้ว = ลบผลแก้ไข
+            $fix = json_decode((string) md_get('remedial', 'g'.$gid, $yt), true) ?: [];
+            if ($fix) {
+                if (in_array($grade, ['0', 'ร'], true)) {
+                    $fix['old'] = $grade;
+                    $fix['new'] = fix_grade((float) $fix['score'], $grade, !empty($fix['special']));
+                    md_set('remedial', 'g'.$gid, $yt, '', json_encode($fix, JSON_UNESCAPED_UNICODE));
+                    $grade = $fix['new'];
+                } else {
+                    md_set('remedial', 'g'.$gid, $yt, '', null);
+                }
             }
             q('UPDATE {grade} SET `midterm`=?, `final`=?, `grade`=? WHERE `id`=? AND `course_id`=?', [$midterm, $final, $grade === '' ? null : $grade, $gid, (int) $c['id']]);
         }
     }
     redirect('?module=task&option=study_record&func=Record&SubjectNum='.(int) ($_GET['SubjectNum'] ?? 0).'&RoomNum='.(int) ($_GET['RoomNum'] ?? 0).($tab !== '' ? '&tab='.$tab : '').'&msg=saved');
+}
+
+/** ผลการสอบแก้ไข: ปกติผ่านเกณฑ์ได้ 1 ไม่ผ่านได้ 0 / ติด ร กรณีพิเศษ = ตัดเกรดตามคะแนนจริง */
+function fix_grade(float $score, string $old, bool $special): string
+{
+    if ($score < PASS_SCORE) {
+        return '0';
+    }
+    return $special && $old === 'ร' ? grade_of((int) round($score)) : '1';
+}
+
+/** บันทึกคะแนนสอบแก้ไข (ป๊อปอัปในแท็บสรุป) */
+function act_task_study_record_SaveFix(): void
+{
+    $c = att_course();
+    $room = (int) ($_GET['RoomNum'] ?? 0);
+    $gid = (int) ($_POST['gid'] ?? 0);
+    if ($c && !record_locked($c, $room)) {
+        $row = q1('SELECT `student_id`, `grade` FROM {grade} WHERE `id`=? AND `course_id`=?', [$gid, (int) $c['id']]);
+        $yt = (int) $c['year'].'/'.(int) $c['term'];
+        $fix = json_decode((string) md_get('remedial', 'g'.$gid, $yt), true) ?: [];
+        $old = (string) ($fix['old'] ?? ($row['grade'] ?? ''));
+        if ($row && in_array($old, ['0', 'ร'], true)) {
+            $raw = trim((string) ($_POST['score'] ?? ''));
+            if ($raw === '' || !is_numeric($raw)) {
+                md_set('remedial', 'g'.$gid, $yt, '', null);
+                q('UPDATE {grade} SET `grade`=? WHERE `id`=?', [$old, $gid]);
+            } else {
+                $score = max(0, min(100, (float) $raw));
+                $special = $old === 'ร' && !empty($_POST['special']);
+                $new = fix_grade($score, $old, $special);
+                md_set('remedial', 'g'.$gid, $yt, '', json_encode(['student' => (int) $row['student_id'], 'course' => (int) $c['id'], 'old' => $old, 'new' => $new,
+                    'date' => date('Y-m-d'), 'apply' => 'ใช่', 'score' => (string) (int) round($score), 'special' => $special ? 1 : 0], JSON_UNESCAPED_UNICODE));
+                q('UPDATE {grade} SET `grade`=? WHERE `id`=?', [$new, $gid]);
+            }
+        }
+    }
+    redirect('?module=task&option=study_record&func=Record&SubjectNum='.(int) ($_GET['SubjectNum'] ?? 0).'&RoomNum='.$room.'&msg=saved');
 }
 
 /* ---------------------------------------------------------------- ผู้ดูแล: ตัวชี้วัดและสาระการเรียนรู้ */

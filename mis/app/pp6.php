@@ -471,9 +471,10 @@ function act_task_report_pp6_Print(): void
                         .$c(h((string) ($fix['old'] ?? $g['grade']))).$c(h((string) ($fix['new'] ?? ''))).'</tr>';
                 }
             }
+            $ah = act_hours(array_map(fn($g) => (int) $g['id'], array_filter($gs, fn($g) => (int) $g['ctype'] === 9)));
             foreach ($gs as $g) {
                 if ((int) $g['ctype'] === 9) {
-                    $acts .= '<tr><td style="white-space:nowrap;height:25px;padding:0px 5px">'.h($g['course_name']).'</td><td align="center" valign="middle">'.h((string) $g['period']).'</td><td align="center" valign="middle">'.h((string) $g['grade']).'</td></tr>';
+                    $acts .= '<tr><td style="white-space:nowrap;height:25px;padding:0px 5px">'.h($g['course_name']).'</td><td align="center" valign="middle">'.h((string) ($ah[(int) $g['id']] ?? $g['period'])).'</td><td align="center" valign="middle">'.h((string) $g['grade']).'</td></tr>';
                 }
             }
             $gpa = gpa_of(array_map(fn($g) => ['grade' => $g['grade'], 'credit' => $g['credit']], array_filter($gs, fn($g) => (int) $g['ctype'] !== 9)));

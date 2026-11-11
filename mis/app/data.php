@@ -107,6 +107,21 @@ function att_stats(array $courses): array
     foreach (q('SELECT `course_id`,`room`,COUNT(DISTINCT `date`,`period`) n, MAX(`date`) last FROM {attendance} WHERE `course_id` IN ('.implode(',', $ids).') GROUP BY `course_id`,`room`') as $r) {
         $out[(int) $r['course_id']][(int) $r['room']] = [(int) $r['n'], $r['last']];
     }
+    // คาบที่กำหนดว่ามีการเรียนการสอนแล้ว (หน้าบันทึกเวลาเรียนรายสัปดาห์)
+    $hrs = [];
+    foreach (md_rows('att_hour', $ids) as $r) {
+        $v = json_decode((string) $r['value'], true) ?: [];
+        if (!empty($v['t'])) {
+            $k = (int) $r['r1'].'|'.(int) $r['r2'];
+            $hrs[$k][0] = ($hrs[$k][0] ?? 0) + count((array) ($v['p'] ?? []));
+            $hrs[$k][1] = max((string) ($hrs[$k][1] ?? ''), (string) $r['r3']);
+        }
+    }
+    foreach ($hrs as $k => [$n, $last]) {
+        [$cid, $room] = array_map('intval', explode('|', $k));
+        $old = $out[$cid][$room] ?? [0, null];
+        $out[$cid][$room] = [max($n, $old[0]), max((string) $old[1], $last)];
+    }
     return $out;
 }
 
@@ -489,7 +504,7 @@ function att_course(): ?array
     if (!$c) {
         return null;
     }
-    if (!is_manager() && (int) $c['teacher_id'] !== (int) me()['id']) {
+    if (!is_manager() && (int) $c['teacher_id'] !== (int) me()['id'] && !act_advisor_of($c, (int) ($_GET['RoomNum'] ?? 0))) {
         return null;
     }
     return $c;
@@ -505,107 +520,6 @@ function att_day(): string
         }
     }
     return date('Y-m-d');
-}
-
-function rows_task_time_attendance_byroom_Attendance()
-{
-    $c = att_course();
-    if (!$c) {
-        redirect('?module=task&option=time_attendance_byroom');
-    }
-    att_ensure();
-    $room = (int) ($_GET['RoomNum'] ?? 0);
-    $day = att_day();
-    $period = max(1, min(12, (int) ($_GET['Period'] ?? 1)));
-    $weekend = in_array((int) date('w', strtotime($day)), [0, 6], true);
-    $base = '?module=task&option=time_attendance_byroom&func=Attendance&TeacherId='.(int) $c['teacher_id'].'&SubjectId='.rawurlencode($c['course_code']).'&SubjectNum='.(int) $c['id'].'&AttendType=subject&Elective=0';
-    $tpl = (string) file_get_contents(MIS_APP.'pages/task_time_attendance_byroom_Attendance.html');
-
-    // ส่วนหัวของรายวิชา
-    $rooms = course_rooms([$c])[(int) $c['id']] ?? [];
-    $opts = '';
-    foreach ($rooms as $r => $n) {
-        $opts .= '<option value="'.h($base.'&RoomNum='.$r.'&actday='.date('d/m/Y', strtotime($day))).'"'.($r === $room ? " selected='selected'" : '').'>'.h($c['course_code'].' - '.class_room_short($c['class'], $r)).'</option>';
-    }
-    $done = (int) (q1('SELECT COUNT(DISTINCT `date`,`period`) n FROM {attendance} WHERE `course_id`=? AND `room`=?', [(int) $c['id'], $room])['n'] ?? 0);
-    $total = (int) $c['period'];
-    $rep = [
-        '/(<select name="SelectAttendance"[^>]*>).*?(<\/select>)/s' => '$1'.str_replace('$', '\\$', $opts).'$2',
-        '/ระดับชั้นมัธยมศึกษาปีที่ \S+/u' => 'ระดับชั้น'.h(cat('class', $c['class'])).'/'.h(preg_replace('/^\d+\//', '', room_short($room))),
-        '/รายวิชา ส21105 ประวัติศาสตร์/u' => 'รายวิชา '.h($c['course_code'].' '.$c['course_name']),
-        '/ประเภท รายวิชาพื้นฐาน/u' => 'ประเภท รายวิชา'.(COURSE_TYPES[(int) $c['type']] ?? ''),
-        '/จำนวนหน่วยกิต [\d.]+/u' => 'จำนวนหน่วยกิต '.h((float) $c['credit']),
-        '/<span style=\'float:left;width:50px\'>0\/20<\/span>/' => "<span style='float:left;width:50px'>$done/$total</span>",
-        '/(80 %<\/span><span style=\'float:left;width:50px\'>)16(<\/span>)/' => '${1}'.(int) ceil($total * 0.8).'$2',
-        '/วัน\S+, \d+&nbsp;\S+&nbsp;\d{4}/u' => 'วัน'.TH_DAYS[(int) date('w', strtotime($day))].', '.th_date($day),
-        '/goUrl:"[^"]*"/' => 'goUrl:"'.$base.'&RoomNum='.$room.'"',
-        '/disabledDays:\[[^\]]*\]/' => 'disabledDays:[0,0,0,0,0,1,1]',
-        "/\\?module=task&option=time_attendance_byroom&RoomNum=\\d+&SubjectId=[^']*'/u" => '?module=task&option=time_attendance_byroom\'',
-        "/ReportPortrait\\('print_portrait\\.php[^']*'\\);/" => "location.href='?module=task&option=report_attendance';",
-        '/var act = "[^"]*";/' => 'var act = "'.str_replace('func=Attendance', 'func=SaveSubjectAttendTime', $base).'&RoomNum='.$room.'&actday='.date('d/m/Y', strtotime($day)).'";',
-        "/confirm_single\\('[^']*'/" => "confirm_single('".$base."&RoomNum=".$room."'",
-    ];
-    $tpl = preg_replace(array_keys($rep), array_values($rep), $tpl);
-    $msg = $_GET['msg'] ?? '';
-    $box = fn($text, $ok) => "<div id='msg_info'><div class='main_msg' style='width:100%'><table border='0' cellspacing='0' cellpadding='0' class='"
-        .($ok ? 'frame_green_msg' : 'frame_red_msg')."' style='width:983px'><tr><td width=20><img src='../images/".($ok ? '1347351892_yes.png' : '001_11.png')."' border=0 align=middle></td><td align='left' style='text-align:left'>&nbsp;&nbsp;<div style='margin-top:-15px'>&nbsp;&nbsp;&nbsp;$text</div></td></tr></table></div></div>";
-    $newBox = $msg === 'saved' ? $box('บันทึกเวลาเรียนเรียบร้อยแล้ว', true) : ($weekend ? $box('กรุณากำหนดวันที่บันทึกให้ตรงกับวันที่มีการเรียนการสอนในภาคเรียนปัจจุบัน', false) : '');
-    $tpl = preg_replace("/<div id='msg_info'>.*?<\\/table><\\/div><\\/div>/s", str_replace('$', '\\$', $newBox), $tpl, 1);
-
-    // ตารางรายชื่อ
-    $grid = '';
-    if (!$weekend) {
-        $students = \Attendance\Sheet\Model::students($c['id'], $room);
-        [$marks] = \Attendance\Sheet\Model::marks($c['id'], $day, $period);
-        $code = array_flip(ATT_CODES);
-        $popts = '';
-        for ($p = 1; $p <= 10; $p++) {
-            $popts .= '<option value="'.h($base.'&RoomNum='.$room.'&actday='.date('d/m/Y', strtotime($day)).'&Period='.$p).'"'.($p === $period ? ' selected' : '').'>คาบที่ '.$p.'</option>';
-        }
-        $grid = "\n<div style=\"width:984px;margin:10px auto 0;text-align:left;overflow:hidden\"><div class=\"titlenav\" style=\"width:969px\"><span style=\"float:left;white-space:nowrap\"><span id=\"Listtitle\">&nbsp;</span><h1 style=\"font-size:23px; white-space:nowrap\">รายชื่อนักเรียน</h1></span>"
-            ."<span style=\"float:right;margin-top:2px;white-space:nowrap\"><select class=\"general radius\" style=\"margin:0px;height:25px;min-width:100px\" onchange=\"select_attendance(this.value);\">$popts</select></span></div>"
-            ."\n<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" class=\"tinytable\" id=\"table\" align=\"left\" style=\"width:983px\"><thead><tr><th width=\"24\" class=\"nosort\"><h3>เลขที่</h3></th><th class=\"nosort\"><h3>รหัสนักเรียน</h3></th><th class=\"nosort\"><h3>ชื่อ-นามสกุล</h3></th><th class=\"nosort\" style=\"text-align:center\"><h3>คาบที่ $period</h3></th></tr></thead><tbody>";
-        foreach ($students as $k => $s) {
-            $v = $code[$marks[$s['id']] ?? ''] ?? '';
-            $cls = $v !== '' ? ATT_CLASS[$v] : '';
-            $id = 'att'.(int) $s['id'];
-            $grid .= "\n<tr class=\"".($k % 2 ? 'oddrow' : 'evenrow')."\"><td>".h($s['number'])."</td><td>".h($s['code'])."</td><td>".name_nbsp($s['name'])."</td><td class=\"box\" style=\"text-align:center\">"
-                ."<input type=\"text\" readonly=\"readonly\" name=\"att[".(int) $s['id']."]\" id=\"$id\" value=\"".h($v)."\" class=\"$cls\" onclick=\"ChangeVal('$id', this.value==''?'ซ':this.value);\"/></td></tr>";
-        }
-        if (!$students) {
-            $grid .= '<tr><td colspan="4" style="text-align:center">ยังไม่มีนักเรียนลงทะเบียนในรายวิชานี้</td></tr>';
-        }
-        $grid .= "\n</tbody></table>\n<div class=\"pagenav\" style=\"width:969px;height:auto;text-align:center\">"
-            ."<span style=\"float:left;font-size:12px;margin-top:4px\">ม=มาเรียน ข=ขาดเรียน ล=ลากิจ ป=ลาป่วย ส=มาสาย ก=กิจกรรม น=หนี ซ=ซ่อมเสริม (คลิกที่ช่องเพื่อเปลี่ยนสถานะ)</span>"
-            ."<a href=\"javascript:void(0);\" onclick=\"$('#list input[type=text]').each(function(){this.value='ม';this.className='blackcolor';});\" id=\"pinkgreenbtns\" style=\"margin-right:6px\">มาเรียนทุกคน</a>"
-            ."<a href=\"javascript:void(0);\" onclick=\"chknull();\" id=\"pinkgreenbtns\"><img src=\"../icon_tools/vec_add_white.png\" border=\"0\" height=\"16\"/> บันทึกเวลาเรียน</a></div></div>";
-    }
-    $tpl = preg_replace('/(<\/DIV>\s*<script language="JavaScript">\s*function chknull)/', str_replace('$', '\\$', $grid).'$1', $tpl, 1);
-    return ['__CONTENT__' => $tpl];
-}
-
-function act_task_time_attendance_byroom_SaveSubjectAttendTime(): void
-{
-    $c = att_course();
-    if (!$c || ($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-        redirect('?module=task&option=time_attendance_byroom');
-    }
-    att_ensure();
-    $room = (int) ($_GET['RoomNum'] ?? 0);
-    $day = att_day();
-    $period = max(1, min(12, (int) ($_GET['Period'] ?? $_POST['Period'] ?? 1)));
-    $rooms = [];
-    foreach (\Attendance\Sheet\Model::students($c['id'], 0) as $s) {
-        $rooms[$s['id']] = $s['room'];
-    }
-    $marks = [];
-    foreach ((array) ($_POST['att'] ?? []) as $sid => $v) {
-        if (isset($rooms[(int) $sid], ATT_CODES[$v])) {
-            $marks[(int) $sid] = ATT_CODES[$v];
-        }
-    }
-    \Attendance\Sheet\Model::save($c['id'], $day, $period, $marks, $rooms, me()['id']);
-    redirect(str_replace('func=SaveSubjectAttendTime', 'func=Attendance', $_SERVER['REQUEST_URI']).'&Period='.$period.'&msg=saved');
 }
 
 /* ---------------------------------------------------------------- เวลาเรียนไม่ถึง 80% */

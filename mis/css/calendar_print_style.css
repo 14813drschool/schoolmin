@@ -1,0 +1,18 @@
+#calendar_header { width:99%}
+#calendar_header .float_left { float:left; font-weight:normal; }
+#calendar_header .float_right { float:right; font-weight:normal; }
+#calendar .th, #calendar .td, #calendar .tdwhite, #calendar .td_empty{ vertical-align:middle; padding:0px; font-size:20px; color:#000; }
+#calendar .monthwhite { border:1px solid #000; border-collapse:collapse; width:100% }
+#calendar .tr_dayswhite { border:0px solid #000; color:#000;}
+#calendar .tr_thickwhite { border:0px solid #000; color:#000;}
+#calendar .tdwhite { border:1px solid #000; color:#000; background-color:#ffffff; }
+#calendar .content_listwhite { text-align:left; vertical-align: middle; align:left; font-weight:normal; padding:0px 4px;color:#000; border:1px solid #000; background-color:#ffffff; min-width:15px; padding:0px auto}
+#calendar .content_narrowwhite { border:1px solid #000; color:#000; background-color:#ffffff; text-align:left; vertical-align: middle; font-weight:normal; padding:0px 4px; color:#000; min-width:15px; font-size:18px }
+#calendar .content_widewhite { border:1px solid #000; color:#000; background-color:#ffffff; text-align:left; vertical-align: middle; font-weight:normal; padding:0px 4px; color:#000; min-width:15px; }
+#calendar .content_tablewhite { text-align:center; vertical-align: middle; align:left; font-weight:normal; color:#000; border:1px solid #000; background-color:#ffffff; padding:0px; font-size:18px }
+#calendar .head_namewhite { text-align:left; vertical-align: middle; align:left; font-weight:normal; padding-left:3px; color:#000; border:1px solid #000; background-color:#ffffff; }
+#calendar .head_tablewhite { text-align:center; vertical-align: middle; align:center; font-weight:normal; padding-left:0px; color:#000; border:1px solid #000; background-color:#ffffff; }
+#calendar .time_splitwhite { width:35px; text-align:center; vertical-align: middle; align:center; font-weight:normal; color:#000; background-color:#ffffff; }
+#calendar .result_splitwhite { width:45px; text-align:center; vertical-align: middle; align:center; font-weight:normal; color:#000; border:1px solid #000; background-color:#ffffff; }
+#calendar .thwhite { text-align:center;align:left; font-weight:normal; color:#000;border:1px solid #000;background-color:#ffffff; }
+#calendar .resultwhite { text-align:center; align:left; font-weight:normal; color:#000; border-left:1px solid #000; background-color:#ffffff; }

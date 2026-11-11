@@ -228,7 +228,7 @@ function adm_grade_edit(bool $post)
         .'function geBadVal(i){var v=i.value.trim(),mx=parseFloat($(i).attr("data-max"));return v!==""&&(!/^\\d+(\\.\\d+)?$/.test(v)||(mx>0&&parseFloat(v)>mx))}'
         .'function geColor(i){var $i=$(i);$i.removeClass("ok bad err");if(i.value.trim()==="")return;$i.addClass(geBadVal(i)?"err":"ok")}'
         .'function geGrade(tr){var ins=tr.find(".ge-n"),v=ins.map(function(){return this.value.trim()}).get(),n=v.filter(function(x){return x!==""}).length,g=tr.find(".ge-g"),t=tr.find(".ge-t");ins.each(function(){geColor(this)});'
-        .'if(!n){t.text("");g.text("");return}var s=0;v.forEach(function(x){s+=parseFloat(x)||0});s=Math.round(s);t.text(s).removeClass("ok bad").addClass(s<50?"bad":"ok");var r;'
+        .'if(!n||v[1]===""||v[2]===""){t.text(n?Math.round(v.reduce(function(a,x){return a+(parseFloat(x)||0)},0)):"");g.text("");return}var s=0;v.forEach(function(x){s+=parseFloat(x)||0});s=Math.round(s);t.text(s).removeClass("ok bad").addClass(s<50?"bad":"ok");var r;'
         .'if(g.attr("data-type")==="9"){r=s>=50?"ผ":"มผ"}else if(n<v.length){r="ร"}else if(s<50){r="0"}else{r="0";for(var k=0;k<GE_SCALE.length;k++){if(s>=GE_SCALE[k][0]){r=GE_SCALE[k][1];break}}}'
         .'g.text(r).removeClass("ok bad").addClass(r==="0"||r==="มผ"||r==="ร"?"bad":"ok")}'
         .'function geSubmit(){var bad=$(".ge-n").filter(function(){return geBadVal(this)});if(bad.length){var i=bad.get(0),v=i.value.trim();geMsg(/^\\d+(\\.\\d+)?$/.test(v)?"ไม่อนุญาตให้บันทึกคะแนนมากกว่า "+(Math.round(parseFloat($(i).attr("data-max"))*100)/100)+" คะแนน":"โปรดระบุคะแนนเป็นตัวเลขเท่านั้น",function(){i.focus()});return}document.forms.ge.submit()}'
@@ -255,7 +255,7 @@ function adm_grade_edit(bool $post)
         .'<div class="gray_12" style="margin:10px 0 4px">หรือ ถ้ายังไม่มีรายวิชาในภาคเรียนนี้ (บันทึกย้อนหลัง) กรอกเพื่อสร้างรายวิชาใหม่:</div>'
         .'รหัสวิชา '.inp('code', '', 90).' ชื่อวิชา '.inp('name', '', 200).' หน่วยกิต '.inp('credit', '1.0', 40).' ประเภท '.sel('type', COURSE_TYPES, 1, 'style="height:22px"')
         .' ระดับชั้น '.sel('class', cats('class'), (int) $s['class'], 'style="height:22px"').' <input type="submit" value="สร้างและเพิ่ม" class="general radius" style="height:25px"/></form>';
-    return d_css().rec_css().'<div class="dz">'.$bar.$info.$table.$add.'<p class="gray_12" style="margin-top:8px">ระบบคิดผลการเรียนให้อัตโนมัติจากคะแนนรวมเหมือนหน้าบันทึกผลการเรียนของครู (ขาดช่องใดช่องหนึ่ง = ร, รวมต่ำกว่า 50 = 0, กิจกรรม = ผ/มผ) วางคะแนนจาก Excel ได้ 3 คอลัมน์ (คะแนนเก็บ, กลางภาค, ปลายภาค) — รายวิชาที่ไม่ได้แก้คะแนนจะคงผลการเรียนเดิม (เช่น ร, มส, ผลสอบแก้ตัว)</p></div>';
+    return d_css().rec_css().'<div class="dz">'.$bar.$info.$table.$add.'<p class="gray_12" style="margin-top:8px">ระบบคิดผลการเรียนให้อัตโนมัติจากคะแนนรวมเหมือนหน้าบันทึกผลการเรียนของครู (ยังสอบกลางภาค/ปลายภาคไม่ครบ = ยังไม่คิดเกรด, สอบครบแต่ขาดคะแนนเก็บ = ร, รวมต่ำกว่า 50 = 0, กิจกรรม = ผ/มผ) วางคะแนนจาก Excel ได้ 3 คอลัมน์ (คะแนนเก็บ, กลางภาค, ปลายภาค) — รายวิชาที่ไม่ได้แก้คะแนนจะคงผลการเรียนเดิม (เช่น ร, มส, ผลสอบแก้ตัว)</p></div>';
 }
 
 /** ลำดับกลุ่มสาระการเรียนรู้ตามอักษรนำรหัสวิชา: ไทย คณิต วิทย์ สังคม สุขศึกษา ศิลปะ การงาน แล้วภาษาต่างประเทศ (อังกฤษไว้ท้าย) */
@@ -270,8 +270,8 @@ function sara_rank(string $code): int
 function ge_auto_grade(string $unit, string $mid, string $fin, int $type): string
 {
     $filled = array_filter([$unit, $mid, $fin], fn($v) => $v !== '');
-    if (!$filled) {
-        return '';
+    if (!$filled || $mid === '' || $fin === '') {
+        return ''; // ยังสอบกลางภาค/ปลายภาคไม่ครบ = ยังไม่คำนวณเกรด
     }
     $total = (int) round((float) $unit + (float) $mid + (float) $fin);
     if ($type === 9) {

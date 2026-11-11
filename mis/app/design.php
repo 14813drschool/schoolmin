@@ -498,13 +498,16 @@ function task_scores(array $gids): array
 }
 
 /** ผลการเรียนอัตโนมัติ: '' = ยังไม่มีคะแนน */
-function auto_grade(bool $any, bool $missing, ?float $total, ?float $attPct): string
+function auto_grade(bool $any, bool $missing, ?float $total, ?float $attPct, bool $examsDone = true): string
 {
     if (!$any) {
         return '';
     }
     if ($attPct !== null && $attPct < 80) {
         return 'มส';
+    }
+    if (!$examsDone) {
+        return ''; // ยังสอบกลางภาค/ปลายภาคไม่ครบ = ยังไม่คำนวณเกรด
     }
     if ($missing) {
         return 'ร';
@@ -735,7 +738,7 @@ function act_task_study_record_SaveRecord(): void
             md_set('rec_split', $gid, '', '', $u === null && $m === null ? null : ($u ?? '').'|'.($m ?? ''));
             $midterm = $u === null && $m === null ? null : (int) round((float) $u + (float) $m);
             $final = $f === null ? null : (int) round($f);
-            $grade = auto_grade($any, $missing, (float) $midterm + (float) $final, $attPct[(int) $row['student_id']] ?? null);
+            $grade = auto_grade($any, $missing, (float) $midterm + (float) $final, $attPct[(int) $row['student_id']] ?? null, $m !== null && $f !== null);
             // คะแนนสอบแก้ไขเดิม: ยังติด 0/ร = ใช้ผลแก้ไข, ไม่ติดแล้ว = ลบผลแก้ไข
             $fix = json_decode((string) md_get('remedial', 'g'.$gid, $yt), true) ?: [];
             if ($fix) {

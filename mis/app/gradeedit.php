@@ -125,18 +125,20 @@ function adm_grade_edit(bool $post)
                 continue;
             }
             [$ou, $om] = ge_split($gid, $row);
-            $of = ge_blank($row) ? '' : (string) (int) $row['final'];
+            $of = ge_blank($row) || $row['final'] === null ? '' : (string) (int) $row['final'];
             $nz = fn($v) => $v === '' ? '' : rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
-            if ($nz($ru) === $nz($ou) && $nz($rm) === $nz($om) && $nz($rf) === $nz($of)) {
+            $examsDone = $rm !== '' && $rf !== '';
+            if ($nz($ru) === $nz($ou) && $nz($rm) === $nz($om) && $nz($rf) === $nz($of) && ($examsDone || (string) $row['grade'] === '')) {
                 continue; // คะแนนไม่เปลี่ยน: คงผลการเรียนเดิม (รวม ร / มส / ผลแก้ตัว)
             }
             if (empty($d['locked'])) {
                 md_set('rec_split', $gid, '', '', $ru === '' && $rm === '' ? null : $nz($ru).'|'.$nz($rm));
             }
-            $midterm = $ru === '' && $rm === '' ? 0 : max(0, min(100, (int) round((float) $ru + (float) $rm)));
-            $fin = $rf === '' ? 0 : max(0, min(100, (int) round((float) $rf)));
+            // ช่องว่าง = ยังไม่มีคะแนน (เก็บเป็นค่าว่างแบบหน้าครู ไม่ใช่ 0)
+            $midterm = $ru === '' && $rm === '' ? null : max(0, min(100, (int) round((float) $ru + (float) $rm)));
+            $fin = $rf === '' ? null : max(0, min(100, (int) round((float) $rf)));
             $g = ge_auto_grade($ru, $rm, $rf, (int) $row['type']);
-            q('UPDATE {grade} SET `midterm`=?, `final`=?, `grade`=? WHERE `id`=?', [$midterm, $fin, $g, $gid]);
+            q('UPDATE {grade} SET `midterm`=?, `final`=?, `grade`=? WHERE `id`=?', [$midterm, $fin, $g === '' ? null : $g, $gid]);
         }
         admin_done('grade_edit', '&student='.$sid.'&yt='.rawurlencode($ytk));
     }
@@ -184,6 +186,9 @@ function adm_grade_edit(bool $post)
         $num = fn($k, $v, $mx, $ro = false) => '<input type="text" name="g['.$gid.']['.$k.']" value="'.h((string) $v).'" data-max="'.h((string) $mx).'" class="rec-in ge-n" inputmode="decimal" autocomplete="off"'
             .($ro ? ' readonly style="background:#f2f2f2" title="คะแนนเก็บคิดจากคะแนนรายหน่วยที่ครูบันทึก แก้ไขได้ที่หน้าบันทึกผลการเรียนของครู"' : '').'/>';
         $gt = (string) $g['grade'];
+        if (!$blank && ($g['final'] === null || ($mOld === '' && md_get('rec_split', $gid) !== null)) && !in_array($gt, ['มส'], true)) {
+            $gt = ''; // ยังสอบกลางภาค/ปลายภาคไม่ครบ = ยังไม่แสดงเกรด
+        }
         $tot = (int) $g['midterm'] + (int) $g['final'];
         $bad = in_array($gt, ['0', 'ร', 'มส', 'มผ'], true);
         // หัวหมวดแบบหน้าบันทึกผลการเรียนของครู: หมวดวิชาบังคับ / หมวดวิชาเลือก / หมวดกิจกรรมพัฒนาผู้เรียน

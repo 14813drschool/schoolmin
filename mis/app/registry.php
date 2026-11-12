@@ -478,7 +478,7 @@ function adm_student_Edit(bool $post)
     }
     [$cy] = cur_term();
     $years = [];
-    for ($y = $cy; $y >= $cy - 12; $y--) {
+    for ($y = $cy; $y >= min($cy - 12, 2554); $y--) {
         $years[$y] = $y;
     }
     $photo = '<img src="'.h($id ? avatar_url($id) : '../images/man_nopic.png').'" style="width:110px;height:130px;object-fit:cover;border:1px solid #ccc;border-radius:4px;display:block;margin-bottom:5px"/><input type="file" name="photo" accept="image/jpeg,image/png,image/webp"/>';
@@ -792,6 +792,72 @@ function keep_room_history(array $s): void
     }
 }
 
+/** ห้องที่ครูเป็นครูประจำชั้นในปีการศึกษา $y (จากประวัติครูประจำชั้น) */
+function adv_room_in_year(int $pid, int $y): int
+{
+    foreach (md_rows('adv_hist', $y) as $r) {
+        if (in_array($pid, array_map('intval', json_decode((string) $r['value'], true) ?: []), true)) {
+            return (int) $r['r2'];
+        }
+    }
+    return 0;
+}
+
+/** ครูประจำชั้นของแต่ละห้องในปีการศึกษา $y [room => [pid...]] (ปีปัจจุบัน = ข้อมูลปัจจุบัน) */
+function room_advisors_in_year(int $y): array
+{
+    if ($y === cur_term()[0]) {
+        return room_advisors();
+    }
+    $o = [];
+    foreach (md_rows('adv_hist', $y) as $r) {
+        $o[(int) $r['r2']] = array_map('intval', json_decode((string) $r['value'], true) ?: []);
+    }
+    return $o;
+}
+
+/** ห้อง/ชั้น/เลขที่ของนักเรียนในปีการศึกษาย้อนหลัง [sid => ['class','room','number']] (ประวัติห้องเรียน + การลงทะเบียนเรียนของปีนั้น) */
+function year_rooms(int $y): array
+{
+    static $cache = [];
+    if (isset($cache[$y])) {
+        return $cache[$y];
+    }
+    $o = [];
+    foreach (md_rows('stroom', null, (string) $y) as $r) {
+        $d = json_decode((string) $r['value'], true) ?: [];
+        if ((int) ($d['room'] ?? 0)) {
+            $o[(int) $r['r1']] = ['class' => (int) ($d['class'] ?? 0), 'room' => (int) $d['room'], 'number' => $d['number'] ?? null];
+        }
+    }
+    foreach (q('SELECT G.`student_id`, MAX(G.`room`) room, MAX(G.`number`) number, MAX(C.`class`) class FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE C.`year`=? AND G.`room`>0 GROUP BY G.`student_id`', [$y]) as $r) {
+        $o[(int) $r['student_id']] ??= ['class' => room_class((int) $r['room']) ?: (int) $r['class'], 'room' => (int) $r['room'], 'number' => $r['number']];
+    }
+    return $cache[$y] = $o;
+}
+
+/** นักเรียนของห้องในปีการศึกษา $y (ปีปัจจุบัน = ห้องปัจจุบัน) */
+function year_room_students(int $room, int $y): array
+{
+    if ($y === cur_term()[0]) {
+        return q('SELECT S.*, U.`name`, U.`phone`, U.`username`, U.`active`, U.`sex` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`room`=? ORDER BY S.`number`, S.`student_id`', [$room]);
+    }
+    $h = array_filter(year_rooms($y), fn($x) => $x['room'] === $room);
+    if (!$h) {
+        return [];
+    }
+    $rows = q('SELECT S.*, U.`name`, U.`phone`, U.`username`, U.`active`, U.`sex` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`id` IN ('.implode(',', array_map('intval', array_keys($h))).')');
+    foreach ($rows as &$s) {
+        $x = $h[(int) $s['id']];
+        $s['class'] = $x['class'];
+        $s['room'] = $x['room'];
+        $s['number'] = $x['number'];
+    }
+    unset($s);
+    usort($rows, fn($a, $b) => [(int) $a['number'], (string) $a['student_id']] <=> [(int) $b['number'], (string) $b['student_id']]);
+    return $rows;
+}
+
 function move_student(array $s, int $to, ?int $number = null): void
 {
     keep_room_history($s);
@@ -801,6 +867,8 @@ function move_student(array $s, int $to, ?int $number = null): void
 function adm_student_class(bool $post)
 {
     $cy = cur_term()[0];
+    $vy = term()[0];
+    $past = $vy !== $cy;
     // คัดลอกครูที่ปรึกษา / แผนการเรียน จากปีการศึกษาอื่น
     if ($post && isset($_POST['copy_adv']) && ($fy = (int) $_POST['copy_adv'])) {
         foreach (md_rows('adv_hist', $fy) as $r) {
@@ -817,33 +885,50 @@ function adm_student_class(bool $post)
     // ยืนยันประวัติ (บันทึกจำนวนนักเรียนที่บันทึกข้อมูลแล้ว ณ วันที่ยืนยัน)
     if ($post && isset($_POST['confirm_act'])) {
         foreach ((array) ($_POST['cf'] ?? []) as $room => $v) {
-            md_set('room_confirm', (int) $room, (string) $cy, '', $_POST['confirm_act'] === 'yes' ? (string) $v : null);
+            md_set('room_confirm', (int) $room, (string) $vy, '', $_POST['confirm_act'] === 'yes' ? (string) $v : null);
         }
         admin_done('student_class');
     }
     if ($post && isset($_POST['adv1'])) {
         foreach ((array) $_POST['adv1'] as $room => $p1) {
-            set_room_advisors((int) $room, [(int) $p1, (int) ($_POST['adv2'][$room] ?? 0)]);
-            md_set('room_prog', (int) $room, (string) $cy, '', (string) ($_POST['prog'][$room] ?? '') ?: null);
+            $pids = [(int) $p1, (int) ($_POST['adv2'][$room] ?? 0)];
+            if ($past) {
+                // ปีการศึกษาย้อนหลัง: บันทึกเฉพาะประวัติครูประจำชั้นของปีนั้น (ไม่เปลี่ยนครูประจำชั้นปัจจุบัน)
+                $pids = array_slice(array_values(array_unique(array_filter($pids))), 0, 2);
+                md_set('adv_hist', $vy, (int) $room, '', $pids ? json_encode($pids) : null);
+            } else {
+                set_room_advisors((int) $room, $pids);
+            }
+            md_set('room_prog', (int) $room, (string) $vy, '', (string) ($_POST['prog'][$room] ?? '') ?: null);
         }
         admin_done('student_class');
     }
-    $adv = room_advisors();
+    $adv = room_advisors_in_year($vy);
     $opts = [0 => '- ไม่กำหนด -'] + personnel_options();
     $progs = ['' => '- ไม่กำหนด -'] + prog_options();
     $cnt = [];
-    foreach (q('SELECT S.`room`, U.`sex`, COUNT(*) n FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE U.`active`=1 GROUP BY S.`room`, U.`sex`') as $r) {
-        $k = $r['sex'] === 'f' ? 'f' : 'm';
-        $cnt[(int) $r['room']][$k] = ($cnt[(int) $r['room']][$k] ?? 0) + (int) $r['n'];
+    if ($past) {
+        $yr = year_rooms($vy);
+        $sex = $yr ? array_column(q('SELECT `id`, `sex` FROM {user} WHERE `id` IN ('.implode(',', array_map('intval', array_keys($yr))).')'), 'sex', 'id') : [];
+        foreach ($yr as $sid => $x) {
+            $k = ($sex[$sid] ?? '') === 'f' ? 'f' : 'm';
+            $cnt[$x['room']][$k] = ($cnt[$x['room']][$k] ?? 0) + 1;
+        }
+    } else {
+        foreach (q('SELECT S.`room`, U.`sex`, COUNT(*) n FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE U.`active`=1 GROUP BY S.`room`, U.`sex`') as $r) {
+            $k = $r['sex'] === 'f' ? 'f' : 'm';
+            $cnt[(int) $r['room']][$k] = ($cnt[(int) $r['room']][$k] ?? 0) + (int) $r['n'];
+        }
     }
     $recorded = [];
     foreach (md_rows('sa_profile') as $r) {
         $recorded[(int) ((json_decode((string) $r['value'], true) ?: [])['student'] ?? 0)] = true;
     }
     $rec = [];
-    foreach (q('SELECT S.`id`, S.`room` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE U.`active`=1') as $s) {
-        if (isset($recorded[(int) $s['id']])) {
-            $rec[(int) $s['room']] = ($rec[(int) $s['room']] ?? 0) + 1;
+    $roomOf = $past ? array_map(fn($x) => $x['room'], year_rooms($vy)) : array_column(q('SELECT S.`id`, S.`room` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE U.`active`=1'), 'room', 'id');
+    foreach ($roomOf as $sid => $rm) {
+        if (isset($recorded[(int) $sid])) {
+            $rec[(int) $rm] = ($rec[(int) $rm] ?? 0) + 1;
         }
     }
     $icon = fn($f, $rid, $ic, $t) => '<a href="'.a_url('student_class', '&func='.$f.'&room='.$rid).'" title="'.$t.'" style="margin:0 2px"><i class="fa '.$ic.'" style="font-size:15px;color:#555"></i></a>';
@@ -856,12 +941,12 @@ function adm_student_class(bool $post)
             $f = (int) ($cnt[$rid]['f'] ?? 0);
             $n = $m + $f;
             $r = (int) ($rec[$rid] ?? 0);
-            $cf = md_get('room_confirm', $rid, (string) $cy);
+            $cf = md_get('room_confirm', $rid, (string) $vy);
             $rows .= zrow([h($cid ? class_room_short($cid, $rid) : $rname), sel("adv1[$rid]", $opts, $a[0] ?? 0, 'style="width:190px;height:24px"').'<br>'.sel("adv2[$rid]", $opts, $a[1] ?? 0, 'style="width:190px;height:24px;margin-top:2px"'),
-                sel("prog[$rid]", $progs, room_prog($rid), 'style="width:120px;height:24px"'), [$n, ' align="center"'], [$m, ' align="center"'], [$f, ' align="center"'], [$r, ' align="center"'],
+                sel("prog[$rid]", $progs, room_prog($rid, $vy), 'style="width:120px;height:24px"'), [$n, ' align="center"'], [$m, ' align="center"'], [$f, ' align="center"'], [$r, ' align="center"'],
                 [$n ? number_format($r * 100 / $n, 2).'%' : '-', ' align="center"'], [$cf !== null ? h($cf) : '-', ' align="center" style="font-size:11px"'],
                 ['<input type="checkbox" name="cf['.$rid.']" value="'.$r.' คน ['.($n ? number_format($r * 100 / $n, 2) : '0.00').'%]" form="cfform"/>', ' align="center"'],
-                [$icon('Room', $rid, 'fa-wrench', 'จัดการนักเรียน').$icon('Promote', $rid, 'fa-cloud-upload', 'เลื่อนชั้น').$icon('Repeat', $rid, 'fa-retweet', 'ซ้ำชั้น').$icon('Grad', $rid, 'fa-thumbs-up', 'จบการศึกษา'), ' align="center" style="white-space:nowrap"']], $i++);
+                [$past ? '<span class="gray_12">ย้อนหลัง</span>' : $icon('Room', $rid, 'fa-wrench', 'จัดการนักเรียน').$icon('Promote', $rid, 'fa-cloud-upload', 'เลื่อนชั้น').$icon('Repeat', $rid, 'fa-retweet', 'ซ้ำชั้น').$icon('Grad', $rid, 'fa-thumbs-up', 'จบการศึกษา'), ' align="center" style="white-space:nowrap"']], $i++);
         }
     }
     $save = '<a href="javascript:void(0);" onclick="document.forms.sc.submit();" id="pinkgreenbtns"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึกครูที่ปรึกษา/แผนการเรียน</a>';
@@ -875,7 +960,10 @@ function adm_student_class(bool $post)
         .' &nbsp;|&nbsp; ครูที่ปรึกษาห้องละไม่เกิน 2 คน / "บันทึก" = นักเรียนที่บันทึกข้อมูลส่วนตัวแล้ว / ติ๊กห้องแล้วกด "ยืนยัน" เพื่อบันทึกประวัติ</div>';
     $cfBtns = '<form id="cfform" method="post" action="'.h(a_url('student_class')).'" style="display:inline"><button name="confirm_act" value="yes" class="general radius" style="height:24px;background:#3498DB;color:#fff;border:0;padding:0 10px">ยืนยัน</button> '
         .'<button name="confirm_act" value="no" class="general radius" style="height:24px;background:#F39C12;color:#fff;border:0;padding:0 10px">ยกเลิก</button></form>';
-    return ['จัดการชั้นเรียน', $copy.'<div style="width:983px;margin:0 auto 6px;text-align:right">ยืนยันประวัติห้องที่ติ๊กไว้: '.$cfBtns.'</div><form name="sc" method="post" action="'.h(a_url('student_class')).'">'.list_table('จัดการชั้นเรียน ประจำปีการศึกษา '.$cy, ['ห้อง', 'ครูที่ปรึกษา', 'แผนการเรียน', ['ทั้งหมด', ' style="text-align:center"'],
+    if ($past) {
+        $copy = msg_box('กำลังดูข้อมูลย้อนหลังของปีการศึกษา '.$vy.' — ครูที่ปรึกษา/แผนการเรียนที่บันทึกในหน้านี้จะเก็บเป็นประวัติของปี '.$vy.' เท่านั้น (ไม่เปลี่ยนข้อมูลปีปัจจุบัน '.$cy.')', true);
+    }
+    return ['จัดการชั้นเรียน', $copy.'<div style="width:983px;margin:0 auto 6px;text-align:right">ยืนยันประวัติห้องที่ติ๊กไว้: '.$cfBtns.'</div><form name="sc" method="post" action="'.h(a_url('student_class')).'">'.list_table('จัดการชั้นเรียน ประจำปีการศึกษา '.$vy, ['ห้อง', 'ครูที่ปรึกษา', 'แผนการเรียน', ['ทั้งหมด', ' style="text-align:center"'],
         ['ชาย', ' style="text-align:center"'], ['หญิง', ' style="text-align:center"'], ['บันทึก', ' style="text-align:center"'], ['ร้อยละ', ' style="text-align:center"'], ['ยืนยันประวัติ', ' style="text-align:center"'], ['', ' style="text-align:center"'], ''],
         $rows, '', $save).'</form>', head_btn('พิมพ์', 'javascript:window.print()', 'print')];
 }

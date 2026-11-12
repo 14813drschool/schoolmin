@@ -90,8 +90,13 @@ function pp6_advisors(array $s): array
     foreach (md_rows('stroom', (int) $s['id']) as $r) {
         $hist[(int) $r['r2']] = json_decode((string) $r['value'], true) ?: [];
     }
+    // ปีที่ไม่มีประวัติห้องเรียน: ใช้ชั้น/ห้องจากการลงทะเบียนเรียนของปีนั้น
+    foreach (q('SELECT C.`year`, MAX(C.`class`) class, MAX(G.`room`) room FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE G.`student_id`=? AND G.`room`>0 GROUP BY C.`year`', [(int) $s['id']]) as $r) {
+        $hist[(int) $r['year']] ??= ['class' => room_class((int) $r['room']) ?: (int) $r['class'], 'room' => (int) $r['room']];
+    }
     $cy = cur_term()[0];
     $hist[$cy] = ['class' => (int) $s['class'], 'room' => (int) $s['room']];
+    $hist = array_filter($hist, fn($y) => $y <= $cy, ARRAY_FILTER_USE_KEY);
     ksort($hist);
     foreach ($hist as $y => $h) {
         $room = (int) ($h['room'] ?? 0);

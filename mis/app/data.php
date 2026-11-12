@@ -447,6 +447,9 @@ function advisor_students(): array
     if (!$p || (int) $p['room'] === 0) {
         return [];
     }
+    if (($vy = term()[0]) !== cur_term()[0]) {
+        return year_room_students((int) $p['room'], $vy);
+    }
     return q('SELECT S.*, U.`name`, U.`phone`, U.`username`, U.`active`, U.`sex` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`class`=? AND S.`room`=? ORDER BY S.`number`, S.`student_id`', [(int) $p['class'], (int) $p['room']]);
 }
 

@@ -90,6 +90,12 @@ function me(?array $override = null): ?array
         q('UPDATE {user_session} SET `last_seen`=NOW() WHERE `sid`=? AND `member_id`=?', [$u['sid'], (int) $u['id']]);
     }
     $p = q1('SELECT * FROM {personnel} WHERE `id`=?', [(int) $u['id']]);
+    // ดูปีการศึกษาย้อนหลัง: ห้องที่เป็นครูประจำชั้นตามประวัติของปีนั้น
+    if ($p && function_exists('adv_room_in_year') && ($vy = term()[0]) !== cur_term()[0]) {
+        $room = adv_room_in_year((int) $u['id'], $vy);
+        $p['room'] = $room;
+        $p['class'] = $room ? room_class($room) : 0;
+    }
     $u['personnel'] = $p;
     $me = $u;
     return $me;

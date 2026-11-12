@@ -369,27 +369,144 @@ function act_result(?string $hr, int $full, bool $fail): string
     return !$fail && (float) $hr * 100 >= $full * 80 ? 'ผ' : 'มผ';
 }
 
-/** ฝ่ายวิชาการ: ลงทะเบียนกิจกรรมพัฒนาผู้เรียนให้นักเรียนทั้งห้อง */
+/* ---------------------------------------------------------------- รายการกิจกรรมพัฒนาผู้เรียน (หลักสูตร) = md dev_act */
+
+const ACT_TYPES = ['ลูกเสือ' => 'กิจกรรมลูกเสือ-เนตรนารี', 'แนะแนว' => 'กิจกรรมแนะแนว', 'ชุมนุม' => 'กิจกรรมชุมนุม', 'สังคม' => 'กิจกรรมเพื่อสังคมและสาธารณประโยชน์', 'นักเรียน' => 'กิจกรรมนักเรียน'];
+const ACT_PLANS = ['รายภาค' => 'รายภาค', 'รายปี' => 'รายปี'];
+const ACT_REQS = ['บังคับ' => 'บังคับ', 'เลือกเสรี' => 'เลือกเสรี'];
+const ACT_TERMS = ['1' => '1', '2' => '2', '1-2' => '1-2'];
+
+/** ระดับชั้นสำหรับเลือก [id => ม.1] */
+function act_class_options(): array
+{
+    $o = [];
+    foreach (cats('class') as $id => $n) {
+        $o[$id] = class_short($id);
+    }
+    return $o;
+}
+
+/** รายการกิจกรรมพัฒนาผู้เรียนทั้งหมด [id => data] เรียงตามประเภท/ระดับชั้น/ภาคเรียน/รหัส */
+function act_catalog(): array
+{
+    $order = array_flip(array_keys(ACT_TYPES));
+    $cls = array_flip(array_map('strval', array_keys(cats('class'))));
+    $o = [];
+    foreach (md_rows('dev_act') as $r) {
+        $d = json_decode((string) $r['value'], true) ?: [];
+        if (($d['name'] ?? '') !== '') {
+            $o[(string) $r['r1']] = $d;
+        }
+    }
+    uasort($o, fn($a, $b) => [$order[$a['type'] ?? ''] ?? 99, $cls[(string) ($a['class'] ?? '')] ?? 99, (string) ($a['term'] ?? ''), (string) ($a['code'] ?? '')]
+        <=> [$order[$b['type'] ?? ''] ?? 99, $cls[(string) ($b['class'] ?? '')] ?? 99, (string) ($b['term'] ?? ''), (string) ($b['code'] ?? '')]);
+    return $o;
+}
+
+/** ข้อมูลมาตรฐาน (ตามรายการกิจกรรมของระบบเดิม) */
+function act_seed(): array
+{
+    $cid = array_flip(act_class_options());
+    $o = [];
+    $add = function ($code, $name, $type, $plan, $req, $cls, $term, $hours) use (&$o, $cid) {
+        if (isset($cid[$cls])) {
+            $o[] = ['code' => $code, 'name' => $name, 'type' => $type, 'plan' => $plan, 'req' => $req, 'class' => (string) $cid[$cls], 'term' => $term, 'hours' => (string) $hours, 'teacher' => ''];
+        }
+    };
+    for ($i = 1; $i <= 6; $i++) {
+        $add('ก1'.$i.'901', 'ลูกเสือ-ยุวกาชาด '.$i, 'ลูกเสือ', 'รายปี', 'บังคับ', 'ป.'.$i, '1-2', 40);
+        $add('ก1'.$i.'903', 'แนะแนว '.$i, 'แนะแนว', 'รายปี', 'บังคับ', 'ป.'.$i, '1-2', 40);
+        $add('ก1'.$i.'902', 'ชุมนุม '.$i, 'ชุมนุม', $i <= 3 ? 'รายปี' : 'รายภาค', 'บังคับ', 'ป.'.$i, '1-2', 40);
+        $add('ก1'.$i.'904', 'กิจกรรมเพื่อสังคมและสาธารณประโยชน์', 'สังคม', 'รายปี', 'บังคับ', 'ป.'.$i, '1-2', 10);
+    }
+    foreach ([1 => ['ก21901', 'ก21906', 'ก21902', 'ก21905', 'ก21903', 'ก21907', 'ก21904', 'ก21908'], 2 => ['ก22901', 'ก22905', 'ก22902', 'ก22906', 'ก22903', 'ก22907', 'ก22904', 'ก22908'], 3 => ['ก23901', 'ก23905', 'ก23902', 'ก23906', 'ก23903', 'ก23907', 'ก23904', 'ก23908']] as $l => $c) {
+        foreach ([1, 2] as $t) {
+            $add($c[$t - 1], 'ลูกเสือ-เนตรนารี', 'ลูกเสือ', 'รายภาค', 'บังคับ', 'ม.'.$l, (string) $t, 20);
+            $add($c[$t + 1], 'แนะแนว '.$l, 'แนะแนว', 'รายภาค', 'บังคับ', 'ม.'.$l, (string) $t, 20);
+            $add($c[$t + 3], 'ชุมนุม '.$l, 'ชุมนุม', 'รายภาค', 'บังคับ', 'ม.'.$l, (string) $t, 20);
+            $add($c[$t + 5], 'กิจกรรมเพื่อสังคมและสาธารณประโยชน์', 'สังคม', 'รายภาค', 'บังคับ', 'ม.'.$l, (string) $t, 10);
+        }
+    }
+    foreach ([4 => 31, 5 => 32, 6 => 33] as $l => $p) {
+        foreach ([1, 2] as $t) {
+            $add('ก'.$p.'90'.($t === 1 ? 1 : 4), 'แนะแนว'.($l === 4 ? ' 4' : ''), 'แนะแนว', 'รายภาค', 'บังคับ', 'ม.'.$l, (string) $t, 20);
+            $add('ก'.$p.'90'.($t === 1 ? 2 : 5), 'ชุมนุม', 'ชุมนุม', 'รายภาค', $l === 6 && $t === 2 ? 'เลือกเสรี' : 'บังคับ', 'ม.'.$l, (string) $t, 20);
+            $add('ก'.$p.'90'.($t === 1 ? 3 : 6), 'กิจกรรมเพื่อสังคมและสาธารณประโยชน์', 'สังคม', 'รายภาค', 'บังคับ', 'ม.'.$l, (string) $t, 10);
+        }
+    }
+    return $o;
+}
+
+/** หน้าแอดมิน: รายการกิจกรรมพัฒนาผู้เรียน (ข้อมูลเดียวกับหน้าวิชาการ และใช้ลงทะเบียนรายห้อง) */
+function adm_dev_act(bool $post)
+{
+    return cat_md('dev_act', 'dev_act', 'กิจกรรมพัฒนาผู้เรียน', [
+        'code' => f_text('รหัสกิจกรรม', true), 'name' => f_text('ชื่อกิจกรรม', true), 'type' => f_sel('ประเภท', ACT_TYPES), 'plan' => f_sel('หลักสูตร', ACT_PLANS),
+        'req' => f_sel('บังคับ/เลือก', ACT_REQS), 'class' => f_sel('ระดับชั้น', 'act_class_options'), 'term' => f_sel('ภาคเรียน', ACT_TERMS), 'hours' => f_num('ชั่วโมง', false),
+        'teacher' => f_sel('ครูผู้รับผิดชอบ', 'personnel_options', false),
+    ], ['code' => 'รหัสกิจกรรม', 'name' => 'ชื่อกิจกรรม', 'type' => 'ประเภท', 'plan' => 'หลักสูตร', 'req' => 'บังคับ/เลือก', 'class' => 'ระดับชั้น', 'term' => 'ภาคเรียน', 'hours' => 'ชั่วโมง'], $post, act_seed());
+}
+
+/** หน้าวิชาการ (ครู): รายการกิจกรรมพัฒนาผู้เรียน */
+function rows_academic_activity()
+{
+    $o = '';
+    $i = 0;
+    foreach (act_catalog() as $id => $d) {
+        $o .= '<tr onclick="SelecteachRow(event,$(this))"><td>'.++$i.'<a name="'.h($id).'"></a></td><td>'.h($d['code'] ?? '').'</td><td>'.h($d['name']).'</td><td>'.h(ACT_TYPES[$d['type'] ?? ''] ?? ($d['type'] ?? '')).'</td>'
+            .'<td>'.h($d['plan'] ?? '').'</td><td>'.h($d['req'] ?? '').'</td><td>'.h(($d['class'] ?? '') !== '' ? class_short($d['class']) : '').'</td><td>'.h($d['term'] ?? '').'</td></tr>';
+    }
+    return ['TBODY0' => $o];
+}
+
+/** ฝ่ายวิชาการ: ลงทะเบียนกิจกรรมพัฒนาผู้เรียน (จากรายการกิจกรรมพัฒนาผู้เรียน) ให้นักเรียนทั้งห้อง */
 function adm_act_enroll(bool $post)
 {
     [$y, $t] = term();
-    if ($post && isset($_POST['add_act'])) {
-        $code = mb_substr(trim((string) ($_POST['code'] ?? '')), 0, 20);
-        $name = mb_substr(trim((string) ($_POST['name'] ?? '')), 0, 150);
-        $class = (int) ($_POST['class'] ?? 0);
-        if ($code !== '' && $name !== '' && $class && !q1('SELECT 1 x FROM {course} WHERE `course_code`=? AND `class`=? AND `year`=? AND `term`=?', [$code, $class, $y, $t])) {
-            q('INSERT INTO {course} (`course_name`,`course_code`,`teacher_id`,`class`,`period`,`credit`,`type`,`year`,`term`) VALUES (?,?,0,?,?,0,9,?,?)',
-                [$name, $code, $class, max(0, (int) ($_POST['hours'] ?? 20)), $y, $t]);
-        }
-        admin_done('act_enroll');
-    }
-    $acts = q('SELECT * FROM {course} WHERE `type`=9 AND `year`=? AND `term`=? ORDER BY `class`, `course_code`', [$y, $t]);
     $byc = rooms_by_class();
+    // กิจกรรมของภาคเรียนนี้จากรายการกิจกรรม: ภาคเรียน 1-2 หรือตรงกับภาคเรียนที่เลือกดู
+    $cat = array_filter(act_catalog(), fn($d) => in_array((string) ($d['term'] ?? ''), ['', '1-2', (string) $t], true));
+    $courses = q('SELECT * FROM {course} WHERE `type`=9 AND `year`=? AND `term`=?', [$y, $t]);
+    $find = function (array $d, int $class) use (&$courses) {
+        foreach ($courses as $c) {
+            if ((string) $c['course_code'] === (string) ($d['code'] ?? '') && (int) $c['class'] === $class) {
+                return $c;
+            }
+        }
+        return null;
+    };
+    $items = [];
+    $used = [];
+    foreach ($cat as $id => $d) {
+        $classes = ($d['class'] ?? '') !== '' ? [(int) $d['class']] : array_map('intval', array_keys(cats('class')));
+        foreach ($classes as $cl) {
+            $c = $find($d, $cl);
+            if ($c) {
+                $used[(int) $c['id']] = true;
+            }
+            $items[] = ['key' => $id.'_'.$cl, 'd' => $d, 'class' => $cl, 'c' => $c];
+        }
+    }
+    foreach ($courses as $c) {
+        if (!isset($used[(int) $c['id']])) {
+            $items[] = ['key' => 'c'.(int) $c['id'], 'd' => ['code' => $c['course_code'], 'name' => $c['course_name'], 'hours' => $c['period'], 'teacher' => $c['teacher_id']], 'class' => (int) $c['class'], 'c' => $c];
+        }
+    }
     if ($post && isset($_POST['save'])) {
         $sel = (array) ($_POST['room'] ?? []);
-        foreach ($acts as $c) {
+        foreach ($items as $it) {
+            $want = array_values(array_intersect(array_map('intval', (array) ($sel[$it['key']] ?? [])), array_map('intval', array_keys($byc[$it['class']] ?? []))));
+            $c = $it['c'];
+            if (!$c && !$want) {
+                continue;
+            }
+            if (!$c) {
+                $d = $it['d'];
+                q('INSERT INTO {course} (`course_name`,`course_code`,`teacher_id`,`class`,`period`,`credit`,`type`,`year`,`term`) VALUES (?,?,?,?,?,0,9,?,?)',
+                    [mb_substr((string) $d['name'], 0, 150), mb_substr((string) ($d['code'] ?? ''), 0, 20), (int) ($d['teacher'] ?? 0), $it['class'], max(0, (int) ($d['hours'] ?? 0)), $y, $t]);
+                $c = q1('SELECT * FROM {course} WHERE `type`=9 AND `year`=? AND `term`=? AND `course_code`=? AND `class`=? ORDER BY `id` DESC', [$y, $t, (string) ($d['code'] ?? ''), $it['class']]);
+            }
             $cid = (int) $c['id'];
-            $want = array_map('intval', (array) ($sel[$cid] ?? []));
             $have = array_map('intval', array_column(q('SELECT DISTINCT `room` FROM {grade} WHERE `course_id`=?', [$cid]), 'room'));
             foreach (array_diff($want, $have) as $room) {
                 foreach (q('SELECT S.`id`, S.`number` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`room`=? AND U.`active`=1', [$room]) as $s) {
@@ -405,30 +522,28 @@ function adm_act_enroll(bool $post)
         admin_done('act_enroll');
     }
     $rows = '';
-    foreach ($acts as $i => $c) {
-        $cid = (int) $c['id'];
+    foreach ($items as $i => $it) {
         $cnt = [];
-        foreach (q('SELECT `room`, COUNT(*) n FROM {grade} WHERE `course_id`=? GROUP BY `room`', [$cid]) as $r) {
-            $cnt[(int) $r['room']] = (int) $r['n'];
+        if ($it['c']) {
+            foreach (q('SELECT `room`, COUNT(*) n FROM {grade} WHERE `course_id`=? GROUP BY `room`', [(int) $it['c']['id']]) as $r) {
+                $cnt[(int) $r['room']] = (int) $r['n'];
+            }
         }
         $cb = '';
-        foreach ($byc[(int) $c['class']] ?? [] as $rid => $rn) {
+        foreach ($byc[$it['class']] ?? [] as $rid => $rn) {
             $on = isset($cnt[$rid]);
-            $cb .= '<label style="display:inline-block;margin:2px 12px 2px 0;white-space:nowrap"><input type="checkbox" name="room['.$cid.'][]" value="'.(int) $rid.'"'.($on ? ' checked data-had="1"' : '').' style="width:auto;height:auto;vertical-align:-2px"/> '
-                .h(class_room_short($c['class'], $rid)).($on ? ' <span class="gray_12">('.$cnt[$rid].')</span>' : '').'</label>';
+            $cb .= '<label style="display:inline-block;margin:2px 12px 2px 0;white-space:nowrap"><input type="checkbox" name="room['.h($it['key']).'][]" value="'.(int) $rid.'"'.($on ? ' checked data-had="1"' : '').' style="width:auto;height:auto;vertical-align:-2px"/> '
+                .h(class_room_short($it['class'], $rid)).($on ? ' <span class="gray_12">('.$cnt[$rid].')</span>' : '').'</label>';
         }
-        $rows .= zrow([$i + 1, h($c['course_code']), h($c['course_name']), h(class_short($c['class'])), [h((string) $c['period']), ' align="center"'],
+        $d = $it['d'];
+        $rows .= zrow([$i + 1, h((string) ($d['code'] ?? '')), h((string) $d['name']), h(class_short($it['class'])), [h((string) ($d['hours'] ?? '')), ' align="center"'],
             $cb ?: '<span class="gray_12">ยังไม่มีห้องเรียนในระดับชั้นนี้</span>', [array_sum($cnt), ' align="center"']], $i);
     }
-    $classes = cats('class');
-    $add = '<form method="post" action="'.h(a_url('act_enroll')).'" style="width:983px;margin:0 auto 10px;text-align:left"><span class="search">เพิ่มกิจกรรม: รหัส '.inp('code', '', 80).' ชื่อกิจกรรม '.inp('name', '', 220)
-        .' ระดับชั้น '.sel('class', $classes ?: ['' => '-'], array_key_first($classes) ?? '').' ชั่วโมง '.inp('hours', '20', 50)
-        .' <input type="submit" name="add_act" value="เพิ่มกิจกรรม" class="general radius" style="height:25px"/></span><div style="clear:both"></div></form>';
     $save = '<input type="submit" name="save" value="บันทึกการลงทะเบียน" class="general radius" style="height:25px" onclick="var f=this.form,x=false;for(var i=0;i<f.elements.length;i++){var e=f.elements[i];if(e.type==\'checkbox\'&&e.getAttribute(\'data-had\')&&!e.checked)x=true;}return x?misConfirm(this,\'ห้องที่ยกเลิกการเลือก จะลบการลงทะเบียนและผลการประเมินกิจกรรมของนักเรียนห้องนั้น ต้องการดำเนินการต่อหรือไม่?\'):true;"/>';
-    $help = '<div style="width:983px;margin:0 auto 8px;text-align:left" class="gray_12">เลือกห้องเรียนที่ต้องการลงทะเบียนกิจกรรม แล้วกด "บันทึกการลงทะเบียน" นักเรียนทุกคนในห้องจะถูกลงทะเบียน และครูประจำชั้นของห้องนั้นจะบันทึกผลกิจกรรมได้ที่ งานรับผิดชอบหลัก &gt; บันทึกผลการเรียน</div>';
-    return ['ลงทะเบียนกิจกรรมพัฒนาผู้เรียน (รายห้อง) ภาคเรียนที่ '.$t.'/'.$y, $add.$help.'<form method="post" action="'.h(a_url('act_enroll')).'">'
+    $help = '<div style="width:983px;margin:0 auto 8px;text-align:left" class="gray_12">กิจกรรมดึงมาจาก <a href="'.h(a_url('dev_act')).'"><b>รายการกิจกรรมพัฒนาผู้เรียน</b></a> (ข้อมูลเดียวกับหน้าวิชาการ) เฉพาะกิจกรรมของภาคเรียนที่ '.$t.' หรือภาคเรียน 1-2 — เลือกห้องแล้วกด "บันทึกการลงทะเบียน" นักเรียนทุกคนในห้องจะถูกลงทะเบียน และครูประจำชั้นของห้องนั้นบันทึกผลได้ที่ งานรับผิดชอบหลัก &gt; บันทึกผลการเรียน</div>';
+    return ['ลงทะเบียนกิจกรรมพัฒนาผู้เรียน (รายห้อง) ภาคเรียนที่ '.$t.'/'.$y, $help.'<form method="post" action="'.h(a_url('act_enroll')).'">'
         .list_table('กิจกรรมพัฒนาผู้เรียน', ['#', 'รหัส', 'กิจกรรมพัฒนาผู้เรียน', 'ระดับชั้น', ['ชั่วโมง', ' style="text-align:center"'], 'ห้องเรียนที่ลงทะเบียน (จำนวนนักเรียน)', ['นักเรียน', ' style="text-align:center"']],
-            $rows ?: '<tr><td colspan="7" align="center">ยังไม่มีกิจกรรมพัฒนาผู้เรียนในภาคเรียนนี้ (เพิ่มได้จากช่อง "เพิ่มกิจกรรม" ด้านบน หรือเมนูรายวิชา ประเภทกิจกรรม)</td></tr>', '', $acts ? $save : '').'</form>'];
+            $rows ?: '<tr><td colspan="7" align="center">ยังไม่มีกิจกรรมของภาคเรียนนี้ใน <a href="'.h(a_url('dev_act')).'">รายการกิจกรรมพัฒนาผู้เรียน</a></td></tr>', '', $items ? $save : '').'</form>'];
 }
 
 /** ครูประจำชั้น/ครูผู้รับผิดชอบ: บันทึกผลกิจกรรมพัฒนาผู้เรียนของห้อง */

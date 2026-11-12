@@ -1039,6 +1039,9 @@ function adm_student_class_HistRoom(bool $post)
     $pick = '<form method="get" style="width:983px;margin:0 auto 10px;text-align:left"><input type="hidden" name="module" value="admin"/><input type="hidden" name="option" value="student_class"/><input type="hidden" name="func" value="HistRoom"/>'
         .'<input type="hidden" name="room" value="'.$rid.'"/><span class="search">เปลี่ยนปีการศึกษา '.sel('year', $ys, $vy, 'style="height:25px" onchange="this.form.submit()"').'</span><div style="clear:both"></div></form>';
     if ($post) {
+        // ครูที่ปรึกษาของห้องในปีนั้น
+        $pids = array_slice(array_values(array_unique(array_filter([(int) ($_POST['adv1'] ?? 0), (int) ($_POST['adv2'] ?? 0)]))), 0, 2);
+        md_set('adv_hist', $vy, $rid, '', $pids ? json_encode($pids) : null);
         foreach ((array) ($_POST['num'] ?? []) as $sid => $num) {
             $sid = (int) $sid;
             if (!empty($_POST['del'][$sid])) {
@@ -1069,11 +1072,16 @@ function adm_student_class_HistRoom(bool $post)
             h((string) $s['student_id']), name_nbsp((string) $s['name']), h(class_room_short($s['class'], $s['room'])), ['<input type="checkbox" name="del['.$sid.']" value="1" style="width:auto;height:auto"/>', ' align="center"']], $i);
     }
     $bad = isset($_GET['bad']) ? msg_box('ไม่พบรหัสนักเรียน: '.h((string) $_GET['bad']), false) : '';
+    $adv = json_decode((string) md_get('adv_hist', $vy, $rid), true) ?: [];
+    $opts = [0 => '- ไม่กำหนด -'] + personnel_options();
+    $advBox = '<div style="width:983px;box-sizing:border-box;margin:0 auto 10px;text-align:left;padding:8px 10px;border:1px dashed #33cc99;border-radius:4px;background:#FCFCFC"><b>ครูที่ปรึกษา (ครูประจำชั้น) ห้อง '.h(room_title($rid)).' ปีการศึกษา '.$vy.'</b><br>'
+        .'คนที่ 1 '.sel('adv1', $opts, $adv[0] ?? 0, 'style="width:230px;height:25px"').' &nbsp; คนที่ 2 '.sel('adv2', $opts, $adv[1] ?? 0, 'style="width:230px;height:25px"')
+        .' <span class="gray_12">(แสดงในตารางครูประจำชั้นของ ปพ.6 — กด "บันทึก" ด้านล่าง)</span></div>';
     $add = '<div style="width:983px;margin:10px auto;text-align:left"><b>เพิ่มนักเรียนเข้าห้องนี้ (ปีการศึกษา '.$vy.')</b> <span class="gray_12">— ใส่รหัสนักเรียนบรรทัดละ 1 คน ตามด้วยเลขที่ (ถ้ามี) เช่น <code>12345 5</code> หรือคัดลอก 2 คอลัมน์ (รหัสนักเรียน, เลขที่) จาก Excel มาวางได้เลย</span><br>'
         .'<textarea name="add" style="width:400px;height:140px;margin-top:5px" class="general radius"></textarea></div>';
     $save = '<a href="javascript:void(0);" onclick="document.forms.hr.submit();" id="pinkgreenbtns"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึก</a>';
     return ['จัดนักเรียนเข้าห้องย้อนหลัง', saved_msg().$bad.$pick.msg_box('ห้อง '.h(room_title($rid)).' ปีการศึกษา '.$vy.' (ย้อนหลัง) — ข้อมูลนี้เป็นประวัติเท่านั้น ไม่ย้ายห้องปัจจุบันของนักเรียน', true)
-        .'<form name="hr" method="post" action="'.h($back).'">'.list_table('รายชื่อนักเรียนห้อง '.h(room_title($rid)).' ปีการศึกษา '.$vy, [['เลขที่', ' style="width:60px;text-align:center"'], 'รหัสนักเรียน', 'ชื่อ-นามสกุล', 'ห้อง', ['เอาออก', ' style="text-align:center"']],
+        .'<form name="hr" method="post" action="'.h($back).'">'.$advBox.list_table('รายชื่อนักเรียนห้อง '.h(room_title($rid)).' ปีการศึกษา '.$vy, [['เลขที่', ' style="width:60px;text-align:center"'], 'รหัสนักเรียน', 'ชื่อ-นามสกุล', 'ห้อง', ['เอาออก', ' style="text-align:center"']],
             $rows ?: '<tr><td colspan="5" align="center">ยังไม่มีนักเรียนในห้องนี้ของปีการศึกษา '.$vy.'</td></tr>', '', btn('กลับ', a_url('student_class', $vy === term()[0] ? '' : '&func=Room&room='.$rid), 'back').' '.$save).$add.'</form>'];
 }
 

@@ -1000,7 +1000,7 @@ function adm_student_class(bool $post)
                 sel("prog[$rid]", $progs, room_prog($rid, $vy), 'style="width:120px;height:24px"'), [$n, ' align="center"'], [$m, ' align="center"'], [$f, ' align="center"'], [$r, ' align="center"'],
                 [$n ? number_format($r * 100 / $n, 2).'%' : '-', ' align="center"'], [$cf !== null ? h($cf) : '-', ' align="center" style="font-size:11px"'],
                 ['<input type="checkbox" name="cf['.$rid.']" value="'.$r.' คน ['.($n ? number_format($r * 100 / $n, 2) : '0.00').'%]" form="cfform"/>', ' align="center"'],
-                [$past ? $icon('HistRoom', $rid, 'fa-wrench', 'จัดนักเรียนเข้าห้อง (ย้อนหลังปี '.$vy.')') : $icon('Room', $rid, 'fa-wrench', 'จัดการนักเรียน').$icon('Promote', $rid, 'fa-cloud-upload', 'เลื่อนชั้น').$icon('Repeat', $rid, 'fa-retweet', 'ซ้ำชั้น').$icon('Grad', $rid, 'fa-thumbs-up', 'จบการศึกษา'), ' align="center" style="white-space:nowrap"']], $i++);
+                [$past ? $icon('HistRoom&year='.$vy, $rid, 'fa-wrench', 'จัดนักเรียนเข้าห้อง (ย้อนหลังปี '.$vy.')') : $icon('Room', $rid, 'fa-wrench', 'จัดการนักเรียน').$icon('Promote', $rid, 'fa-cloud-upload', 'เลื่อนชั้น').$icon('Repeat', $rid, 'fa-retweet', 'ซ้ำชั้น').$icon('Grad', $rid, 'fa-thumbs-up', 'จบการศึกษา'), ' align="center" style="white-space:nowrap"']], $i++);
         }
     }
     $save = '<a href="javascript:void(0);" onclick="document.forms.sc.submit();" id="pinkgreenbtns"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึกครูที่ปรึกษา/แผนการเรียน</a>';
@@ -1026,12 +1026,18 @@ function adm_student_class(bool $post)
 function adm_student_class_HistRoom(bool $post)
 {
     $rid = (int) ($_GET['room'] ?? 0);
-    $vy = term()[0];
+    $vy = (int) ($_GET['year'] ?? 0) ?: term()[0];
     $cy = cur_term()[0];
-    if ($vy >= $cy || !isset(cats('room')[$rid])) {
+    if ($vy >= $cy || $vy < 2554 || !isset(cats('room')[$rid])) {
         redirect(a_url('student_class'));
     }
-    $back = a_url('student_class', '&func=HistRoom&room='.$rid);
+    $back = a_url('student_class', '&func=HistRoom&room='.$rid.'&year='.$vy);
+    $ys = [];
+    for ($y = $cy - 1; $y >= 2554; $y--) {
+        $ys[$y] = 'ปีการศึกษา '.$y;
+    }
+    $pick = '<form method="get" style="width:983px;margin:0 auto 10px;text-align:left"><input type="hidden" name="module" value="admin"/><input type="hidden" name="option" value="student_class"/><input type="hidden" name="func" value="HistRoom"/>'
+        .'<input type="hidden" name="room" value="'.$rid.'"/><span class="search">เปลี่ยนปีการศึกษา '.sel('year', $ys, $vy, 'style="height:25px" onchange="this.form.submit()"').'</span><div style="clear:both"></div></form>';
     if ($post) {
         foreach ((array) ($_POST['num'] ?? []) as $sid => $num) {
             $sid = (int) $sid;
@@ -1066,9 +1072,9 @@ function adm_student_class_HistRoom(bool $post)
     $add = '<div style="width:983px;margin:10px auto;text-align:left"><b>เพิ่มนักเรียนเข้าห้องนี้ (ปีการศึกษา '.$vy.')</b> <span class="gray_12">— ใส่รหัสนักเรียนบรรทัดละ 1 คน ตามด้วยเลขที่ (ถ้ามี) เช่น <code>12345 5</code> หรือคัดลอก 2 คอลัมน์ (รหัสนักเรียน, เลขที่) จาก Excel มาวางได้เลย</span><br>'
         .'<textarea name="add" style="width:400px;height:140px;margin-top:5px" class="general radius"></textarea></div>';
     $save = '<a href="javascript:void(0);" onclick="document.forms.hr.submit();" id="pinkgreenbtns"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึก</a>';
-    return ['จัดนักเรียนเข้าห้องย้อนหลัง', saved_msg().$bad.msg_box('ห้อง '.h(room_title($rid)).' ปีการศึกษา '.$vy.' (ย้อนหลัง) — ข้อมูลนี้เป็นประวัติเท่านั้น ไม่ย้ายห้องปัจจุบันของนักเรียน', true)
+    return ['จัดนักเรียนเข้าห้องย้อนหลัง', saved_msg().$bad.$pick.msg_box('ห้อง '.h(room_title($rid)).' ปีการศึกษา '.$vy.' (ย้อนหลัง) — ข้อมูลนี้เป็นประวัติเท่านั้น ไม่ย้ายห้องปัจจุบันของนักเรียน', true)
         .'<form name="hr" method="post" action="'.h($back).'">'.list_table('รายชื่อนักเรียนห้อง '.h(room_title($rid)).' ปีการศึกษา '.$vy, [['เลขที่', ' style="width:60px;text-align:center"'], 'รหัสนักเรียน', 'ชื่อ-นามสกุล', 'ห้อง', ['เอาออก', ' style="text-align:center"']],
-            $rows ?: '<tr><td colspan="5" align="center">ยังไม่มีนักเรียนในห้องนี้ของปีการศึกษา '.$vy.'</td></tr>', '', btn('กลับ', a_url('student_class'), 'back').' '.$save).$add.'</form>'];
+            $rows ?: '<tr><td colspan="5" align="center">ยังไม่มีนักเรียนในห้องนี้ของปีการศึกษา '.$vy.'</td></tr>', '', btn('กลับ', a_url('student_class', $vy === term()[0] ? '' : '&func=Room&room='.$rid), 'back').' '.$save).$add.'</form>'];
 }
 
 function room_title(int $rid): string
@@ -1141,7 +1147,16 @@ function adm_student_class_Room(bool $post)
         $save = '<a href="javascript:void(0)" onclick="document.forms.rm.submit()" id="pinkgreenbtns" style="background:#F39C12"><img src="../icon_tools/vec_add_white.png" height="16"/> บันทึกเลขที่นักเรียน</a>';
         return ['จัดลำดับนักเรียนในห้อง (เลขที่นักเรียน)', '<form name="rm" method="post" action="'.h($back).'">'.list_table($title, ['#', 'รหัสนักเรียน', 'เลขที่', 'ชื่อ', 'นามสกุล', 'สถานภาพ'], $rows, count($list).' คน', $save).'</form>', $tools];
     }
-    return ['จัดการนักเรียนประจำชั้น '.room_title($rid), '<div style="width:983px;margin:0 auto 8px;text-align:left" class="gray_12">เลือก "ชั้นเรียนปลายทาง" ให้นักเรียนที่ต้องการย้าย (ย้ายพร้อมกันได้หลายคน) แล้วกด "ย้ายห้อง" / "ลบออกจากห้องเรียน" รายชื่อจะไปอยู่ที่เมนูนักเรียนยังไม่กำหนดห้องเรียน</div>'
+    // ทางเข้า: จัดนักเรียนเข้าห้องนี้ย้อนหลัง (ประวัติห้องเรียนปีที่ผ่านมา)
+    $ys = [];
+    for ($y = cur_term()[0] - 1; $y >= 2554; $y--) {
+        $ys[$y] = 'ปีการศึกษา '.$y;
+    }
+    $hist = '<form method="get" style="width:983px;box-sizing:border-box;margin:0 auto 10px;text-align:left;padding:8px 10px;border:1px dashed #33cc99;border-radius:4px;background:#FCFCFC">'
+        .'<input type="hidden" name="module" value="admin"/><input type="hidden" name="option" value="student_class"/><input type="hidden" name="func" value="HistRoom"/><input type="hidden" name="room" value="'.$rid.'"/>'
+        .'<b><i class="fa fa-history"></i> ประวัติห้องเรียนย้อนหลัง</b> — จัดนักเรียนเข้าห้อง '.h(room_title($rid)).' ของ '.sel('year', $ys, cur_term()[0] - 1, 'style="height:25px"')
+        .' <input type="submit" value="จัดนักเรียนย้อนหลัง" class="general radius" style="height:25px"/> <span class="gray_12">(ใช้แสดงใน ปพ.6 / ไม่ย้ายห้องปัจจุบัน)</span></form>';
+    return ['จัดการนักเรียนประจำชั้น '.room_title($rid), $hist.'<div style="width:983px;margin:0 auto 8px;text-align:left" class="gray_12">เลือก "ชั้นเรียนปลายทาง" ให้นักเรียนที่ต้องการย้าย (ย้ายพร้อมกันได้หลายคน) แล้วกด "ย้ายห้อง" / "ลบออกจากห้องเรียน" รายชื่อจะไปอยู่ที่เมนูนักเรียนยังไม่กำหนดห้องเรียน</div>'
         .'<form name="rm" method="post" action="'.h($back).'">'.list_table($title, [['เลขที่', ' style="text-align:center"'], 'รหัสนักเรียน', 'ชื่อ', 'นามสกุล', 'สถานภาพ', 'ปัจจุบันอยู่ชั้น', 'ชั้นเรียนปลายทาง', ''], $rows, count($list).' คน').'</form>', $tools];
 }
 

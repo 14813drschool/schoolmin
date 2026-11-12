@@ -831,7 +831,11 @@ function year_rooms(int $y): array
         }
     }
     foreach (q('SELECT G.`student_id`, MAX(G.`room`) room, MAX(G.`number`) number, MAX(C.`class`) class FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE C.`year`=? AND G.`room`>0 GROUP BY G.`student_id`', [$y]) as $r) {
-        $o[(int) $r['student_id']] ??= ['class' => room_class((int) $r['room']) ?: (int) $r['class'], 'room' => (int) $r['room'], 'number' => $r['number']];
+        // ห้องในข้อมูลลงทะเบียนต้องอยู่ในระดับชั้นของรายวิชาปีนั้น (ข้อมูลเก่าที่นำเข้าอาจเป็นห้องปัจจุบัน)
+        if ((int) $r['class'] && room_class((int) $r['room']) !== (int) $r['class']) {
+            continue;
+        }
+        $o[(int) $r['student_id']] ??= ['class' => (int) $r['class'] ?: room_class((int) $r['room']), 'room' => (int) $r['room'], 'number' => $r['number']];
     }
     return $cache[$y] = $o;
 }

@@ -91,8 +91,10 @@ function pp6_advisors(array $s): array
         $hist[(int) $r['r2']] = json_decode((string) $r['value'], true) ?: [];
     }
     // ปีที่ไม่มีประวัติห้องเรียน: ใช้ชั้น/ห้องจากการลงทะเบียนเรียนของปีนั้น
-    foreach (q('SELECT C.`year`, MAX(C.`class`) class, MAX(G.`room`) room FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE G.`student_id`=? AND G.`room`>0 GROUP BY C.`year`', [(int) $s['id']]) as $r) {
-        $hist[(int) $r['year']] ??= ['class' => room_class((int) $r['room']) ?: (int) $r['class'], 'room' => (int) $r['room']];
+    // (ระดับชั้นตามรายวิชาของปีนั้น; ใช้ห้องเฉพาะเมื่อห้องอยู่ในระดับชั้นเดียวกัน ไม่งั้นแสดงเฉพาะระดับชั้น)
+    foreach (q('SELECT C.`year`, MAX(C.`class`) class, MAX(G.`room`) room FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE G.`student_id`=? GROUP BY C.`year`', [(int) $s['id']]) as $r) {
+        $cl = (int) $r['class'] ?: room_class((int) $r['room']);
+        $hist[(int) $r['year']] ??= ['class' => $cl, 'room' => room_class((int) $r['room']) === $cl ? (int) $r['room'] : 0];
     }
     $cy = cur_term()[0];
     $hist[$cy] = ['class' => (int) $s['class'], 'room' => (int) $s['room']];

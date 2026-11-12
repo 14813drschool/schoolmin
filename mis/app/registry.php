@@ -502,6 +502,19 @@ function adm_student_Edit(bool $post)
         ['มารดา: มือถือ / บ้าน', inp('mother_mobile', $in['mother_mobile'] ?? '', 140).' '.inp('mother_home', $in['mother_home'] ?? '', 140), false],
         ['รหัสผ่านเข้าระบบ', inp('password', '', 200, 'password', 'autocomplete="new-password" placeholder="'.($s ? 'เว้นว่างถ้าไม่เปลี่ยน' : 'ค่าเริ่มต้น = รหัสนักเรียน').'"'), false],
     ];
+    if ($s) {
+        // ประวัติห้องเรียนปีการศึกษาที่ผ่านมา (แสดงใน ปพ.6 / รายชื่อนักเรียนประจำชั้นย้อนหลัง)
+        $hist = student_room_history($id);
+        $from = min(array_merge([(int) ($in['entry_year'] ?? 0) ?: $cy - 6], array_keys($hist)));
+        $from = max(2554, min($from, $cy - 1));
+        $ht = '<table cellspacing="0" cellpadding="2" style="border-collapse:collapse"><tr><td class="gray_12" style="width:90px">ปีการศึกษา</td><td class="gray_12">ห้อง</td><td class="gray_12">เลขที่</td></tr>';
+        for ($y = $from; $y < $cy; $y++) {
+            $x = $hist[$y] ?? null;
+            $ht .= '<tr><td>'.$y.'</td><td>'.sel('hroom['.$y.']', $rooms, $x['room'] ?? 0, 'style="width:200px;height:24px"').'<input type="hidden" name="hold['.$y.']" value="'.(int) ($x['room'] ?? 0).'|'.h((string) ($x['number'] ?? '')).'"/></td>'
+                .'<td>'.inp('hnum['.$y.']', (string) ($x['number'] ?? ''), 60).'</td></tr>';
+        }
+        $rows[] = ['ประวัติห้องเรียน (ปีที่ผ่านมา)', $ht.'</table><span class="gray_12">ใช้แสดงระดับชั้น/ครูประจำชั้นย้อนหลังใน ปพ.6 และรายชื่อนักเรียนประจำชั้นเมื่อเลือกดูปีการศึกษาย้อนหลัง</span>', false];
+    }
     $note = '<div style="width:983px;margin:0 auto 10px;text-align:left" class="gray_12">รหัสนักเรียนต้องไม่ซ้ำกัน / หากสถานภาพไม่ใช่ "ศึกษาอยู่" รายชื่อจะย้ายไปแสดงที่เมนู "นักเรียนจบการศึกษา" หรือ "นักเรียนออกกลางคัน"</div>';
     return [$s ? 'แก้ไขข้อมูลนักเรียน' : 'เพิ่มนักเรียน', $note.admin_form($s ? 'แก้ไขข้อมูลนักเรียน' : 'เพิ่มนักเรียน', a_url('student', '&func=Save&id='.$id.(isset($_GET['back']) ? '&back='.rawurlencode((string) $_GET['back']) : '')), $rows, a_url((string) ($_GET['back'] ?? 'student')))];
 }
@@ -539,6 +552,12 @@ function adm_student_Save(bool $post)
         $d[$k] = mb_substr(trim((string) ($_POST[$k] ?? '')), 0, 60);
     }
     stinfo_save($uid, $d);
+    foreach ((array) ($_POST['hroom'] ?? []) as $y => $hr) {
+        $num = trim((string) ($_POST['hnum'][$y] ?? ''));
+        if ((string) ($_POST['hold'][$y] ?? '') !== (int) $hr.'|'.$num) {
+            set_room_history($uid, (int) $y, (int) $hr, $num === '' ? null : (int) $num);
+        }
+    }
     set_student_status($uid, $status, imp_date((string) ($_POST['left_date'] ?? '')));
     save_photo($uid);
     admin_done(preg_replace('/[^a-z_]/', '', (string) ($_GET['back'] ?? 'student')) ?: 'student');
@@ -824,20 +843,51 @@ function year_rooms(int $y): array
         return $cache[$y];
     }
     $o = [];
+    $set = [];
     foreach (md_rows('stroom', null, (string) $y) as $r) {
         $d = json_decode((string) $r['value'], true) ?: [];
+        $set[(int) $r['r1']] = true;
         if ((int) ($d['room'] ?? 0)) {
-            $o[(int) $r['r1']] = ['class' => (int) ($d['class'] ?? 0), 'room' => (int) $d['room'], 'number' => $d['number'] ?? null];
+            $o[(int) $r['r1']] = ['class' => (int) ($d['class'] ?? 0) ?: room_class((int) $d['room']), 'room' => (int) $d['room'], 'number' => $d['number'] ?? null];
         }
     }
     foreach (q('SELECT G.`student_id`, MAX(G.`room`) room, MAX(G.`number`) number, MAX(C.`class`) class FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE C.`year`=? AND G.`room`>0 GROUP BY G.`student_id`', [$y]) as $r) {
         // ห้องในข้อมูลลงทะเบียนต้องอยู่ในระดับชั้นของรายวิชาปีนั้น (ข้อมูลเก่าที่นำเข้าอาจเป็นห้องปัจจุบัน)
-        if ((int) $r['class'] && room_class((int) $r['room']) !== (int) $r['class']) {
+        if (isset($set[(int) $r['student_id']]) || ((int) $r['class'] && room_class((int) $r['room']) !== (int) $r['class'])) {
             continue;
         }
         $o[(int) $r['student_id']] ??= ['class' => (int) $r['class'] ?: room_class((int) $r['room']), 'room' => (int) $r['room'], 'number' => $r['number']];
     }
     return $cache[$y] = $o;
+}
+
+/** บันทึกประวัติห้องเรียนของนักเรียนในปีการศึกษาที่ผ่านมา (room 0 = ไม่ได้อยู่ห้องใด / ล้างข้อมูลที่ระบบอนุมาน) */
+function set_room_history(int $sid, int $y, int $room, $number = null): void
+{
+    if ($y >= cur_term()[0] || $y < 2400) {
+        return;
+    }
+    md_set('stroom', $sid, (string) $y, '', json_encode(['class' => $room ? room_class($room) : 0, 'room' => $room, 'number' => $number === '' || $number === null ? null : (int) $number]));
+}
+
+/** ห้องของนักเรียนรายปีที่ผ่านมา [ปี => ['class','room','number']] */
+function student_room_history(int $sid): array
+{
+    $years = [];
+    foreach (md_rows('stroom', $sid) as $r) {
+        $years[(int) $r['r2']] = true;
+    }
+    foreach (q('SELECT DISTINCT C.`year` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE G.`student_id`=?', [$sid]) as $r) {
+        $years[(int) $r['year']] = true;
+    }
+    $o = [];
+    foreach (array_keys($years) as $y) {
+        if ($y < cur_term()[0] && ($x = year_rooms($y)[$sid] ?? null)) {
+            $o[$y] = $x;
+        }
+    }
+    ksort($o);
+    return $o;
 }
 
 /** นักเรียนของห้องในปีการศึกษา $y (ปีปัจจุบัน = ห้องปัจจุบัน) */
@@ -950,7 +1000,7 @@ function adm_student_class(bool $post)
                 sel("prog[$rid]", $progs, room_prog($rid, $vy), 'style="width:120px;height:24px"'), [$n, ' align="center"'], [$m, ' align="center"'], [$f, ' align="center"'], [$r, ' align="center"'],
                 [$n ? number_format($r * 100 / $n, 2).'%' : '-', ' align="center"'], [$cf !== null ? h($cf) : '-', ' align="center" style="font-size:11px"'],
                 ['<input type="checkbox" name="cf['.$rid.']" value="'.$r.' คน ['.($n ? number_format($r * 100 / $n, 2) : '0.00').'%]" form="cfform"/>', ' align="center"'],
-                [$past ? '<span class="gray_12">ย้อนหลัง</span>' : $icon('Room', $rid, 'fa-wrench', 'จัดการนักเรียน').$icon('Promote', $rid, 'fa-cloud-upload', 'เลื่อนชั้น').$icon('Repeat', $rid, 'fa-retweet', 'ซ้ำชั้น').$icon('Grad', $rid, 'fa-thumbs-up', 'จบการศึกษา'), ' align="center" style="white-space:nowrap"']], $i++);
+                [$past ? $icon('HistRoom', $rid, 'fa-wrench', 'จัดนักเรียนเข้าห้อง (ย้อนหลังปี '.$vy.')') : $icon('Room', $rid, 'fa-wrench', 'จัดการนักเรียน').$icon('Promote', $rid, 'fa-cloud-upload', 'เลื่อนชั้น').$icon('Repeat', $rid, 'fa-retweet', 'ซ้ำชั้น').$icon('Grad', $rid, 'fa-thumbs-up', 'จบการศึกษา'), ' align="center" style="white-space:nowrap"']], $i++);
         }
     }
     $save = '<a href="javascript:void(0);" onclick="document.forms.sc.submit();" id="pinkgreenbtns"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึกครูที่ปรึกษา/แผนการเรียน</a>';
@@ -970,6 +1020,55 @@ function adm_student_class(bool $post)
     return ['จัดการชั้นเรียน', $copy.'<div style="width:983px;margin:0 auto 6px;text-align:right">ยืนยันประวัติห้องที่ติ๊กไว้: '.$cfBtns.'</div><form name="sc" method="post" action="'.h(a_url('student_class')).'">'.list_table('จัดการชั้นเรียน ประจำปีการศึกษา '.$vy, ['ห้อง', 'ครูที่ปรึกษา', 'แผนการเรียน', ['ทั้งหมด', ' style="text-align:center"'],
         ['ชาย', ' style="text-align:center"'], ['หญิง', ' style="text-align:center"'], ['บันทึก', ' style="text-align:center"'], ['ร้อยละ', ' style="text-align:center"'], ['ยืนยันประวัติ', ' style="text-align:center"'], ['', ' style="text-align:center"'], ''],
         $rows, '', $save).'</form>', head_btn('พิมพ์', 'javascript:window.print()', 'print')];
+}
+
+/** จัดนักเรียนเข้าห้องย้อนหลัง (ปีการศึกษาที่เลือกดู ซึ่งเป็นปีที่ผ่านมา) */
+function adm_student_class_HistRoom(bool $post)
+{
+    $rid = (int) ($_GET['room'] ?? 0);
+    $vy = term()[0];
+    $cy = cur_term()[0];
+    if ($vy >= $cy || !isset(cats('room')[$rid])) {
+        redirect(a_url('student_class'));
+    }
+    $back = a_url('student_class', '&func=HistRoom&room='.$rid);
+    if ($post) {
+        foreach ((array) ($_POST['num'] ?? []) as $sid => $num) {
+            $sid = (int) $sid;
+            if (!empty($_POST['del'][$sid])) {
+                set_room_history($sid, $vy, 0);
+            } elseif ((string) ($_POST['old'][$sid] ?? '') !== trim((string) $num)) {
+                set_room_history($sid, $vy, $rid, trim((string) $num) === '' ? null : (int) $num);
+            }
+        }
+        $bad = [];
+        foreach (preg_split('/\r\n|\r|\n/', (string) ($_POST['add'] ?? '')) as $line) {
+            $p = preg_split('/[\t,; ]+/', trim($line));
+            if (($p[0] ?? '') === '') {
+                continue;
+            }
+            $s = imp_student($p[0]);
+            if (!$s) {
+                $bad[] = $p[0];
+                continue;
+            }
+            set_room_history((int) $s['id'], $vy, $rid, isset($p[1]) && is_numeric($p[1]) ? (int) $p[1] : null);
+        }
+        redirect($back.'&msg=saved'.($bad ? '&bad='.rawurlencode(implode(', ', array_slice($bad, 0, 30))) : ''));
+    }
+    $rows = '';
+    foreach (year_room_students($rid, $vy) as $i => $s) {
+        $sid = (int) $s['id'];
+        $rows .= zrow([['<input type="text" name="num['.$sid.']" value="'.h((string) $s['number']).'" style="width:45px;text-align:center" class="general radius"/><input type="hidden" name="old['.$sid.']" value="'.h((string) $s['number']).'"/>', ' align="center"'],
+            h((string) $s['student_id']), name_nbsp((string) $s['name']), h(class_room_short($s['class'], $s['room'])), ['<input type="checkbox" name="del['.$sid.']" value="1" style="width:auto;height:auto"/>', ' align="center"']], $i);
+    }
+    $bad = isset($_GET['bad']) ? msg_box('ไม่พบรหัสนักเรียน: '.h((string) $_GET['bad']), false) : '';
+    $add = '<div style="width:983px;margin:10px auto;text-align:left"><b>เพิ่มนักเรียนเข้าห้องนี้ (ปีการศึกษา '.$vy.')</b> <span class="gray_12">— ใส่รหัสนักเรียนบรรทัดละ 1 คน ตามด้วยเลขที่ (ถ้ามี) เช่น <code>12345 5</code> หรือคัดลอก 2 คอลัมน์ (รหัสนักเรียน, เลขที่) จาก Excel มาวางได้เลย</span><br>'
+        .'<textarea name="add" style="width:400px;height:140px;margin-top:5px" class="general radius"></textarea></div>';
+    $save = '<a href="javascript:void(0);" onclick="document.forms.hr.submit();" id="pinkgreenbtns"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึก</a>';
+    return ['จัดนักเรียนเข้าห้องย้อนหลัง', saved_msg().$bad.msg_box('ห้อง '.h(room_title($rid)).' ปีการศึกษา '.$vy.' (ย้อนหลัง) — ข้อมูลนี้เป็นประวัติเท่านั้น ไม่ย้ายห้องปัจจุบันของนักเรียน', true)
+        .'<form name="hr" method="post" action="'.h($back).'">'.list_table('รายชื่อนักเรียนห้อง '.h(room_title($rid)).' ปีการศึกษา '.$vy, [['เลขที่', ' style="width:60px;text-align:center"'], 'รหัสนักเรียน', 'ชื่อ-นามสกุล', 'ห้อง', ['เอาออก', ' style="text-align:center"']],
+            $rows ?: '<tr><td colspan="5" align="center">ยังไม่มีนักเรียนในห้องนี้ของปีการศึกษา '.$vy.'</td></tr>', '', btn('กลับ', a_url('student_class'), 'back').' '.$save).$add.'</form>'];
 }
 
 function room_title(int $rid): string

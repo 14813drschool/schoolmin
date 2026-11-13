@@ -433,12 +433,15 @@ function imp_row(string $set, array $c): string
                     [mb_substr(trim($cname), 0, 50), mb_substr(trim($code), 0, 20), $cc ?: (int) $s['class'], min(9.9, max(0, (float) $credit)), (int) (array_search(trim($ctype), COURSE_TYPES, true) ?: 1), $yt[0], $yt[1]]);
                 $course = imp_course($code, $cc ?: (int) $s['class'], $yt);
             }
-            $g = trim($g) !== '' ? trim($g) : ((trim($mid) === '' && trim($fin) === '') ? '' : grade_of((int) $mid + (int) $fin));
+            // ไม่ระบุเกรด: คำนวณเฉพาะเมื่อมีคะแนนทั้งสองช่อง (ยังสอบไม่ครบ = ยังไม่มีเกรด)
+            $g = trim($g) !== '' ? trim($g) : ((trim($mid) === '' || trim($fin) === '') ? null : grade_of((int) $mid + (int) $fin));
+            $mid = trim($mid) === '' ? null : (int) $mid;
+            $fin = trim($fin) === '' ? null : (int) $fin;
             if ($ex = q1('SELECT `id` FROM {grade} WHERE `student_id`=? AND `course_id`=?', [(int) $s['id'], (int) $course['id']])) {
-                q('UPDATE {grade} SET `midterm`=?, `final`=?, `grade`=? WHERE `id`=?', [(int) $mid, (int) $fin, $g, (int) $ex['id']]);
+                q('UPDATE {grade} SET `midterm`=?, `final`=?, `grade`=? WHERE `id`=?', [$mid, $fin, $g, (int) $ex['id']]);
                 return 'update';
             }
-            q('INSERT INTO {grade} (`student_id`,`course_id`,`number`,`room`,`type`,`midterm`,`final`,`grade`) VALUES (?,?,?,?,0,?,?,?)', [(int) $s['id'], (int) $course['id'], (int) $s['number'], (int) $s['room'], (int) $mid, (int) $fin, $g]);
+            q('INSERT INTO {grade} (`student_id`,`course_id`,`number`,`room`,`type`,`midterm`,`final`,`grade`) VALUES (?,?,?,?,0,?,?,?)', [(int) $s['id'], (int) $course['id'], (int) $s['number'], (int) $s['room'], $mid, $fin, $g]);
             return 'add';
 
         case 'clubs':

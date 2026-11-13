@@ -382,9 +382,10 @@ function adm_score_import(bool $post)
                 $err[] = 'แถว '.($i + 1).': ไม่พบ'.(!$c ? 'รายวิชา '.$code : 'นักเรียน '.$sidc);
                 continue;
             }
-            $mid = (int) $mid;
-            $fin = (int) $fin;
-            $g = $g !== '' ? $g : grade_of($mid + $fin);
+            // ไม่ระบุเกรด: คำนวณเฉพาะเมื่อมีคะแนนทั้งสองช่อง (ยังสอบไม่ครบ = ยังไม่มีเกรด)
+            $g = $g !== '' ? $g : (trim((string) $mid) === '' || trim((string) $fin) === '' ? null : grade_of((int) $mid + (int) $fin));
+            $mid = trim((string) $mid) === '' ? null : (int) $mid;
+            $fin = trim((string) $fin) === '' ? null : (int) $fin;
             $ex = q1('SELECT `id` FROM {grade} WHERE `student_id`=? AND `course_id`=?', [(int) $s['id'], (int) $c['id']]);
             if ($ex) {
                 q('UPDATE {grade} SET `midterm`=?, `final`=?, `grade`=? WHERE `id`=?', [$mid, $fin, $g, (int) $ex['id']]);

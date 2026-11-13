@@ -503,11 +503,11 @@ function auto_grade(bool $any, bool $missing, ?float $total, ?float $attPct, boo
     if (!$any) {
         return '';
     }
+    if (!$examsDone) {
+        return ''; // ยังสอบกลางภาค/ปลายภาคไม่ครบ = ยังไม่คำนวณเกรด (รวมถึง มส)
+    }
     if ($attPct !== null && $attPct < 80) {
         return 'มส';
-    }
-    if (!$examsDone) {
-        return ''; // ยังสอบกลางภาค/ปลายภาคไม่ครบ = ยังไม่คำนวณเกรด
     }
     if ($missing) {
         return 'ร';
@@ -607,7 +607,8 @@ function rows_task_study_record_Record()
     $rows = '';
     foreach ($students as $s) {
         $gid = (int) $s['gid'];
-        [$uOld, $mOld] = array_pad(explode('|', (string) md_get('rec_split', $gid)), 2, '');
+        $split = md_get('rec_split', $gid);
+        [$uOld, $mOld] = array_pad(explode('|', (string) $split), 2, '');
         $fix = json_decode((string) md_get('remedial', 'g'.$gid, $yt), true) ?: [];
         if ($units) {
             $usum = 0.0;
@@ -622,6 +623,13 @@ function rows_task_study_record_Record()
         }
         $has = $s['midterm'] !== null || $s['final'] !== null;
         $grade = (string) ($fix['old'] ?? $s['grade']);
+        // ยังสอบไม่ครบ = ไม่มีคะแนนปลายภาค หรือมีการแยกคะแนนแล้วแต่ยังไม่มีคะแนนกลางภาค (ข้อมูลนำเข้าที่ไม่ได้แยกคะแนน ใช้คะแนนปลายภาคอย่างเดียว)
+        if (!$fix && ($s['final'] === null || ($split !== null && $mOld === ''))) {
+            $grade = ''; // ยังสอบไม่ครบ: ไม่แสดงเกรดที่ค้างอยู่เดิม และล้างเกรดที่บันทึกค้างไว้ (หน้านักเรียน/ปพ. จะได้ไม่แสดง)
+            if ((string) $s['grade'] !== '' && !$locked) {
+                q('UPDATE {grade} SET `grade`=NULL WHERE `id`=?', [$gid]);
+            }
+        }
         $tot = (int) $s['midterm'] + (int) $s['final'];
         // ช่อง "แก้" ขึ้นเฉพาะผู้ที่ติด 0 หรือ ร (กดเพื่อบันทึกคะแนนสอบแก้ไข)
         $np = preg_split('/\s+/u', trim((string) $s['name']), 2);

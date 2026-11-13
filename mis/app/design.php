@@ -624,10 +624,17 @@ function rows_task_study_record_Record()
         $has = $s['midterm'] !== null || $s['final'] !== null;
         $grade = (string) ($fix['old'] ?? $s['grade']);
         // ยังสอบไม่ครบ = ไม่มีคะแนนปลายภาค หรือมีการแยกคะแนนแล้วแต่ยังไม่มีคะแนนกลางภาค (ข้อมูลนำเข้าที่ไม่ได้แยกคะแนน ใช้คะแนนปลายภาคอย่างเดียว)
-        if (!$fix && ($s['final'] === null || ($split !== null && $mOld === ''))) {
-            $grade = ''; // ยังสอบไม่ครบ: ไม่แสดงเกรดที่ค้างอยู่เดิม และล้างเกรดที่บันทึกค้างไว้ (หน้านักเรียน/ปพ. จะได้ไม่แสดง)
-            if ((string) $s['grade'] !== '' && !$locked) {
-                q('UPDATE {grade} SET `grade`=NULL WHERE `id`=?', [$gid]);
+        if ($s['final'] === null || ($split !== null && $mOld === '')) {
+            // ยังสอบไม่ครบ: ไม่แสดงเกรด/ผลแก้ไขที่ค้างอยู่เดิม และล้างที่บันทึกค้างไว้ (หน้านักเรียน/ปพ. จะได้ไม่แสดง)
+            $grade = '';
+            $fix = [];
+            if (!$locked) {
+                if ((string) $s['grade'] !== '') {
+                    q('UPDATE {grade} SET `grade`=NULL WHERE `id`=?', [$gid]);
+                }
+                if (md_get('remedial', 'g'.$gid, $yt) !== null) {
+                    md_set('remedial', 'g'.$gid, $yt, '', null);
+                }
             }
         }
         $tot = (int) $s['midterm'] + (int) $s['final'];

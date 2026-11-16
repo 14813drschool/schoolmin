@@ -43,14 +43,75 @@ function rpt_term_options(): array
 /** ผู้บริหาร/ผู้ลงนาม: ชื่อจาก "กำหนดผู้บริหารโรงเรียน" ตามคำในตำแหน่ง */
 function rpt_signer(string $word): string
 {
-    $po = personnel_options();
-    foreach (md_rows('executive') as $r) {
-        $d = json_decode((string) $r['value'], true) ?: [];
-        if (mb_strpos((string) ($d['position'] ?? ''), $word) !== false) {
-            return $po[$d['person'] ?? 0] ?? '';
+    foreach (executives() as [$pid, $pos, $name]) {
+        if (exec_pos_match($pos, $word)) {
+            return $name;
         }
     }
     return '';
+}
+
+/** ตำแหน่งตรงกับคำที่ค้นหา (เช่น "ผู้อำนวยการ" ไม่นับ "รองผู้อำนวยการ") */
+function exec_pos_match(string $pos, string $word): bool
+{
+    $pos = trim($pos);
+    if (mb_strpos($pos, $word) === false) {
+        return false;
+    }
+    return mb_strpos($word, 'รอง') === 0 || mb_strpos($pos, 'รอง') !== 0;
+}
+
+/**
+ * ผู้บริหารโรงเรียน [[pid, ตำแหน่ง, ชื่อ]] เรียง ผอ. > รอง ผอ. > อื่น ๆ
+ * จากเมนู "ผู้บริหารโรงเรียน" และบุคลากรที่กำหนดตำแหน่งเป็นผู้อำนวยการ/รองผู้อำนวยการ
+ */
+function executives(): array
+{
+    static $o = null;
+    if ($o !== null) {
+        return $o;
+    }
+    $po = personnel_options();
+    $list = [];
+    $seen = [];
+    foreach (md_rows('executive') as $r) {
+        $d = json_decode((string) $r['value'], true) ?: [];
+        $pid = (int) ($d['person'] ?? 0);
+        if (!$pid || !isset($po[$pid])) {
+            continue;
+        }
+        $list[] = [$pid, trim((string) ($d['position'] ?? '')), $po[$pid], (int) ($d['order'] ?? 0)];
+        $seen[$pid] = true;
+    }
+    foreach (q('SELECT P.`id`, P.`position`, P.`order` FROM {personnel} P JOIN {user} U ON U.`id`=P.`id` WHERE U.`active`=1 AND P.`position`>0') as $p) {
+        $pos = (string) cat('position', $p['position'], '');
+        if (!isset($seen[(int) $p['id']]) && isset($po[(int) $p['id']]) && preg_match('/ผู้อำนวยการ|ผอ\./u', $pos)) {
+            $list[] = [(int) $p['id'], $pos, $po[(int) $p['id']], 100 + (int) $p['order']];
+            $seen[(int) $p['id']] = true;
+        }
+    }
+    $rank = fn($pos) => exec_pos_match($pos, 'ผู้อำนวยการ') ? 0 : (mb_strpos($pos, 'รอง') === 0 ? 1 : 2);
+    usort($list, fn($a, $b) => [$rank($a[1]), $a[3]] <=> [$rank($b[1]), $b[3]]);
+    return $o = array_map(fn($x) => [$x[0], $x[1], $x[2]], $list);
+}
+
+/** ลายเซ็นผู้อำนวยการ (URL) หรือ '' ถ้ายังไม่อัปโหลด */
+function director_sign_url(): string
+{
+    foreach (['png', 'jpg', 'gif'] as $e) {
+        $f = ROOT_PATH.'datas/school/director_sign.'.$e;
+        if (is_file($f)) {
+            return '/datas/school/director_sign.'.$e.'?v='.filemtime($f);
+        }
+    }
+    return '';
+}
+
+/** รูปลายเซ็นผู้อำนวยการวางทับเส้นลงชื่อ (ไม่ทำให้ระยะบรรทัดเปลี่ยน) */
+function director_sign_img(int $left = 20, int $h = 44): string
+{
+    $u = director_sign_url();
+    return $u === '' ? '' : '<span style="position:relative;display:inline-block;width:0;height:0;vertical-align:baseline"><img src="'.h($u).'" alt="" style="position:absolute;left:'.$left.'px;bottom:-6px;height:'.$h.'px;max-width:180px"/></span>';
 }
 
 /** เวลาเรียนร้อยละของนักเรียนในรายวิชา [course => [sid => pct]] */
@@ -135,7 +196,8 @@ function rpt_signs(array $who): string
 {
     $o = '<div class="sign">';
     foreach ($who as [$role, $name]) {
-        $o .= '<div>ลงชื่อ ..................................<br>('.($name !== '' ? h($name) : '..................................').')<br>'.h($role).'</div>';
+        $sig = preg_match('/^ผู้อำนวยการ/u', $role) ? director_sign_img(40) : '';
+        $o .= '<div>ลงชื่อ '.$sig.'..................................<br>('.($name !== '' ? h($name) : '..................................').')<br>'.h($role).'</div>';
     }
     return $o.'</div>';
 }

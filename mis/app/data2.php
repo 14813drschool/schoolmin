@@ -1332,9 +1332,9 @@ function rows_main_manager()
 {
     $rows = '';
     $i = 0;
-    foreach (q('SELECT U.`name`, P.`position` FROM {personnel} P JOIN {user} U ON U.`id`=P.`id` WHERE P.`position` IN (1,2) AND U.`active`=1 ORDER BY P.`position`, P.`order`') as $p) {
-        $pos = cat('position', $p['position']);
-        $rows .= tr([++$i, h($pos), (int) $p['position'] === 1 ? 'ผอ.' : 'รอง ผอ.', name_nbsp($p['name'])]);
+    foreach (executives() as [$pid, $pos, $name]) {
+        $short = exec_pos_match($pos, 'ผู้อำนวยการ') ? 'ผอ.' : (mb_strpos($pos, 'รอง') === 0 ? 'รอง ผอ.' : '');
+        $rows .= tr([++$i, h($pos), $short, name_nbsp($name)]);
     }
     return $rows;
 }

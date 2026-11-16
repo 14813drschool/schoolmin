@@ -222,8 +222,45 @@ function adm_ptype(bool $post)
 
 function adm_executive(bool $post)
 {
-    return md_page('executive', 'executive', 'ผู้บริหารโรงเรียน', ['person' => f_sel('บุคลากร', 'personnel_options'), 'position' => f_text('ตำแหน่งบริหาร', true), 'order' => f_num('ลำดับการแสดง', false), 'phone' => f_text('โทรศัพท์')],
+    // ลายเซ็นผู้อำนวยการ (ใช้ในเอกสารพิมพ์ เช่น ปพ.1 ปพ.6 ใบรายงานผล)
+    if ($post && isset($_POST['sign_save'])) {
+        $up = $_FILES['director_sign'] ?? null;
+        $del = !empty($_POST['sign_del']);
+        if ($del || ($up && (int) $up['error'] === 0 && (int) $up['size'] > 0)) {
+            $ext = $del ? '' : (['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/gif' => 'gif'][(string) @mime_content_type($up['tmp_name'])] ?? '');
+            if (!$del && ($ext === '' || (int) $up['size'] > 2 * 1024 * 1024)) {
+                return msg_box('ไฟล์ลายเซ็นต้องเป็น PNG/JPG/GIF ไม่เกิน 2 MB', false).adm_executive(false);
+            }
+            @mkdir(ROOT_PATH.'datas/school', 0777, true);
+            foreach (['png', 'jpg', 'gif'] as $e) {
+                @unlink(ROOT_PATH.'datas/school/director_sign.'.$e);
+            }
+            if (!$del) {
+                move_uploaded_file($up['tmp_name'], ROOT_PATH.'datas/school/director_sign.'.$ext);
+            }
+        }
+        admin_done('executive');
+    }
+    $dir = rpt_signer('ผู้อำนวยการ');
+    $sig = director_sign_url();
+    $box = '<form method="post" enctype="multipart/form-data" action="'.h(a_url('executive')).'" style="width:983px;box-sizing:border-box;margin:0 auto 10px;text-align:left;padding:10px 12px;border:1px dashed #33cc99;border-radius:4px;background:#FCFCFC">'
+        .'<table style="width:100%"><tr><td style="width:250px;vertical-align:top"><b>ผู้อำนวยการโรงเรียน</b><br>'.($dir !== '' ? h($dir) : '<span style="color:#C0392B">ยังไม่ได้กำหนด — เพิ่มรายการด้านล่าง ตำแหน่ง "ผู้อำนวยการโรงเรียน"</span>').'</td>'
+        .'<td style="width:240px;vertical-align:top"><b>ลายเซ็นผู้อำนวยการ</b><div style="width:220px;height:70px;border:1px solid #ccc;border-radius:3px;background:#fff;display:flex;align-items:center;justify-content:center;margin-top:4px">'
+        .($sig !== '' ? '<img src="'.h($sig).'" style="max-width:210px;max-height:64px"/>' : '<span class="gray_12">ยังไม่มีลายเซ็น</span>').'</div></td>'
+        .'<td style="vertical-align:top"><input type="file" name="director_sign" accept="image/png,image/jpeg,image/gif" style="width:260px;font-size:12px"/>'
+        .'<div class="gray_12" style="font-size:11px;margin:2px 0 6px">ไฟล์ PNG (พื้นหลังโปร่งใส) / JPG / GIF ไม่เกิน 2 MB — แสดงบนเส้นลงชื่อผู้อำนวยการในเอกสารพิมพ์ เช่น ปพ.1 ปพ.6 ใบรายงานผลการเรียน</div>'
+        .($sig !== '' ? '<label style="font-size:12px"><input type="checkbox" name="sign_del" value="1" style="width:auto;height:auto;vertical-align:-2px"/> ลบลายเซ็น</label> ' : '')
+        .'<input type="submit" name="sign_save" value="บันทึกลายเซ็น" class="general radius" style="height:25px"/></td></tr></table></form>';
+    $page = md_page('executive', 'executive', 'ผู้บริหารโรงเรียน', ['person' => f_sel('บุคลากร', 'personnel_options'), 'position' => f_text('ตำแหน่งบริหาร', true), 'order' => f_num('ลำดับการแสดง', false), 'phone' => f_text('โทรศัพท์')],
         ['order' => 'ลำดับ', 'person' => 'ชื่อ-นามสกุล', 'position' => 'ตำแหน่ง', 'phone' => 'โทรศัพท์'], $post);
+    if (($_GET['func'] ?? '') !== '') {
+        return $page;
+    }
+    if (is_array($page)) {
+        $page[count($page) - 1] = $box.$page[count($page) - 1];
+        return $page;
+    }
+    return is_string($page) ? $box.$page : $page;
 }
 
 const PSTATUS = ['ปฏิบัติงาน' => 'ปฏิบัติงาน', 'ช่วยราชการ' => 'ช่วยราชการ', 'ลาศึกษาต่อ' => 'ลาศึกษาต่อ', 'พักการสอน' => 'พักการสอน', 'ย้าย' => 'ย้ายออก', 'ลาออก' => 'ลาออก', 'เกษียณ' => 'เกษียณอายุราชการ'];
@@ -610,7 +647,8 @@ function signs(array $who): string
     $o = '<table style="margin-top:50px;border:none"><tr>';
     foreach ($who as $w) {
         $n = $w === 'นายทะเบียน' ? registrar_name() : (preg_match('/^ผู้อำนวยการ/u', $w) ? rpt_signer('ผู้อำนวยการ') : '');
-        $o .= '<td style="border:none;text-align:center">ลงชื่อ ........................................<br>( '.($n !== '' ? h($n) : '........................................').' )<br>'.h($w).'</td>';
+        $sig = preg_match('/^ผู้อำนวยการ/u', $w) ? director_sign_img(50) : '';
+        $o .= '<td style="border:none;text-align:center">ลงชื่อ '.$sig.'........................................<br>( '.($n !== '' ? h($n) : '........................................').' )<br>'.h($w).'</td>';
     }
     return $o.'</tr></table>';
 }

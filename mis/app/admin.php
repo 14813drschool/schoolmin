@@ -842,12 +842,29 @@ function adm_course(bool $post)
     $courses = q('SELECT C.*, U.`name` teacher FROM {course} C LEFT JOIN {user} U ON U.`id`=C.`teacher_id` WHERE C.`year`=? AND C.`term`=? ORDER BY C.`class`, C.`type`, C.`course_code`', [$y, $t]);
     $rooms = course_rooms($courses);
     foreach ($courses as $i => $c) {
-        $rows .= zrow([$i + 1, h($c['course_code']), h($c['course_name']), COURSE_TYPES[(int) $c['type']] ?? '', h(class_short($c['class'])), [h((float) $c['credit']), ' align="center"'], [(int) $c['period'], ' align="center"'],
+        $rows .= zrow([['<input type="checkbox" name="ids[]" value="'.(int) $c['id'].'" class="cdel" style="width:auto;height:auto"/>', ' align="center"'], $i + 1, h($c['course_code']), h($c['course_name']), COURSE_TYPES[(int) $c['type']] ?? '', h(class_short($c['class'])), [h((float) $c['credit']), ' align="center"'], [(int) $c['period'], ' align="center"'],
             name_nbsp((string) $c['teacher']), [array_sum($rooms[(int) $c['id']] ?? []), ' align="center"'],
             [edit_link(a_url('course', '&func=Edit&id='.(int) $c['id'])).' <a href="'.a_url('enroll', '&course='.(int) $c['id']).'" title="ลงทะเบียนเรียน"><img src="../icon_tools/vec_man_dark.png" height="16"/></a> '.del_link(a_url('course', '&func=Delete&id='.(int) $c['id'])), ' align="center" width="80"']], $i);
     }
-    return ['รายวิชา ประจำภาคเรียนที่ '.$t.' ปีการศึกษา '.$y, list_table('รายวิชา ประจำภาคเรียนที่ '.$t.' ปีการศึกษา '.$y, ['#', 'รหัสวิชา', 'ชื่อรายวิชา', 'ประเภท', 'ชั้น', 'หน่วยกิต', 'คาบ', 'ครูผู้สอน', 'นักเรียน', ['', ' style="width:80px"']], $rows, count($courses).' รายวิชา',
-        btn('เพิ่มรายวิชา', a_url('course', '&func=Edit'), 'add')), head_btn('เพิ่ม', a_url('course', '&func=Edit'), 'add')];
+    $delBtn = '<a href="javascript:void(0);" id="pinkgreenbtns" style="background:#E74C3C;border-color:#C0392B" onclick="var f=document.forms.cdelf,n=f.querySelectorAll(\'input.cdel:checked\').length;if(!n){AlertBox.alert(\'<br>กรุณาเลือกรายวิชาที่ต้องการลบ\');return false;}misConfirm(f,\'ลบรายวิชาที่เลือก \'+n+\' วิชา พร้อมข้อมูลการลงทะเบียนและคะแนนของรายวิชาเหล่านั้น ต้องการลบหรือไม่?\',function(){f.submit();});return false;"><i class="fa fa-trash"></i> ลบที่เลือก</a> ';
+    $all = '<input type="checkbox" title="เลือกทั้งหมด" style="width:auto;height:auto" onclick="var c=this.checked;document.querySelectorAll(\'input.cdel\').forEach(function(x){x.checked=c})"/>';
+    return ['รายวิชา ประจำภาคเรียนที่ '.$t.' ปีการศึกษา '.$y, '<form name="cdelf" method="post" action="'.h(a_url('course', '&func=DeleteMany')).'">'.list_table('รายวิชา ประจำภาคเรียนที่ '.$t.' ปีการศึกษา '.$y, [[$all, ' style="width:30px;text-align:center"'], '#', 'รหัสวิชา', 'ชื่อรายวิชา', 'ประเภท', 'ชั้น', 'หน่วยกิต', 'คาบ', 'ครูผู้สอน', 'นักเรียน', ['', ' style="width:80px"']], $rows, count($courses).' รายวิชา',
+        $delBtn.btn('เพิ่มรายวิชา', a_url('course', '&func=Edit'), 'add')).'</form>', head_btn('เพิ่ม', a_url('course', '&func=Edit'), 'add')];
+}
+
+/** ลบรายวิชาที่เลือกพร้อมกันหลายวิชา (เฉพาะภาคเรียนที่เลือกดู) */
+function adm_course_DeleteMany(bool $post)
+{
+    [$y, $t] = term();
+    $ids = array_values(array_filter(array_map('intval', (array) ($_POST['ids'] ?? []))));
+    if ($post && $ids) {
+        $ids = array_map('intval', array_column(q('SELECT `id` FROM {course} WHERE `year`=? AND `term`=? AND `id` IN ('.implode(',', $ids).')', [$y, $t]), 'id'));
+        if ($ids) {
+            q('DELETE FROM {grade} WHERE `course_id` IN ('.implode(',', $ids).')');
+            q('DELETE FROM {course} WHERE `id` IN ('.implode(',', $ids).')');
+        }
+    }
+    admin_done('course');
 }
 
 function adm_course_Edit(bool $post)

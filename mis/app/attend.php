@@ -386,6 +386,18 @@ function act_class_options(): array
     return $o;
 }
 
+/** ระดับชั้นของกิจกรรม (เลือกได้หลายระดับ; ว่าง = ทุกระดับชั้น) */
+function act_classes(array $d): array
+{
+    return array_map('intval', md_list($d['class'] ?? ''));
+}
+
+/** ข้อความระดับชั้นของกิจกรรม เช่น ม.1, ม.2 */
+function act_class_label(array $d): string
+{
+    return implode(', ', array_map('class_short', act_classes($d)));
+}
+
 /** รายการกิจกรรมพัฒนาผู้เรียนทั้งหมด [id => data] เรียงตามประเภท/ระดับชั้น/ภาคเรียน/รหัส */
 function act_catalog(): array
 {
@@ -398,8 +410,9 @@ function act_catalog(): array
             $o[(string) $r['r1']] = $d;
         }
     }
-    uasort($o, fn($a, $b) => [$order[$a['type'] ?? ''] ?? 99, $cls[(string) ($a['class'] ?? '')] ?? 99, (string) ($a['term'] ?? ''), (string) ($a['code'] ?? '')]
-        <=> [$order[$b['type'] ?? ''] ?? 99, $cls[(string) ($b['class'] ?? '')] ?? 99, (string) ($b['term'] ?? ''), (string) ($b['code'] ?? '')]);
+    $c1 = fn($d) => $cls[(string) (act_classes($d)[0] ?? '')] ?? 99;
+    uasort($o, fn($a, $b) => [$order[$a['type'] ?? ''] ?? 99, $c1($a), (string) ($a['term'] ?? ''), (string) ($a['code'] ?? '')]
+        <=> [$order[$b['type'] ?? ''] ?? 99, $c1($b), (string) ($b['term'] ?? ''), (string) ($b['code'] ?? '')]);
     return $o;
 }
 
@@ -442,7 +455,7 @@ function adm_dev_act(bool $post)
 {
     return cat_md('dev_act', 'dev_act', 'กิจกรรมพัฒนาผู้เรียน', [
         'code' => f_text('รหัสกิจกรรม', true), 'name' => f_text('ชื่อกิจกรรม', true), 'type' => f_sel('ประเภท', ACT_TYPES), 'plan' => f_sel('หลักสูตร', ACT_PLANS),
-        'req' => f_sel('บังคับ/เลือก', ACT_REQS), 'class' => f_sel('ระดับชั้น', 'act_class_options'), 'term' => f_sel('ภาคเรียน', ACT_TERMS), 'hours' => f_num('ชั่วโมง', false),
+        'req' => f_sel('บังคับ/เลือก', ACT_REQS), 'class' => ['ระดับชั้น (เลือกได้หลายระดับ)', 'checks', 'act_class_options', true], 'term' => f_sel('ภาคเรียน', ACT_TERMS), 'hours' => f_num('ชั่วโมง', false),
         'teacher' => f_sel('ครูผู้รับผิดชอบ', 'personnel_options', false),
     ], ['code' => 'รหัสกิจกรรม', 'name' => 'ชื่อกิจกรรม', 'type' => 'ประเภท', 'plan' => 'หลักสูตร', 'req' => 'บังคับ/เลือก', 'class' => 'ระดับชั้น', 'term' => 'ภาคเรียน', 'hours' => 'ชั่วโมง'], $post, act_seed());
 }
@@ -454,7 +467,7 @@ function rows_academic_activity()
     $i = 0;
     foreach (act_catalog() as $id => $d) {
         $o .= '<tr onclick="SelecteachRow(event,$(this))"><td>'.++$i.'<a name="'.h($id).'"></a></td><td>'.h($d['code'] ?? '').'</td><td>'.h($d['name']).'</td><td>'.h(ACT_TYPES[$d['type'] ?? ''] ?? ($d['type'] ?? '')).'</td>'
-            .'<td>'.h($d['plan'] ?? '').'</td><td>'.h($d['req'] ?? '').'</td><td>'.h(($d['class'] ?? '') !== '' ? class_short($d['class']) : '').'</td><td>'.h($d['term'] ?? '').'</td></tr>';
+            .'<td>'.h($d['plan'] ?? '').'</td><td>'.h($d['req'] ?? '').'</td><td>'.h(act_class_label($d)).'</td><td>'.h($d['term'] ?? '').'</td></tr>';
     }
     return ['TBODY0' => $o];
 }
@@ -478,7 +491,7 @@ function adm_act_enroll(bool $post)
     $items = [];
     $used = [];
     foreach ($cat as $id => $d) {
-        $classes = ($d['class'] ?? '') !== '' ? [(int) $d['class']] : array_map('intval', array_keys(cats('class')));
+        $classes = act_classes($d) ?: array_map('intval', array_keys(cats('class')));
         foreach ($classes as $cl) {
             $c = $find($d, $cl);
             if ($c) {

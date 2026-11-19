@@ -475,6 +475,9 @@ function md_page(string $kind, string $option, string $label, array $fields, arr
             }
             $v = $_POST[$n] ?? '';
             $d[$n] = is_array($v) ? array_map('strval', $v) : mb_substr(trim((string) $v), 0, $t === 'textarea' ? 3000 : 250);
+            if ($t === 'checks') {
+                $d[$n] = md_list($v);
+            }
             if ($t === 'date') {
                 $d[$n] = $d[$n] !== '' ? be_date_to_iso($d[$n]) : '';
             }
@@ -495,6 +498,7 @@ function md_page(string $kind, string $option, string $label, array $fields, arr
             $html = match ($t) {
                 'textarea' => txt($n, $v),
                 'select' => sel($n, ['' => '- เลือก -'] + (is_callable($opts) ? $opts() : $opts), $v, 'style="width:300px;height:25px"'),
+                'checks' => md_checks($n, is_callable($opts) ? $opts() : $opts, $v),
                 'date' => inp($n, $v ? iso_to_be($v) : '', 120, 'text', 'placeholder="วว/ดด/ปปปป"'),
                 'number' => inp($n, $v, 100),
                 'file' => '<input type="file" name="'.$n.'"/>'.($v ? ' <a href="/datas/mis/'.h($v).'" target="_blank">'.h($d[$n.'_name'] ?? $v).'</a>' : ''),
@@ -522,6 +526,10 @@ function md_page(string $kind, string $option, string $label, array $fields, arr
                 $o = is_callable($opts) ? $opts() : $opts;
                 $v = $o[$v] ?? $v;
             }
+            if ($t === 'checks') {
+                $o = $opts ? (is_callable($opts) ? $opts() : $opts) : [];
+                $v = implode(', ', array_map(fn($x) => $o[$x] ?? $x, md_list($v)));
+            }
             $cells[] = match ($t) {
                 'date' => $v ? th_date($v, ' ') : '',
                 'file' => $v ? '<a href="/datas/mis/'.h($v).'" target="_blank">'.h($d[$c.'_name'] ?? 'เปิดไฟล์').'</a>' : '-',
@@ -533,6 +541,23 @@ function md_page(string $kind, string $option, string $label, array $fields, arr
         $rows .= zrow($cells, $i);
     }
     return list_table('รายการ'.h($label), array_merge(['#'], array_map(fn($l) => is_array($l) ? $l[0] : $l, array_values($listCols)), [['', ' style="width:60px"']]), $rows, count($items).' รายการ', btn('เพิ่ม'.$label, a_url($option, '&func=Edit'), 'add'));
+}
+
+/** ค่าหลายตัวเลือก (array หรือข้อความคั่นด้วย ,) -> [string] */
+function md_list($v): array
+{
+    return array_values(array_filter(array_map('strval', is_array($v) ? $v : explode(',', (string) $v)), fn($x) => $x !== ''));
+}
+
+/** ช่องติ๊กเลือกได้หลายค่า */
+function md_checks(string $n, array $opts, $v): string
+{
+    $on = array_flip(md_list($v));
+    $o = '<input type="hidden" name="'.h($n).'[]" value=""/>';
+    foreach ($opts as $k => $l) {
+        $o .= '<label style="display:inline-block;margin:2px 12px 2px 0;white-space:nowrap"><input type="checkbox" name="'.h($n).'[]" value="'.h((string) $k).'"'.(isset($on[(string) $k]) ? ' checked' : '').' style="width:auto;height:auto;vertical-align:-2px"/> '.h((string) $l).'</label>';
+    }
+    return '<div style="max-width:560px">'.$o.'</div>';
 }
 
 function personnel_options(): array

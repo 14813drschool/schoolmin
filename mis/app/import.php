@@ -491,8 +491,10 @@ function imp_row(string $set, array $c): string
         case 'holidays':
             [$date, $name] = $c;
             $d = imp_date($date) ?: throw new \RuntimeException('วันที่ไม่ถูกต้อง: '.$date);
-            $had = md_get('workdays', 'd'.$d) !== null;
-            md_set('workdays', 'd'.$d, '', '', json_encode(['date' => $d, 'type' => 'หยุด', 'name' => trim($name)], JSON_UNESCAPED_UNICODE));
+            // วันที่เดิม (รวมรายการที่เพิ่มจากหน้าปฏิทิน) = ปรับปรุงรายการเดิม
+            $key = md_get('workdays', 'd'.$d) !== null ? 'd'.$d : (imp_md_match('workdays', '', ['date' => $d, 'type' => 'หยุด']) ?? 'd'.$d);
+            $had = md_get('workdays', $key) !== null;
+            md_set('workdays', $key, '', '', json_encode(['date' => $d, 'type' => 'หยุด', 'name' => trim($name)], JSON_UNESCAPED_UNICODE));
             return $had ? 'update' : 'add';
 
         case 'fees':
@@ -502,8 +504,13 @@ function imp_row(string $set, array $c): string
             if (trim($cls) !== '' && !$cid) {
                 throw new \RuntimeException('ไม่พบระดับชั้น '.$cls);
             }
-            $had = md_get('fee_item', 'f'.md5(trim($name).'|'.$cid), yt()) !== null;
-            md_set('fee_item', 'f'.md5(trim($name).'|'.$cid), yt(), '', json_encode(['name' => trim($name), 'class' => (string) $cid, 'amount' => (string) (float) str_replace(',', '', $amount),
+            // รายการ + ระดับชั้นเดิม (รวมรายการที่เพิ่มจากหน้าค่าบำรุง) = ปรับปรุงรายการเดิม
+            $key = 'f'.md5(trim($name).'|'.$cid);
+            if (md_get('fee_item', $key, yt()) === null) {
+                $key = imp_md_match('fee_item', yt(), ['name' => trim($name), 'class' => (string) $cid]) ?? $key;
+            }
+            $had = md_get('fee_item', $key, yt()) !== null;
+            md_set('fee_item', $key, yt(), '', json_encode(['name' => trim($name), 'class' => (string) $cid, 'amount' => (string) (float) str_replace(',', '', $amount),
                 'group' => mb_strpos($grp, 'สพฐ') !== false ? 'obec' : 'school'], JSON_UNESCAPED_UNICODE));
             return $had ? 'update' : 'add';
 
@@ -516,6 +523,199 @@ function imp_row(string $set, array $c): string
             return $had ? 'update' : 'add';
     }
     throw new \RuntimeException('ไม่รู้จักชุดข้อมูล');
+}
+
+/* ---------------------------------------------------------------- ส่งออกข้อมูลเดิม (คอลัมน์เดียวกับไฟล์นำเข้า แก้แล้วนำเข้ากลับได้) */
+
+function exp_date(?string $iso): string
+{
+    $iso = (string) $iso;
+    return preg_match('/^\d{4}-\d{2}-\d{2}/', $iso) && substr($iso, 0, 4) !== '0000' ? iso_to_be(substr($iso, 0, 10)) : '';
+}
+
+function exp_sex(?string $v): string
+{
+    return $v === 'm' ? 'ช' : ($v === 'f' ? 'ญ' : '');
+}
+
+/** แถวข้อมูลเดิมของชุดข้อมูล (ไม่รวมหัวตาราง) */
+function imp_export(string $set): array
+{
+    [$y, $t] = term();
+    $o = [];
+    $codes = null;
+    $code = function (int $sid) use (&$codes): string {
+        if ($codes === null) {
+            $codes = array_column(q('SELECT `id`, `student_id` FROM {student}'), 'student_id', 'id');
+        }
+        return (string) ($codes[$sid] ?? '');
+    };
+    $uname = function (int $uid): string {
+        static $u = null;
+        $u ??= array_column(q('SELECT `id`, `username` FROM {user}'), 'username', 'id');
+        return (string) ($u[$uid] ?? '');
+    };
+    $stu = fn() => q('SELECT S.*, U.`name`, U.`sex`, U.`birthday` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE U.`active`=1 ORDER BY S.`class`, S.`room`, S.`number`, S.`student_id`');
+    switch ($set) {
+        case 'rooms':
+            foreach (rooms_by_class() as $cid => $rooms) {
+                foreach ($rooms as $rid => $rn) {
+                    $o[] = [$cid ? class_short($cid) : '', $rn];
+                }
+            }
+            break;
+
+        case 'students':
+            $info = stinfo_all();
+            $entry = md_options('entry_type', 'name');
+            foreach ($stu() as $s) {
+                [$pre, $fn, $ln] = split_name((string) $s['name']);
+                $d = $info[(int) $s['id']] ?? [];
+                $o[] = [$s['student_id'], $pre, $fn, $ln, exp_sex($s['sex']), $s['class'] ? class_short($s['class']) : '', $s['room'] ? room_short($s['room']) : '', (string) ($s['number'] ?? ''),
+                    (string) ($s['id_card'] ?? ''), exp_date($s['birthday'] ?? ''), (string) ($s['parent'] ?? ''), (string) ($s['parent_phone'] ?? ''), (string) ($s['address'] ?? ''),
+                    (string) ($d['nickname'] ?? ''), (string) ($entry[$d['entry'] ?? ''] ?? ''), (string) ($d['entry_year'] ?? '')];
+            }
+            break;
+
+        case 'phones':
+            $info = stinfo_all();
+            foreach ($stu() as $s) {
+                $d = $info[(int) $s['id']] ?? [];
+                $o[] = [$s['student_id'], (string) ($s['parent_phone'] ?? ''), (string) ($d['guardian_home'] ?? ''), (string) ($d['father_mobile'] ?? ''), (string) ($d['father_home'] ?? ''), (string) ($d['mother_mobile'] ?? ''), (string) ($d['mother_home'] ?? '')];
+            }
+            break;
+
+        case 'personnel':
+            $ph = array_column(q('SELECT `id`, `phone`, `sex` FROM {user}'), null, 'id');
+            foreach (personnel_rows() as $p) {
+                [$pre, $fn, $ln] = split_name((string) $p['name']);
+                $o[] = [$p['username'], $pre, $fn, $ln, exp_sex($ph[$p['id']]['sex'] ?? null), $p['position'] ? cat('position', $p['position'], '') : '', $p['department'] ? cat('department', $p['department'], '') : '', (string) ($ph[$p['id']]['phone'] ?? ''), ''];
+            }
+            break;
+
+        case 'advisors':
+            $adv = room_advisors();
+            foreach (rooms_by_class() as $cid => $rooms) {
+                foreach ($rooms as $rid => $rn) {
+                    $a = $adv[$rid] ?? [];
+                    $o[] = [$rn, isset($a[0]) ? $uname($a[0]) : '', isset($a[1]) ? $uname($a[1]) : ''];
+                }
+            }
+            break;
+
+        case 'stroom':
+            $years = array_map('intval', array_column(q('SELECT DISTINCT `r2` y FROM {mis_data} WHERE `kind`=?', ['stroom']), 'y'));
+            foreach (q('SELECT DISTINCT `year` FROM {course} WHERE `year`<?', [cur_term()[0]]) as $r) {
+                $years[] = (int) $r['year'];
+            }
+            $years = array_unique(array_filter($years, fn($v) => $v >= 2400 && $v < cur_term()[0]));
+            sort($years);
+            foreach ($years as $yy) {
+                $rows = year_rooms($yy);
+                uasort($rows, fn($a, $b) => [$a['room'], (int) $a['number']] <=> [$b['room'], (int) $b['number']]);
+                foreach ($rows as $sid => $d) {
+                    if ($code($sid) !== '' && $d['room']) {
+                        $o[] = [$code($sid), (string) $yy, class_room_short($d['class'], $d['room']), (string) ($d['number'] ?? '')];
+                    }
+                }
+            }
+            break;
+
+        case 'advhist':
+            $rows = md_rows('adv_hist');
+            usort($rows, fn($a, $b) => [(int) $a['r1'], (int) $a['r2']] <=> [(int) $b['r1'], (int) $b['r2']]);
+            foreach ($rows as $r) {
+                if ((int) $r['r1'] >= cur_term()[0]) {
+                    continue;
+                }
+                $a = array_values(json_decode((string) $r['value'], true) ?: []);
+                $o[] = [(string) $r['r1'], class_room_short(room_class((int) $r['r2']), (int) $r['r2']), isset($a[0]) ? $uname((int) $a[0]) : '', isset($a[1]) ? $uname((int) $a[1]) : ''];
+            }
+            break;
+
+        case 'sstatus':
+            $st = student_status();
+            foreach (q('SELECT S.`id`, S.`student_id` FROM {student} S ORDER BY S.`class`, S.`room`, S.`number`, S.`student_id`') as $s) {
+                $d = $st[(int) $s['id']] ?? ['status' => 'ศึกษาอยู่', 'date' => '', 'note' => ''];
+                $o[] = [$s['student_id'], $d['status'] ?: 'ศึกษาอยู่', exp_date($d['date'] ?? ''), (string) ($d['note'] ?? '')];
+            }
+            break;
+
+        case 'courses':
+            foreach (q('SELECT * FROM {course} WHERE `year`=? AND `term`=? ORDER BY `class`, `type`, `course_code`', [$y, $t]) as $c) {
+                $o[] = [$y, $t, $c['course_code'], $c['course_name'], $c['class'] ? class_short($c['class']) : '', (string) (float) $c['credit'], (string) (int) $c['period'], COURSE_TYPES[(int) $c['type']] ?? 'พื้นฐาน', $uname((int) $c['teacher_id'])];
+            }
+            break;
+
+        case 'enroll':
+            foreach (q('SELECT C.`course_code`, S.`student_id` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` JOIN {student} S ON S.`id`=G.`student_id` WHERE C.`year`=? AND C.`term`=? ORDER BY C.`class`, C.`course_code`, G.`room`, G.`number`, S.`student_id`', [$y, $t]) as $r) {
+                $o[] = [$y, $t, $r['course_code'], $r['student_id']];
+            }
+            break;
+
+        case 'scores':
+            foreach (q('SELECT C.`course_code`, C.`course_name`, C.`credit`, C.`class`, C.`type`, S.`student_id`, G.`midterm`, G.`final`, G.`grade` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` JOIN {student} S ON S.`id`=G.`student_id` WHERE C.`year`=? AND C.`term`=? ORDER BY C.`class`, C.`course_code`, G.`room`, G.`number`, S.`student_id`', [$y, $t]) as $r) {
+                $o[] = [$y, $t, $r['course_code'], $r['student_id'], (string) ($r['midterm'] ?? ''), (string) ($r['final'] ?? ''), (string) ($r['grade'] ?? ''), $r['course_name'], (string) (float) $r['credit'], $r['class'] ? class_short($r['class']) : '', COURSE_TYPES[(int) $r['type']] ?? 'พื้นฐาน'];
+            }
+            break;
+
+        case 'clubs':
+            foreach (md_rows('club', null, yt()) as $r) {
+                $d = json_decode((string) $r['value'], true) ?: [];
+                $o[] = [(string) ($d['name'] ?? ''), $uname((int) ($d['teacher'] ?? 0)), (string) ($d['place'] ?? ''), (string) ($d['seats'] ?? ''), (int) ($d['class'] ?? 0) ? class_short($d['class']) : ''];
+            }
+            break;
+
+        case 'behavior':
+            $rules = md_options('sa_rule', 'name');
+            foreach (md_rows('sa_bad', null, yt()) as $r) {
+                $d = json_decode((string) $r['value'], true) ?: [];
+                $o[] = [$code((int) ($d['student'] ?? 0)), exp_date($d['date'] ?? ''), (string) ($rules[$d['rule'] ?? ''] ?? ''), (string) ($d['points'] ?? ''), (string) ($d['detail'] ?? '')];
+            }
+            break;
+
+        case 'scholar':
+            $funds = md_options('sa_fund', 'name');
+            foreach (md_rows('sa_fund_student', null, yt()) as $r) {
+                $d = json_decode((string) $r['value'], true) ?: [];
+                $o[] = [$code((int) ($d['student'] ?? 0)), (string) ($funds[$d['fund'] ?? ''] ?? ''), (string) ($d['amount'] ?? ''), exp_date($d['date'] ?? '')];
+            }
+            break;
+
+        case 'leave':
+            foreach (md_rows('leave', null, yt()) as $r) {
+                $d = json_decode((string) $r['value'], true) ?: [];
+                $o[] = [$uname((int) ($d['person'] ?? 0)), LEAVE_TYPES[$d['type'] ?? ''] ?? (string) ($d['type'] ?? ''), exp_date($d['from'] ?? ''), exp_date($d['to'] ?? ''), (string) ($d['days'] ?? ''), (string) ($d['note'] ?? '')];
+            }
+            break;
+
+        case 'holidays':
+            foreach (md_rows('workdays') as $r) {
+                $d = json_decode((string) $r['value'], true) ?: [];
+                if (($d['type'] ?? '') === 'หยุด') {
+                    $o[] = [exp_date($d['date'] ?? ''), (string) ($d['name'] ?? ''), $d['date'] ?? ''];
+                }
+            }
+            usort($o, fn($a, $b) => strcmp($a[2], $b[2]));
+            $o = array_map(fn($a) => [$a[0], $a[1]], $o);
+            break;
+
+        case 'fees':
+            foreach (md_rows('fee_item', null, yt()) as $r) {
+                $d = json_decode((string) $r['value'], true) ?: [];
+                $o[] = [(string) ($d['name'] ?? ''), (int) ($d['class'] ?? 0) ? class_short($d['class']) : '', (string) ($d['amount'] ?? ''), ($d['group'] ?? 'school') === 'obec' ? 'สพฐ.' : 'โรงเรียน'];
+            }
+            break;
+
+        case 'payments':
+            foreach (md_rows('pay', null, yt()) as $r) {
+                $d = json_decode((string) $r['value'], true) ?: [];
+                $m = ['cash' => 'เงินสด', 'bank' => 'ธนาคาร', 'transfer' => 'โอน'][$d['method'] ?? ''] ?? 'เงินสด';
+                $o[] = [$code((int) $r['r1']), (string) ($d['amount'] ?? ''), exp_date($d['date'] ?? ''), $m, (string) ($d['book'] ?? ''), (string) ($d['no'] ?? ''), (string) ($d['ref'] ?? '')];
+            }
+            break;
+    }
+    return $o;
 }
 
 /* ---------------------------------------------------------------- หน้า */
@@ -535,6 +735,21 @@ function adm_csv_import(bool $post)
         header('Content-Disposition: attachment; filename="import_'.$_GET['tpl'].'.csv"');
         header('Cache-Control: no-store');
         echo "\xEF\xBB\xBF".$line(array_keys($cols)).$line(array_values($cols));
+        return null;
+    }
+
+    // ดาวน์โหลดข้อมูลเดิมในระบบ (หัวคอลัมน์เดียวกับไฟล์นำเข้า แก้ไขแล้วนำเข้ากลับได้)
+    if (isset($_GET['export']) && isset($sets[$_GET['export']])) {
+        $k = (string) $_GET['export'];
+        $line = fn($a) => implode(',', array_map(fn($v) => '"'.str_replace('"', '""', (string) $v).'"', $a))."\r\n";
+        $out = "\xEF\xBB\xBF".$line(array_keys($sets[$k][2]));
+        foreach (imp_export($k) as $r) {
+            $out .= $line($r);
+        }
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="data_'.$k.'_'.date('Ymd').'.csv"');
+        header('Cache-Control: no-store');
+        echo $out;
         return null;
     }
 
@@ -577,11 +792,12 @@ function adm_csv_import(bool $post)
     $i = 0;
     foreach ($sets as $k => [$label, $mod, $cols, $note]) {
         $rows .= zrow([++$i, '<a id="'.$k.'"></a><b>'.h($label).'</b><br><span class="gray_12">'.h($mods[$mod][3] ?? $mods[$mod][0]).'</span>', '<span style="font-size:11px">'.h(implode(', ', array_keys($cols))).'</span><br><span class="gray_12" style="font-size:11px">'.h($note).'</span>',
-            ['<a href="'.a_url('csv_import', '&tpl='.$k).'"><i class="fa fa-download"></i> ไฟล์ตัวอย่าง</a>', ' align="center" style="white-space:nowrap"'],
+            ['<a href="'.a_url('csv_import', '&tpl='.$k).'"><i class="fa fa-download"></i> ไฟล์ตัวอย่าง</a><br><a href="'.a_url('csv_import', '&export='.$k).'" style="color:#1E8449"><i class="fa fa-download"></i> ข้อมูลเดิมในระบบ</a>', ' align="center" style="white-space:nowrap"'],
             ['<form method="post" enctype="multipart/form-data" action="'.h(a_url('csv_import', '&set='.$k)).'" style="margin:0;white-space:nowrap"><input type="hidden" name="set" value="'.$k.'"/>'
                 .'<input type="file" name="csv" accept=".csv,.txt" required style="width:190px;font-size:11px"/> <input type="submit" value="นำเข้า" class="general radius" style="height:24px"/></form>', ' align="center"']], $i);
     }
     $help = '<p style="width:983px;margin:0 auto 8px;text-align:left" class="gray_12">ขั้นตอน: 1) ดาวน์โหลดไฟล์ตัวอย่าง 2) กรอกข้อมูลใน Excel ตามหัวคอลัมน์ (ลบแถวตัวอย่างออก) 3) บันทึกเป็น CSV (UTF-8) 4) เลือกไฟล์แล้วกด "นำเข้า"<br>'
+        .'แก้ไขข้อมูลเดิม: กด "ข้อมูลเดิมในระบบ" เพื่อดาวน์โหลดข้อมูลที่มีอยู่ (รายวิชา/ลงทะเบียน/ผลการเรียน/ชุมนุม/พฤติกรรม/ทุน/การลา/ค่าบำรุง/การชำระเงิน เป็นของภาคเรียนที่เลือกดู '.yt().') แก้ไขใน Excel แล้วนำเข้ากลับ — รหัสผ่านบุคลากรเว้นว่างไว้ (ไม่เปลี่ยนรหัสผ่านเดิม)<br>'
         .'วันที่ใช้รูปแบบ วว/ดด/ปปปป (พ.ศ.) / ระดับชั้นใช้ชื่อเต็มหรือชื่อย่อ เช่น ม.1 / ห้องใช้ชื่อห้อง เช่น 1/1 / ข้อมูลที่มีอยู่แล้วจะถูกปรับปรุง ไม่สร้างซ้ำ</p>';
     return ['นำเข้าข้อมูลจากไฟล์ CSV', $result.$help.list_table('ชุดข้อมูลที่นำเข้าได้', ['#', 'ข้อมูล', 'คอลัมน์ในไฟล์', ['ตัวอย่าง', ' style="text-align:center"'], ['นำเข้าไฟล์', ' style="text-align:center"']], $rows, count($sets).' ชุดข้อมูล')];
 }

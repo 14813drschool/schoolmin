@@ -538,11 +538,11 @@ function exp_sex(?string $v): string
     return $v === 'm' ? 'ช' : ($v === 'f' ? 'ญ' : '');
 }
 
-/** แถวข้อมูลเดิมของชุดข้อมูล (ไม่รวมหัวตาราง) */
-function imp_export(string $set): array
+/** แถวข้อมูลเดิมของชุดข้อมูล (ไม่รวมหัวตาราง) / $year: รายวิชา-ลงทะเบียน-ผลการเรียน 0 = ทุกปีการศึกษา */
+function imp_export(string $set, int $year = 0): array
 {
-    [$y, $t] = term();
     $o = [];
+    $yw = $year ? ' C.`year`='.$year : ' 1=1';
     $codes = null;
     $code = function (int $sid) use (&$codes): string {
         if ($codes === null) {
@@ -642,20 +642,20 @@ function imp_export(string $set): array
             break;
 
         case 'courses':
-            foreach (q('SELECT * FROM {course} WHERE `year`=? AND `term`=? ORDER BY `class`, `type`, `course_code`', [$y, $t]) as $c) {
-                $o[] = [$y, $t, $c['course_code'], $c['course_name'], $c['class'] ? class_short($c['class']) : '', (string) (float) $c['credit'], (string) (int) $c['period'], COURSE_TYPES[(int) $c['type']] ?? 'พื้นฐาน', $uname((int) $c['teacher_id'])];
+            foreach (q('SELECT * FROM {course} C WHERE'.$yw.' ORDER BY C.`year`, C.`term`, C.`class`, C.`type`, C.`course_code`') as $c) {
+                $o[] = [$c['year'], $c['term'], $c['course_code'], $c['course_name'], $c['class'] ? class_short($c['class']) : '', (string) (float) $c['credit'], (string) (int) $c['period'], COURSE_TYPES[(int) $c['type']] ?? 'พื้นฐาน', $uname((int) $c['teacher_id'])];
             }
             break;
 
         case 'enroll':
-            foreach (q('SELECT C.`course_code`, S.`student_id` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` JOIN {student} S ON S.`id`=G.`student_id` WHERE C.`year`=? AND C.`term`=? ORDER BY C.`class`, C.`course_code`, G.`room`, G.`number`, S.`student_id`', [$y, $t]) as $r) {
-                $o[] = [$y, $t, $r['course_code'], $r['student_id']];
+            foreach (q('SELECT C.`year`, C.`term`, C.`course_code`, S.`student_id` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` JOIN {student} S ON S.`id`=G.`student_id` WHERE'.$yw.' ORDER BY C.`year`, C.`term`, C.`class`, C.`course_code`, G.`room`, G.`number`, S.`student_id`') as $r) {
+                $o[] = [$r['year'], $r['term'], $r['course_code'], $r['student_id']];
             }
             break;
 
         case 'scores':
-            foreach (q('SELECT C.`course_code`, C.`course_name`, C.`credit`, C.`class`, C.`type`, S.`student_id`, G.`midterm`, G.`final`, G.`grade` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` JOIN {student} S ON S.`id`=G.`student_id` WHERE C.`year`=? AND C.`term`=? ORDER BY C.`class`, C.`course_code`, G.`room`, G.`number`, S.`student_id`', [$y, $t]) as $r) {
-                $o[] = [$y, $t, $r['course_code'], $r['student_id'], (string) ($r['midterm'] ?? ''), (string) ($r['final'] ?? ''), (string) ($r['grade'] ?? ''), $r['course_name'], (string) (float) $r['credit'], $r['class'] ? class_short($r['class']) : '', COURSE_TYPES[(int) $r['type']] ?? 'พื้นฐาน'];
+            foreach (q('SELECT C.`year`, C.`term`, C.`course_code`, C.`course_name`, C.`credit`, C.`class`, C.`type`, S.`student_id`, G.`midterm`, G.`final`, G.`grade` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` JOIN {student} S ON S.`id`=G.`student_id` WHERE'.$yw.' ORDER BY C.`year`, C.`term`, C.`class`, C.`course_code`, G.`room`, G.`number`, S.`student_id`') as $r) {
+                $o[] = [$r['year'], $r['term'], $r['course_code'], $r['student_id'], (string) ($r['midterm'] ?? ''), (string) ($r['final'] ?? ''), (string) ($r['grade'] ?? ''), $r['course_name'], (string) (float) $r['credit'], $r['class'] ? class_short($r['class']) : '', COURSE_TYPES[(int) $r['type']] ?? 'พื้นฐาน'];
             }
             break;
 
@@ -743,11 +743,11 @@ function adm_csv_import(bool $post)
         $k = (string) $_GET['export'];
         $line = fn($a) => implode(',', array_map(fn($v) => '"'.str_replace('"', '""', (string) $v).'"', $a))."\r\n";
         $out = "\xEF\xBB\xBF".$line(array_keys($sets[$k][2]));
-        foreach (imp_export($k) as $r) {
+        foreach (imp_export($k, (int) ($_GET['y'] ?? 0)) as $r) {
             $out .= $line($r);
         }
         header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="data_'.$k.'_'.date('Ymd').'.csv"');
+        header('Content-Disposition: attachment; filename="data_'.$k.((int) ($_GET['y'] ?? 0) ? '_'.(int) $_GET['y'] : '').'_'.date('Ymd').'.csv"');
         header('Cache-Control: no-store');
         echo $out;
         return null;
@@ -788,16 +788,21 @@ function adm_csv_import(bool $post)
     }
 
     $mods = admin_modules();
+    // ตัวเลือกปีการศึกษาสำหรับดาวน์โหลดรายวิชา/ลงทะเบียน/ผลการเรียน (ค่าเริ่มต้น = ทุกปี)
+    $yopt = '<option value="">ทุกปีการศึกษา</option>';
+    foreach (q('SELECT DISTINCT `year` FROM {course} ORDER BY `year` DESC') as $r) {
+        $yopt .= '<option value="'.(int) $r['year'].'">ปี '.(int) $r['year'].'</option>';
+    }
     $rows = '';
     $i = 0;
     foreach ($sets as $k => [$label, $mod, $cols, $note]) {
         $rows .= zrow([++$i, '<a id="'.$k.'"></a><b>'.h($label).'</b><br><span class="gray_12">'.h($mods[$mod][3] ?? $mods[$mod][0]).'</span>', '<span style="font-size:11px">'.h(implode(', ', array_keys($cols))).'</span><br><span class="gray_12" style="font-size:11px">'.h($note).'</span>',
-            ['<a href="'.a_url('csv_import', '&tpl='.$k).'"><i class="fa fa-download"></i> ไฟล์ตัวอย่าง</a><br><a href="'.a_url('csv_import', '&export='.$k).'" style="color:#1E8449"><i class="fa fa-download"></i> ข้อมูลเดิมในระบบ</a>', ' align="center" style="white-space:nowrap"'],
+            ['<a href="'.a_url('csv_import', '&tpl='.$k).'"><i class="fa fa-download"></i> ไฟล์ตัวอย่าง</a><br>'.(in_array($k, ['courses', 'enroll', 'scores'], true) ? '<select style="font-size:11px;height:20px;margin:2px 0" onchange="var a=this.parentNode.querySelector(\'a.exp\');a.href=a.href.replace(/&y=\\d*/,\'\')+(this.value?\'&y=\'+this.value:\'\')">'.$yopt.'</select><br>' : '').'<a class="exp" href="'.a_url('csv_import', '&export='.$k).'" style="color:#1E8449"><i class="fa fa-download"></i> ข้อมูลเดิมในระบบ</a>', ' align="center" style="white-space:nowrap"'],
             ['<form method="post" enctype="multipart/form-data" action="'.h(a_url('csv_import', '&set='.$k)).'" style="margin:0;white-space:nowrap"><input type="hidden" name="set" value="'.$k.'"/>'
                 .'<input type="file" name="csv" accept=".csv,.txt" required style="width:190px;font-size:11px"/> <input type="submit" value="นำเข้า" class="general radius" style="height:24px"/></form>', ' align="center"']], $i);
     }
     $help = '<p style="width:983px;margin:0 auto 8px;text-align:left" class="gray_12">ขั้นตอน: 1) ดาวน์โหลดไฟล์ตัวอย่าง 2) กรอกข้อมูลใน Excel ตามหัวคอลัมน์ (ลบแถวตัวอย่างออก) 3) บันทึกเป็น CSV (UTF-8) 4) เลือกไฟล์แล้วกด "นำเข้า"<br>'
-        .'แก้ไขข้อมูลเดิม: กด "ข้อมูลเดิมในระบบ" เพื่อดาวน์โหลดข้อมูลที่มีอยู่ (รายวิชา/ลงทะเบียน/ผลการเรียน/ชุมนุม/พฤติกรรม/ทุน/การลา/ค่าบำรุง/การชำระเงิน เป็นของภาคเรียนที่เลือกดู '.yt().') แก้ไขใน Excel แล้วนำเข้ากลับ — รหัสผ่านบุคลากรเว้นว่างไว้ (ไม่เปลี่ยนรหัสผ่านเดิม)<br>'
+        .'แก้ไขข้อมูลเดิม: กด "ข้อมูลเดิมในระบบ" เพื่อดาวน์โหลดข้อมูลที่มีอยู่ (รายวิชา/ลงทะเบียน/ผลการเรียน ได้ทุกปีการศึกษา หรือเลือกเฉพาะปี / ชุมนุม/พฤติกรรม/ทุน/การลา/ค่าบำรุง/การชำระเงิน เป็นของภาคเรียนที่เลือกดู '.yt().' — เปลี่ยนภาคเรียนด้านบนเพื่อดาวน์โหลดภาคอื่น) แก้ไขใน Excel แล้วนำเข้ากลับ — รหัสผ่านบุคลากรเว้นว่างไว้ (ไม่เปลี่ยนรหัสผ่านเดิม)<br>'
         .'วันที่ใช้รูปแบบ วว/ดด/ปปปป (พ.ศ.) / ระดับชั้นใช้ชื่อเต็มหรือชื่อย่อ เช่น ม.1 / ห้องใช้ชื่อห้อง เช่น 1/1 / ข้อมูลที่มีอยู่แล้วจะถูกปรับปรุง ไม่สร้างซ้ำ</p>';
     return ['นำเข้าข้อมูลจากไฟล์ CSV', $result.$help.list_table('ชุดข้อมูลที่นำเข้าได้', ['#', 'ข้อมูล', 'คอลัมน์ในไฟล์', ['ตัวอย่าง', ' style="text-align:center"'], ['นำเข้าไฟล์', ' style="text-align:center"']], $rows, count($sets).' ชุดข้อมูล')];
 }

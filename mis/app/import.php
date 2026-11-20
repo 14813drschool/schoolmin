@@ -28,9 +28,9 @@ function import_sets(): array
         'sstatus' => ['สถานะนักเรียน (เข้าใหม่/จบ/ย้าย/ลาออก)', 'main', ['รหัสนักเรียน' => '12345', 'สถานภาพ' => 'จบการศึกษาภาคบังคับ', 'วันที่' => '31/03/2570', 'หมายเหตุ' => ''],
             'สถานภาพ: '.implode(', ', STUDENT_STATUS).' (สถานภาพอื่นที่ไม่ใช่ "ศึกษาอยู่" จะพ้นจากทะเบียนปัจจุบัน)'],
         'courses' => ['รายวิชา (ได้ทุกปีการศึกษา)', 'academic', ['ปีการศึกษา' => '2568', 'ภาคเรียน' => '1', 'รหัสวิชา' => 'ค21101', 'ชื่อวิชา' => 'คณิตศาสตร์ 1', 'ระดับชั้น' => 'ม.1', 'หน่วยกิต' => '1.5', 'คาบ/สัปดาห์' => '3',
-            'ประเภท (พื้นฐาน/เพิ่มเติม/กิจกรรม)' => 'พื้นฐาน', 'ชื่อผู้ใช้ครูผู้สอน' => 'teacher01'], 'ใส่ปีการศึกษา/ภาคเรียนของแต่ละแถว ไฟล์เดียวมีหลายปีได้ (เว้นว่าง = ภาคเรียนปัจจุบัน '.yt().') / ปี+ภาค+รหัสวิชา+ชั้นเดิม = ปรับปรุง'],
+            'ประเภท (พื้นฐาน/เพิ่มเติม/กิจกรรม)' => 'พื้นฐาน', 'ชื่อผู้ใช้ครูผู้สอน' => 'teacher01'], 'รหัสวิชาเว้นว่างได้ (เช่น กิจกรรมพัฒนาผู้เรียน ใช้ชื่อวิชาแทน) / ใส่ปีการศึกษา/ภาคเรียนของแต่ละแถว ไฟล์เดียวมีหลายปีได้ (เว้นว่าง = ภาคเรียนปัจจุบัน '.yt().') / ปี+ภาค+รหัสวิชา+ชั้นเดิม = ปรับปรุง'],
         'enroll' => ['ลงทะเบียนเรียน (ได้ทุกปีการศึกษา)', 'academic', ['ปีการศึกษา' => '2568', 'ภาคเรียน' => '1', 'รหัสวิชา' => 'ค21101', 'ห้อง หรือ รหัสนักเรียน' => '1/1'],
-            'ใส่ห้อง = ลงทะเบียนทั้งห้อง (ตามรายชื่อห้องปัจจุบัน) / ใส่รหัสนักเรียน = รายคน / ปีการศึกษาเว้นว่าง = ภาคเรียนปัจจุบัน'],
+            'รายวิชาที่ไม่มีรหัสใส่ชื่อวิชาแทนรหัสวิชาได้ / ใส่ห้อง = ลงทะเบียนทั้งห้อง (ตามรายชื่อห้องปัจจุบัน) / ใส่รหัสนักเรียน = รายคน / ปีการศึกษาเว้นว่าง = ภาคเรียนปัจจุบัน'],
         'scores' => ['ผลการเรียน (ได้ทุกปีการศึกษา)', 'academic', ['ปีการศึกษา' => '2568', 'ภาคเรียน' => '1', 'รหัสวิชา' => 'ค21101', 'รหัสนักเรียน' => '12345', 'คะแนนระหว่างภาค' => '60', 'คะแนนปลายภาค' => '25',
             'ผลการเรียน (เว้นว่างให้คำนวณ)' => '', 'ชื่อวิชา' => 'คณิตศาสตร์ 1', 'หน่วยกิต' => '1.5', 'ระดับชั้นของรายวิชา' => 'ม.1', 'ประเภท (พื้นฐาน/เพิ่มเติม/กิจกรรม)' => 'พื้นฐาน'],
             'ไฟล์เดียวใส่ผลการเรียนหลายปี/หลายภาคได้ ถ้ายังไม่มีรายวิชาในภาคนั้นและกรอกชื่อวิชาไว้ ระบบจะสร้างรายวิชาให้ / ผลการเรียนใส่ได้ทั้งตัวเลขและ ร มส มผ ผ'],
@@ -210,7 +210,10 @@ function imp_term(string $y, string $t): array
 function imp_course(string $code, int $class = 0, ?array $yt = null): ?array
 {
     [$y, $t] = $yt ?? term();
-    return q1('SELECT * FROM {course} WHERE `course_code`=? AND `year`=? AND `term`=?'.($class ? ' AND `class`='.$class : '').' ORDER BY `id` LIMIT 1', [trim($code), $y, $t]);
+    $c = trim($code);
+    // รายวิชาที่ไม่มีรหัสวิชา (เช่น กิจกรรมพัฒนาผู้เรียน) ค้นจากชื่อวิชาแทน
+    return $c === '' ? null : (q1('SELECT * FROM {course} WHERE `course_code`=? AND `year`=? AND `term`=?'.($class ? ' AND `class`='.$class : '').' ORDER BY `id` LIMIT 1', [$c, $y, $t])
+        ?? q1('SELECT * FROM {course} WHERE `course_code`=\'\' AND `course_name`=? AND `year`=? AND `term`=?'.($class ? ' AND `class`='.$class : '').' ORDER BY `id` LIMIT 1', [$c, $y, $t]));
 }
 
 /* ---------------------------------------------------------------- การนำเข้าแต่ละแถว: คืนค่า 'add' | 'update' หรือ throw ข้อความผิดพลาด */
@@ -381,7 +384,6 @@ function imp_row(string $set, array $c): string
 
         case 'courses':
             [$yr, $tm, $code, $name, $cls, $credit, $period, $type, $un] = $c;
-            $need($code, 'รหัสวิชา');
             $need($name, 'ชื่อวิชา');
             [$y, $t] = imp_term($yr, $tm);
             $cid = imp_class($cls);
@@ -391,7 +393,8 @@ function imp_row(string $set, array $c): string
                 throw new \RuntimeException('ไม่พบครู '.$un);
             }
             $v = [mb_substr(trim($name), 0, 50), (int) $tid, $cid, max(0, (int) $period), min(9.9, max(0, (float) $credit)), (int) $typeId];
-            if ($ex = q1('SELECT `id` FROM {course} WHERE `course_code`=? AND `class`=? AND `year`=? AND `term`=?', [trim($code), $cid, $y, $t])) {
+            // ไม่มีรหัสวิชา (เช่น กิจกรรมพัฒนาผู้เรียน) = ใช้ชื่อวิชาจับคู่รายการเดิม
+            if ($ex = q1('SELECT `id` FROM {course} WHERE `course_code`=? AND `class`=? AND `year`=? AND `term`=?'.(trim($code) === '' ? ' AND `course_name`=?' : ''), array_merge([trim($code), $cid, $y, $t], trim($code) === '' ? [$v[0]] : []))) {
                 q('UPDATE {course} SET `course_name`=?, `teacher_id`=IF(?>0,?,`teacher_id`), `class`=?, `period`=?, `credit`=?, `type`=? WHERE `id`=?', [$v[0], $v[1], $v[1], $v[2], $v[3], $v[4], $v[5], (int) $ex['id']]);
                 return 'update';
             }
@@ -420,18 +423,21 @@ function imp_row(string $set, array $c): string
 
         case 'scores':
             [$yr, $tm, $code, $sc, $mid, $fin, $g, $cname, $credit, $ccls, $ctype] = $c;
-            $need($code, 'รหัสวิชา');
+            if (trim($code) === '' && trim($cname) === '') {
+                throw new \RuntimeException('ไม่มีรหัสวิชาหรือชื่อวิชา');
+            }
             $yt = imp_term($yr, $tm);
             $s = imp_student($sc) ?? throw new \RuntimeException('ไม่พบนักเรียน '.$sc);
             $cc = imp_class($ccls);
-            $course = imp_course($code, $cc ?: (int) $s['class'], $yt) ?? imp_course($code, 0, $yt);
+            $ckey = trim($code) !== '' ? $code : $cname;
+            $course = imp_course($ckey, $cc ?: (int) $s['class'], $yt) ?? imp_course($ckey, 0, $yt);
             if (!$course) {
                 if (trim($cname) === '') {
                     throw new \RuntimeException('ไม่พบรายวิชา '.$code.' ในภาคเรียน '.$yt[1].'/'.$yt[0].' (กรอกชื่อวิชาเพื่อให้สร้างรายวิชาอัตโนมัติ)');
                 }
                 q('INSERT INTO {course} (`course_name`,`course_code`,`teacher_id`,`class`,`period`,`credit`,`type`,`year`,`term`) VALUES (?,?,0,?,0,?,?,?,?)',
                     [mb_substr(trim($cname), 0, 50), mb_substr(trim($code), 0, 20), $cc ?: (int) $s['class'], min(9.9, max(0, (float) $credit)), (int) (array_search(trim($ctype), COURSE_TYPES, true) ?: 1), $yt[0], $yt[1]]);
-                $course = imp_course($code, $cc ?: (int) $s['class'], $yt);
+                $course = imp_course($ckey, $cc ?: (int) $s['class'], $yt);
             }
             // ไม่ระบุเกรด: คำนวณเฉพาะเมื่อมีคะแนนทั้งสองช่อง (ยังสอบไม่ครบ = ยังไม่มีเกรด)
             $g = trim($g) !== '' ? trim($g) : ((trim($mid) === '' || trim($fin) === '') ? null : grade_of((int) $mid + (int) $fin));
@@ -648,7 +654,7 @@ function imp_export(string $set, int $year = 0): array
             break;
 
         case 'enroll':
-            foreach (q('SELECT C.`year`, C.`term`, C.`course_code`, S.`student_id` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` JOIN {student} S ON S.`id`=G.`student_id` WHERE'.$yw.' ORDER BY C.`year`, C.`term`, C.`class`, C.`course_code`, G.`room`, G.`number`, S.`student_id`') as $r) {
+            foreach (q('SELECT C.`year`, C.`term`, IF(C.`course_code`=\'\', C.`course_name`, C.`course_code`) course_code, S.`student_id` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` JOIN {student} S ON S.`id`=G.`student_id` WHERE'.$yw.' ORDER BY C.`year`, C.`term`, C.`class`, C.`course_code`, G.`room`, G.`number`, S.`student_id`') as $r) {
                 $o[] = [$r['year'], $r['term'], $r['course_code'], $r['student_id']];
             }
             break;

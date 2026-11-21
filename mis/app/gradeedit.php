@@ -112,6 +112,9 @@ function adm_grade_edit(bool $post)
                 continue;
             }
             if (!empty($d['del'])) {
+                if ($g = q1('SELECT `course_id` FROM {grade} WHERE `id`=?', [$gid])) {
+                    auto_enroll_out((int) $g['course_id'], $sid); // ถอนออกแล้ว ระบบจะไม่ลงทะเบียนให้ซ้ำ
+                }
                 q('DELETE FROM {grade} WHERE `id`=?', [$gid]);
                 md_set('tscore', $gid, '', '', null);
                 md_set('rec_split', $gid, '', '', null);

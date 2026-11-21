@@ -713,6 +713,7 @@ function record_status_cell(array $st): string
 
 function rows_task_study_record()
 {
+    auto_enroll(); // ลงทะเบียนอัตโนมัติ (รายวิชา/กิจกรรมตามระดับชั้น)
     $all = my_courses();
     $ids = array_map(fn($c) => (int) $c['id'], $all);
     $done = [];

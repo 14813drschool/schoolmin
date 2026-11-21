@@ -263,6 +263,7 @@ function a_url(string $option, string $extra = ''): string
 
 function admin_done(string $option, string $extra = ''): void
 {
+    auto_enroll_dirty(); // ข้อมูลเปลี่ยน: ลงทะเบียนอัตโนมัติรอบถัดไปทำงานทันที
     redirect(a_url($option, $extra.'&msg=saved'));
 }
 
@@ -866,7 +867,7 @@ function adm_permission(bool $post)
 
 function adm_course(bool $post)
 {
-    act_merge_dups(); // รวมกิจกรรมพัฒนาผู้เรียนซ้ำ (ไม่มีรหัส + มีรหัส ชื่อเดียวกัน)
+    auto_enroll(true); // รวมกิจกรรมซ้ำ + ลงทะเบียนอัตโนมัติตามระดับชั้น
     [$y, $t] = term();
     $rows = '';
     $courses = q('SELECT C.*, U.`name` teacher FROM {course} C LEFT JOIN {user} U ON U.`id`=C.`teacher_id` WHERE C.`year`=? AND C.`term`=? ORDER BY C.`class`, C.`type`, C.`course_code`', [$y, $t]);
@@ -957,6 +958,7 @@ function adm_course_copy(bool $post)
 
 function adm_enroll(bool $post)
 {
+    auto_enroll(true);
     [$y, $t] = term();
     $courses = q('SELECT * FROM {course} WHERE `year`=? AND `term`=? ORDER BY `class`, `course_code`', [$y, $t]);
     $cid = (int) ($_GET['course'] ?? ($courses[0]['id'] ?? 0));
@@ -969,14 +971,22 @@ function adm_enroll(bool $post)
         $n = 0;
         if (isset($_POST['add_room']) && $room) {
             foreach (q('SELECT S.`id`, S.`number` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`room`=? AND U.`active`=1', [$room]) as $s) {
+                auto_enroll_out($cid, (int) $s['id'], false);
                 if (!q1('SELECT 1 x FROM {grade} WHERE `course_id`=? AND `student_id`=?', [$cid, (int) $s['id']])) {
                     q('INSERT INTO {grade} (`student_id`,`course_id`,`number`,`room`,`type`) VALUES (?,?,?,?,1)', [(int) $s['id'], $cid, $s['number'], $room]);
                     $n++;
                 }
             }
+            md_set('enroll_manual', $cid, '', '', null);
         }
         foreach ((array) ($_POST['remove'] ?? []) as $gid) {
+            if ($g = q1('SELECT `student_id` FROM {grade} WHERE `id`=? AND `course_id`=?', [(int) $gid, $cid])) {
+                auto_enroll_out($cid, (int) $g['student_id']); // ถอนออกแล้ว ระบบจะไม่ลงทะเบียนให้ซ้ำ
+            }
             q('DELETE FROM {grade} WHERE `id`=? AND `course_id`=?', [(int) $gid, $cid]);
+        }
+        if (!q1('SELECT 1 x FROM {grade} WHERE `course_id`=? LIMIT 1', [$cid])) {
+            md_set('enroll_manual', $cid, '', '', '1');
         }
         redirect(a_url('enroll', '&course='.$cid.'&msg=saved'));
     }

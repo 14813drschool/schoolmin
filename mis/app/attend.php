@@ -473,6 +473,136 @@ function rows_academic_activity()
 }
 
 /** ฝ่ายวิชาการ: ลงทะเบียนกิจกรรมพัฒนาผู้เรียน (จากรายการกิจกรรมพัฒนาผู้เรียน) ให้นักเรียนทั้งห้อง */
+/* ---------------------------------------------------------------- ลงทะเบียนอัตโนมัติ (ปีการศึกษาปัจจุบัน) */
+
+/** ให้ระบบลงทะเบียนอัตโนมัติรอบถัดไปทำงานทันที (หลังผู้ดูแลบันทึกข้อมูล/นำเข้าไฟล์) */
+function auto_enroll_dirty(): void
+{
+    md_set('auto_enroll', 'stamp', '', '', null);
+}
+
+/** ผู้ดูแลจัดการลงทะเบียนรายวิชานี้เอง: ปิดการลงทะเบียนอัตโนมัติ (ไม่มีนักเรียนเหลือ = ปิดทั้งรายวิชา) */
+function auto_enroll_manual(int $cid): void
+{
+    md_set('enroll_auto', $cid, '', '', null);
+    if (!q1('SELECT 1 x FROM {grade} WHERE `course_id`=? LIMIT 1', [$cid])) {
+        md_set('enroll_manual', $cid, '', '', '1');
+    }
+}
+
+/** นักเรียนที่ผู้ดูแลถอนออกจากรายวิชา (ระบบจะไม่ลงทะเบียนให้ซ้ำ) */
+function auto_enroll_out(int $cid, int $sid, bool $out = true): void
+{
+    md_set('enroll_out', $cid, $sid, '', $out ? '1' : null);
+}
+
+/**
+ * ลงทะเบียนอัตโนมัติของปีการศึกษาปัจจุบัน (ภาคเรียน 1 และ 2)
+ * - กิจกรรมพัฒนาผู้เรียน: สร้างรายวิชาตามรายการกิจกรรม (ระดับชั้น/ภาคเรียนที่กำหนด) ให้อัตโนมัติ
+ * - รายวิชา/กิจกรรมที่ยังไม่มีนักเรียน: ลงทะเบียนนักเรียนทุกคนในระดับชั้นของรายวิชา
+ *   และรายวิชาที่ระบบลงให้แล้ว จะเพิ่มนักเรียนใหม่ของระดับชั้นนั้นให้ด้วย
+ * - รายวิชาที่ลงทะเบียนเอง/นำเข้าไว้แล้ว (บางห้อง/บางคน) ไม่แตะต้อง
+ */
+function auto_enroll(bool $force = false): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    $stamp = (int) md_get('auto_enroll', 'stamp');
+    if (!$force && $stamp > time() - 600) {
+        return;
+    }
+    md_set('auto_enroll', 'stamp', '', '', (string) time());
+    $years = array_unique(array_filter([cur_term()[0], term()[0]], fn($v) => $v >= cur_term()[0]));
+    act_merge_dups();
+    // นักเรียนที่ศึกษาอยู่ แยกตามระดับชั้น
+    $byClass = [];
+    foreach (q('SELECT S.`id`, S.`class`, S.`room`, S.`number` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE U.`active`=1 AND S.`class`>0 AND S.`room`>0') as $s) {
+        $byClass[(int) $s['class']][] = $s;
+    }
+    if (!$byClass) {
+        return;
+    }
+    $manual = array_flip(array_map('intval', array_column(md_rows('enroll_manual'), 'r1')));
+    $auto = array_flip(array_map('intval', array_column(md_rows('enroll_auto'), 'r1')));
+    $out = [];
+    foreach (md_rows('enroll_out') as $r) {
+        $out[(int) $r['r1']][(int) $r['r2']] = true;
+    }
+    $cat = act_catalog();
+    foreach ($years as $y) {
+        foreach ([1, 2] as $t) {
+            // 1) กิจกรรมพัฒนาผู้เรียนจากรายการกิจกรรม
+            $acts = q('SELECT `id`, `course_code`, `course_name`, `class` FROM {course} WHERE `type`=9 AND `year`=? AND `term`=?', [$y, $t]);
+            foreach ($cat as $d) {
+                if (!in_array((string) ($d['term'] ?? ''), ['', '1-2', (string) $t], true) || trim((string) ($d['name'] ?? '')) === '') {
+                    continue;
+                }
+                foreach (act_classes($d) ?: array_keys($byClass) as $cl) {
+                    if (empty($byClass[$cl])) {
+                        continue;
+                    }
+                    $code = (string) ($d['code'] ?? '');
+                    $hit = null;
+                    foreach ($acts as $c) {
+                        if ((int) $c['class'] === (int) $cl && $code !== '' && (string) $c['course_code'] === $code) {
+                            $hit = $c;
+                            break;
+                        }
+                    }
+                    if (!$hit) {
+                        foreach ($acts as $c) {
+                            if ((int) $c['class'] === (int) $cl && (string) $c['course_code'] === '' && trim((string) $c['course_name']) === trim((string) $d['name'])) {
+                                $hit = $c;
+                                if ($code !== '') {
+                                    q('UPDATE {course} SET `course_code`=? WHERE `id`=?', [mb_substr($code, 0, 20), (int) $c['id']]);
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    if (!$hit) {
+                        q('INSERT INTO {course} (`course_name`,`course_code`,`teacher_id`,`class`,`period`,`credit`,`type`,`year`,`term`) VALUES (?,?,?,?,?,0,9,?,?)',
+                            [mb_substr((string) $d['name'], 0, 150), mb_substr($code, 0, 20), (int) ($d['teacher'] ?? 0), (int) $cl, max(0, (int) ($d['hours'] ?? 0)), $y, $t]);
+                        $acts[] = ['id' => 0, 'course_code' => $code, 'course_name' => (string) $d['name'], 'class' => (int) $cl];
+                    }
+                }
+            }
+            // 2) ลงทะเบียนนักเรียนทั้งระดับชั้น
+            $courses = q('SELECT `id`, `class` FROM {course} WHERE `year`=? AND `term`=? AND `class`>0', [$y, $t]);
+            if (!$courses) {
+                continue;
+            }
+            $ids = array_map(fn($c) => (int) $c['id'], $courses);
+            $have = [];
+            foreach (q('SELECT `course_id`, `student_id` FROM {grade} WHERE `course_id` IN ('.implode(',', $ids).')') as $g) {
+                $have[(int) $g['course_id']][(int) $g['student_id']] = true;
+            }
+            $vals = [];
+            foreach ($courses as $c) {
+                $cid = (int) $c['id'];
+                if (isset($manual[$cid]) || empty($byClass[(int) $c['class']]) || (!isset($auto[$cid]) && !empty($have[$cid]))) {
+                    continue;
+                }
+                foreach ($byClass[(int) $c['class']] as $s) {
+                    if (!isset($have[$cid][(int) $s['id']]) && !isset($out[$cid][(int) $s['id']])) {
+                        $vals[] = [(int) $s['id'], $cid, $s['number'], (int) $s['room']];
+                    }
+                }
+                if (!isset($auto[$cid])) {
+                    md_set('enroll_auto', $cid, '', '', '1');
+                    $auto[$cid] = true;
+                }
+            }
+            foreach (array_chunk($vals, 300) as $chunk) {
+                q('INSERT INTO {grade} (`student_id`,`course_id`,`number`,`room`,`type`) VALUES '.implode(',', array_fill(0, count($chunk), '(?,?,?,?,1)')), array_merge(...$chunk));
+            }
+        }
+    }
+}
+
 /**
  * รวมกิจกรรมซ้ำ: กิจกรรมเดิมที่ไม่มีรหัส กับกิจกรรมที่มีรหัส ชื่อ/ระดับชั้น/ปี/ภาคเรียนเดียวกัน
  * เก็บรายการเดิม (ผลประเมิน/สถานะอนุมัติเดิม) แล้วใส่รหัสให้ — รหัสต่างกันไม่รวม
@@ -499,7 +629,7 @@ function adm_act_enroll(bool $post)
     $byc = rooms_by_class();
     // กิจกรรมของภาคเรียนนี้จากรายการกิจกรรม: ภาคเรียน 1-2 หรือตรงกับภาคเรียนที่เลือกดู
     $cat = array_filter(act_catalog(), fn($d) => in_array((string) ($d['term'] ?? ''), ['', '1-2', (string) $t], true));
-    act_merge_dups();
+    auto_enroll(true); // รวมกิจกรรมซ้ำ + สร้าง/ลงทะเบียนกิจกรรมตามระดับชั้นอัตโนมัติ
     $courses = q('SELECT * FROM {course} WHERE `type`=9 AND `year`=? AND `term`=?', [$y, $t]);
     $find = function (array $d, int $class) use (&$courses) {
         foreach ($courses as $c) {
@@ -561,6 +691,11 @@ function adm_act_enroll(bool $post)
             foreach (array_diff($have, $want) as $room) {
                 q('DELETE FROM {grade} WHERE `course_id`=? AND `room`=?', [$cid, $room]);
             }
+            if (array_diff($want, $have) || array_diff($have, $want)) {
+                // ผู้ดูแลเลือกห้องเอง: ใช้ตามที่เลือก (ไม่ลงทะเบียนอัตโนมัติทับ)
+                md_set('enroll_manual', $cid, '', '', null);
+                auto_enroll_manual($cid);
+            }
         }
         admin_done('act_enroll');
     }
@@ -583,7 +718,9 @@ function adm_act_enroll(bool $post)
             $cb ?: '<span class="gray_12">ยังไม่มีห้องเรียนในระดับชั้นนี้</span>', [array_sum($cnt), ' align="center"']], $i);
     }
     $save = '<input type="submit" name="save" value="บันทึกการลงทะเบียน" class="general radius" style="height:25px" onclick="var f=this.form,x=false;for(var i=0;i<f.elements.length;i++){var e=f.elements[i];if(e.type==\'checkbox\'&&e.getAttribute(\'data-had\')&&!e.checked)x=true;}return x?misConfirm(this,\'ห้องที่ยกเลิกการเลือก จะลบการลงทะเบียนและผลการประเมินกิจกรรมของนักเรียนห้องนั้น ต้องการดำเนินการต่อหรือไม่?\'):true;"/>';
-    $help = '<div style="width:983px;margin:0 auto 8px;text-align:left" class="gray_12">กิจกรรมดึงมาจาก <a href="'.h(a_url('dev_act')).'"><b>รายการกิจกรรมพัฒนาผู้เรียน</b></a> (ข้อมูลเดียวกับหน้าวิชาการ) เฉพาะกิจกรรมของภาคเรียนที่ '.$t.' หรือภาคเรียน 1-2 — เลือกห้องแล้วกด "บันทึกการลงทะเบียน" นักเรียนทุกคนในห้องจะถูกลงทะเบียน และครูประจำชั้นของห้องนั้นบันทึกผลได้ที่ งานรับผิดชอบหลัก &gt; บันทึกผลการเรียน</div>';
+    $help = '<div style="width:983px;margin:0 auto 8px;text-align:left" class="gray_12">กิจกรรมดึงมาจาก <a href="'.h(a_url('dev_act')).'"><b>รายการกิจกรรมพัฒนาผู้เรียน</b></a> (ข้อมูลเดียวกับหน้าวิชาการ) เฉพาะกิจกรรมของภาคเรียนที่ '.$t.' หรือภาคเรียน 1-2<br>'
+        .'<b style="color:#1E8449">ระบบลงทะเบียนให้อัตโนมัติ:</b> นักเรียนทุกห้องในระดับชั้นที่กำหนดในรายการกิจกรรม ทั้งภาคเรียน 1 และ 2 ของปีการศึกษาปัจจุบัน (นักเรียนใหม่ถูกเพิ่มให้เอง) — หน้านี้ใช้เมื่อต้องการปรับห้องเอง เช่น ยกเลิกบางห้อง แล้วกด "บันทึกการลงทะเบียน" (กิจกรรมที่ปรับเองระบบจะไม่ลงทับ)<br>'
+        .'ครูประจำชั้นของห้องบันทึกผลได้ที่ งานรับผิดชอบหลัก &gt; บันทึกผลการเรียน</div>';
     return ['ลงทะเบียนกิจกรรมพัฒนาผู้เรียน (รายห้อง) ภาคเรียนที่ '.$t.'/'.$y, $help.'<form method="post" action="'.h(a_url('act_enroll')).'">'
         .list_table('กิจกรรมพัฒนาผู้เรียน', ['#', 'รหัส', 'กิจกรรมพัฒนาผู้เรียน', 'ระดับชั้น', ['ชั่วโมง', ' style="text-align:center"'], 'ห้องเรียนที่ลงทะเบียน (จำนวนนักเรียน)', ['นักเรียน', ' style="text-align:center"']],
             $rows ?: '<tr><td colspan="7" align="center">ยังไม่มีกิจกรรมของภาคเรียนนี้ใน <a href="'.h(a_url('dev_act')).'">รายการกิจกรรมพัฒนาผู้เรียน</a></td></tr>', '', $items ? $save : '').'</form>'];

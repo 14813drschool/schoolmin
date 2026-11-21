@@ -207,6 +207,18 @@ function imp_term(string $y, string $t): array
     return [$yy, $tt];
 }
 
+/** รวมรายวิชาซ้ำ $dup เข้ารายวิชาเดิม $keep (ย้ายนักเรียน/เวลาเรียนที่ยังไม่มี แล้วลบรายวิชาซ้ำ) */
+function imp_merge_course(int $dup, int $keep): void
+{
+    q('UPDATE {grade} SET `course_id`=? WHERE `course_id`=? AND `student_id` NOT IN (SELECT `student_id` FROM (SELECT `student_id` FROM {grade} WHERE `course_id`=?) x)', [$keep, $dup, $keep]);
+    q('DELETE FROM {grade} WHERE `course_id`=?', [$dup]);
+    q('UPDATE IGNORE {attendance} SET `course_id`=? WHERE `course_id`=?', [$keep, $dup]);
+    q('DELETE FROM {attendance} WHERE `course_id`=?', [$dup]);
+    q('UPDATE IGNORE {mis_data} SET `r1`=? WHERE `kind`=\'att_hour\' AND `r1`=?', [(string) $keep, (string) $dup]);
+    q('DELETE FROM {mis_data} WHERE `kind` IN (\'att_hour\',\'approved\',\'ask\') AND `r1`=?', [(string) $dup]);
+    q('DELETE FROM {course} WHERE `id`=?', [$dup]);
+}
+
 function imp_course(string $code, int $class = 0, ?array $yt = null): ?array
 {
     [$y, $t] = $yt ?? term();
@@ -393,12 +405,20 @@ function imp_row(string $set, array $c): string
                 throw new \RuntimeException('ไม่พบครู '.$un);
             }
             $v = [mb_substr(trim($name), 0, 50), (int) $tid, $cid, max(0, (int) $period), min(9.9, max(0, (float) $credit)), (int) $typeId];
-            // ไม่มีรหัสวิชา (เช่น กิจกรรมพัฒนาผู้เรียน) = ใช้ชื่อวิชาจับคู่รายการเดิม
-            if ($ex = q1('SELECT `id` FROM {course} WHERE `course_code`=? AND `class`=? AND `year`=? AND `term`=?'.(trim($code) === '' ? ' AND `course_name`=?' : ''), array_merge([trim($code), $cid, $y, $t], trim($code) === '' ? [$v[0]] : []))) {
-                q('UPDATE {course} SET `course_name`=?, `teacher_id`=IF(?>0,?,`teacher_id`), `class`=?, `period`=?, `credit`=?, `type`=? WHERE `id`=?', [$v[0], $v[1], $v[1], $v[2], $v[3], $v[4], $v[5], (int) $ex['id']]);
+            $code = mb_substr(trim($code), 0, 20);
+            // รายวิชาเดิมที่ไม่มีรหัสวิชา (เช่น กิจกรรมพัฒนาผู้เรียน) จับคู่ด้วยชื่อวิชา
+            $blank = q1('SELECT `id` FROM {course} WHERE `course_code`=\'\' AND `course_name`=? AND `class`=? AND `year`=? AND `term`=? ORDER BY `id` LIMIT 1', [$v[0], $cid, $y, $t]);
+            $ex = $code === '' ? $blank : q1('SELECT `id` FROM {course} WHERE `course_code`=? AND `class`=? AND `year`=? AND `term`=? ORDER BY `id` LIMIT 1', [$code, $cid, $y, $t]);
+            if ($blank && $ex && (int) $ex['id'] !== (int) $blank['id']) {
+                // เคยนำเข้าแล้วเกิดรายวิชาซ้ำ = รวมกลับเข้ารายวิชาเดิม
+                imp_merge_course((int) $ex['id'], (int) $blank['id']);
+            }
+            if ($ex = $blank ?: $ex) {
+                // ใส่รหัสวิชาให้รายวิชาเดิมที่ยังไม่มีรหัส (ไม่สร้างรายวิชาใหม่)
+                q('UPDATE {course} SET `course_name`=?, `course_code`=IF(?<>\'\',?,`course_code`), `teacher_id`=IF(?>0,?,`teacher_id`), `class`=?, `period`=?, `credit`=?, `type`=? WHERE `id`=?', [$v[0], $code, $code, $v[1], $v[1], $v[2], $v[3], $v[4], $v[5], (int) $ex['id']]);
                 return 'update';
             }
-            q('INSERT INTO {course} (`course_name`,`course_code`,`teacher_id`,`class`,`period`,`credit`,`type`,`year`,`term`) VALUES (?,?,?,?,?,?,?,?,?)', [$v[0], mb_substr(trim($code), 0, 20), $v[1], $v[2], $v[3], $v[4], $v[5], $y, $t]);
+            q('INSERT INTO {course} (`course_name`,`course_code`,`teacher_id`,`class`,`period`,`credit`,`type`,`year`,`term`) VALUES (?,?,?,?,?,?,?,?,?)', [$v[0], $code, $v[1], $v[2], $v[3], $v[4], $v[5], $y, $t]);
             return 'add';
 
         case 'enroll':
@@ -430,7 +450,8 @@ function imp_row(string $set, array $c): string
             $s = imp_student($sc) ?? throw new \RuntimeException('ไม่พบนักเรียน '.$sc);
             $cc = imp_class($ccls);
             $ckey = trim($code) !== '' ? $code : $cname;
-            $course = imp_course($ckey, $cc ?: (int) $s['class'], $yt) ?? imp_course($ckey, 0, $yt);
+            $course = imp_course($ckey, $cc ?: (int) $s['class'], $yt) ?? imp_course($ckey, 0, $yt)
+                ?? (trim($cname) !== '' ? imp_course($cname, $cc ?: (int) $s['class'], $yt) : null);
             if (!$course) {
                 if (trim($cname) === '') {
                     throw new \RuntimeException('ไม่พบรายวิชา '.$code.' ในภาคเรียน '.$yt[1].'/'.$yt[0].' (กรอกชื่อวิชาเพื่อให้สร้างรายวิชาอัตโนมัติ)');

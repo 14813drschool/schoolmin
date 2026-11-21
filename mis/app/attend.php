@@ -510,6 +510,9 @@ function auto_enroll(bool $force = false): void
         return;
     }
     $done = true;
+    if (term()[0] < cur_term()[0]) {
+        auto_enroll_past(term()[0], $force);
+    }
     if (md_get('auto_enroll', 'v') !== '2') {
         // ครั้งเดียว: ผลการเรียนปีที่ผ่านมาที่บันทึกเป็นห้องปัจจุบัน ปรับให้ตรงประวัติห้องเรียน
         sync_hist_grade_rooms();
@@ -604,6 +607,40 @@ function auto_enroll(bool $force = false): void
             foreach (array_chunk($vals, 300) as $chunk) {
                 q('INSERT INTO {grade} (`student_id`,`course_id`,`number`,`room`,`type`) VALUES '.implode(',', array_fill(0, count($chunk), '(?,?,?,?,1)')), array_merge(...$chunk));
             }
+        }
+    }
+}
+
+/**
+ * ปีการศึกษาที่ผ่านมา: กิจกรรมพัฒนาผู้เรียนที่ยังไม่มีนักเรียนลงทะเบียน
+ * ลงทะเบียนนักเรียนที่อยู่ในระดับชั้นนั้นในปีนั้น (ตามประวัติห้องเรียน) ให้ครูประจำชั้นปีนั้นบันทึก/ดูผลได้
+ */
+function auto_enroll_past(int $y, bool $force = false): void
+{
+    $stamp = (int) md_get('auto_enroll', 'y'.$y);
+    if (!$force && $stamp > time() - 600) {
+        return;
+    }
+    md_set('auto_enroll', 'y'.$y, '', '', (string) time());
+    $courses = q('SELECT C.`id`, C.`class` FROM {course} C WHERE C.`type`=9 AND C.`year`=? AND C.`class`>0 AND NOT EXISTS (SELECT 1 FROM {grade} G WHERE G.`course_id`=C.`id`)', [$y]);
+    if (!$courses) {
+        return;
+    }
+    $manual = array_flip(array_map('intval', array_column(md_rows('enroll_manual'), 'r1')));
+    $byClass = [];
+    foreach (year_rooms($y) as $sid => $d) {
+        if ((int) $d['room'] && (int) $d['class']) {
+            $byClass[(int) $d['class']][] = [$sid, $d['number'] ?? null, (int) $d['room']];
+        }
+    }
+    foreach ($courses as $c) {
+        $cid = (int) $c['id'];
+        if (isset($manual[$cid]) || empty($byClass[(int) $c['class']])) {
+            continue;
+        }
+        foreach (array_chunk($byClass[(int) $c['class']], 300) as $chunk) {
+            $vals = array_map(fn($s) => [$s[0], $cid, $s[1], $s[2]], $chunk);
+            q('INSERT INTO {grade} (`student_id`,`course_id`,`number`,`room`,`type`) VALUES '.implode(',', array_fill(0, count($vals), '(?,?,?,?,1)')), array_merge(...$vals));
         }
     }
 }

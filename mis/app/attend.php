@@ -759,7 +759,7 @@ function rows_task_study_record_ActRecord()
         .'function actFull(){var a=document.querySelectorAll("input.ah");for(var i=0;i<a.length;i++){a[i].value=ACT_FULL;actRes(a[i].getAttribute("data-g"));}}</script>';
     $info = '<div style="width:983px;margin:0 auto 10px;text-align:left;font-size:20px;font-family:TH Sarabun New"><b>'.h($c['course_code'].' '.$c['course_name']).'</b> &nbsp; ระดับชั้น '.h($room ? class_room_short($c['class'], $room) : class_short($c['class']))
         .' &nbsp; เวลาเรียน '.$full.' ชั่วโมง &nbsp; <span class="gray_12" style="font-size:13px">(เข้าร่วมกิจกรรมร้อยละ 80 ขึ้นไป และผ่านการปฏิบัติกิจกรรม = ผ)</span>'
-        .($lock ? '<div style="color:#CC0000;font-size:14px">ยืนยันผลการประเมินแล้ว ไม่สามารถแก้ไขได้ (ยกเลิกการยืนยันที่หน้าบันทึกผลการเรียนก่อน)</div>' : '').'</div>';
+        .($lock ? '<div style="color:#CC0000;font-size:19px;margin-top:4px">ยืนยันผลการประเมินแล้ว ไม่สามารถแก้ไขได้ (ยกเลิกการยืนยันที่หน้าบันทึกผลการเรียนก่อน)</div>' : '').'</div>';
     $btns = btn('กลับ', '?module=task&option=study_record', 'back').($lock ? '' : ' <a href="javascript:void(0);" onclick="actFull();" id="pinkgreenbtns" style="margin-left:4px">เต็มเวลาทุกคน</a>'
         .' <a href="javascript:void(0);" onclick="document.forms.actrec.submit();" id="pinkgreenbtns" style="margin-left:4px"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึกผลกิจกรรม</a>');
     $body = saved_msg().$js.$info.'<form name="actrec" method="post" action="?module=task&option=study_record&func=SaveActRecord&SubjectNum='.(int) $c['id'].'&RoomNum='.$room.'">'

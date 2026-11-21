@@ -152,6 +152,21 @@ function rpt_g($g): string
     return $g === null || $g === '' ? '-' : (string) $g;
 }
 
+/** เกรดเฉลี่ยของชุดผลการเรียน: รายวิชายังไม่มีเกรด หรือติด ร / 0 = "ยังไม่ครบ" */
+function rpt_gpa_cell(array $grades): string
+{
+    foreach ($grades as $g) {
+        if ((int) ($g['ctype'] ?? 0) === 9) {
+            continue;
+        }
+        $v = trim((string) ($g['grade'] ?? ''));
+        if ($v === '' || $v === 'ร' || (is_numeric($v) && (float) $v == 0)) {
+            return 'ยังไม่ครบ';
+        }
+    }
+    return rpt_gpa_text(gpa_of($grades));
+}
+
 function rpt_gpa_text(?float $g): string
 {
     return $g === null ? '-' : number_format(floor($g * 100) / 100, 2);
@@ -228,13 +243,13 @@ function rpt_card_page(array $s, int $y, int $t, string $mode, array $att): stri
         }
         $body .= '<table style="margin-top:4px"><tr><th style="width:28px">ที่</th><th style="width:70px">รหัสวิชา</th><th>รายวิชา</th><th style="width:60px">ประเภท</th><th style="width:48px">หน่วยกิต</th><th style="width:52px">ระหว่างภาค</th>'
             .'<th style="width:48px">ปลายภาค</th><th style="width:40px">รวม</th><th style="width:48px">เวลาเรียน %</th><th style="width:52px">ผลการเรียน</th></tr>'.($tr ?: '<tr><td colspan="10" class="c">ยังไม่มีผลการเรียน</td></tr>')
-            .'<tr><td colspan="4" class="r">หน่วยกิตที่ได้ / ผลการเรียนเฉลี่ยภาคเรียนนี้ (GPA)</td><td class="c">'.$credits.'</td><td colspan="4"></td><td class="c"><b>'.rpt_gpa_text(gpa_of($gs)).'</b></td></tr></table>';
+            .'<tr><td colspan="4" class="r">หน่วยกิตที่ได้ / ผลการเรียนเฉลี่ยภาคเรียนนี้ (GPA)</td><td class="c">'.$credits.'</td><td colspan="4"></td><td class="c"><b>'.rpt_gpa_cell($gs).'</b></td></tr></table>';
     }
     $lvNow = class_level($s['class']);
-    $gpax = gpa_of(array_filter(student_grades($sid), fn($g) => ($lvNow === '' || in_array(grade_level($g), [$lvNow, ''], true)) && ((int) $g['year'] < $y || ((int) $g['year'] === $y && (int) $g['term'] <= max(array_column($terms, 1))))));
+    $gpax = rpt_gpa_cell(array_filter(student_grades($sid), fn($g) => ($lvNow === '' || in_array(grade_level($g), [$lvNow, ''], true)) && ((int) $g['year'] < $y || ((int) $g['year'] === $y && (int) $g['term'] <= max(array_column($terms, 1))))));
     $lv = fn($k) => ($a = score_avg($k, $sid)) === null ? '-' : level_text($a);
     $adv = array_map(fn($p) => personnel_options()[$p] ?? '', room_advisors()[(int) $s['room']] ?? []);
-    $sum = '<table class="nb" style="margin-top:8px"><tr><td style="width:50%">ผลการเรียนเฉลี่ย'.($mode === 'year' ? 'ทั้งปี' : 'ภาคเรียนนี้').' <b>'.rpt_gpa_text(gpa_of($yearGrades)).'</b></td><td>ผลการเรียนเฉลี่ยสะสม (GPAX) <b>'.rpt_gpa_text($gpax).'</b></td></tr>'
+    $sum = '<table class="nb" style="margin-top:8px"><tr><td style="width:50%">ผลการเรียนเฉลี่ย'.($mode === 'year' ? 'ทั้งปี' : 'ภาคเรียนนี้').' <b>'.rpt_gpa_cell($yearGrades).'</b></td><td>ผลการเรียนเฉลี่ยสะสม (GPAX) <b>'.$gpax.'</b></td></tr>'
         .'<tr><td>คุณลักษณะอันพึงประสงค์ <b>'.$lv('char').'</b></td><td>การอ่าน คิดวิเคราะห์และเขียน <b>'.$lv('skill').'</b></td></tr>'
         .'<tr><td>สมรรถนะสำคัญของผู้เรียน <b>'.(($a = score_avg(preg_match('/ป\./', class_short((int) $s['class'])) ? 'capp' : 'capj', $sid)) === null ? '-' : level_text($a)).'</b></td><td></td></tr></table>';
     $title = 'รายงานผลการเรียน'.($mode === 'year' ? ' ปีการศึกษา '.$y : ' ภาคเรียนที่ '.$t.' ปีการศึกษา '.$y);

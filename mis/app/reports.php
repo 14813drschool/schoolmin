@@ -187,9 +187,9 @@ function rpt_print(string $title, string $body, bool $landscape = false): void
     exit;
 }
 
-function rpt_head(string $title, string $sub = ''): string
+function rpt_head(string $title, string $sub = '', bool $addr = false): string
 {
-    return '<div class="head"><img src="'.h(rpt_logo()).'" alt=""/><div><h2>'.h(cfg('school_name', 'โรงเรียนดรุณราษฎร์วิทยา')).'</h2><h3>'.h($title).'</h3>'.($sub !== '' ? '<div class="c small">'.$sub.'</div>' : '').'</div></div>';
+    return '<div class="head"><img src="'.h(rpt_logo()).'" alt=""/><div><h2>'.h(cfg('school_name', 'โรงเรียนดรุณราษฎร์วิทยา')).'</h2>'.($addr ? '<div class="c" style="font-size:13px;margin:-2px 0 2px">'.h(school_address()).'</div>' : '').'<h3>'.h($title).'</h3>'.($sub !== '' ? '<div class="c small">'.$sub.'</div>' : '').'</div></div>';
 }
 
 function rpt_signs(array $who): string
@@ -212,6 +212,8 @@ function rpt_card_page(array $s, int $y, int $t, string $mode, array $att): stri
     $yearGrades = [];
     foreach ($terms as [$yy, $tt]) {
         $gs = rpt_grades($sid, $yy, $tt);
+        // รายวิชาก่อน แล้วตามด้วยกิจกรรมพัฒนาผู้เรียน (แนะแนว > ลูกเสือ-เนตรนารี > ชุมนุม > เพื่อสังคมฯ)
+        $gs = array_merge(array_values(array_filter($gs, fn($g) => (int) $g['ctype'] !== 9)), array_values(array_filter($gs, fn($g) => (int) $g['ctype'] === 9)));
         $yearGrades = array_merge($yearGrades, $gs);
         $tr = '';
         $credits = 0.0;
@@ -239,7 +241,7 @@ function rpt_card_page(array $s, int $y, int $t, string $mode, array $att): stri
     $info = '<table class="nb" style="margin-top:6px"><tr><td>ชื่อ-นามสกุล <b>'.h($s['name']).'</b></td><td>เลขประจำตัว <b>'.h($s['student_id']).'</b></td><td>ชั้น <b>'.h(rpt_room_name((int) $s['room'])).'</b> เลขที่ <b>'.h($s['number']).'</b></td></tr></table>';
     $cut = '<div class="cut small">✂ ส่วนส่งคืนโรงเรียน &nbsp; ข้าพเจ้า ...................................................... ผู้ปกครองของ '.h($s['name']).' ชั้น '.h(rpt_room_name((int) $s['room']))
         .' ได้รับทราบผลการเรียนแล้ว<br><br>ความคิดเห็นของผู้ปกครอง ..................................................................................................................... ลงชื่อ ................................ ผู้ปกครอง</div>';
-    return '<div class="page">'.rpt_head($title).$info.$body.$sum
+    return '<div class="page">'.rpt_head($title, '', true).$info.$body.$sum
         .rpt_signs([['ครูที่ปรึกษา', $adv[0] ?? ''], ['รองผู้อำนวยการฝ่ายวิชาการ', rpt_signer('วิชาการ')], ['ผู้อำนวยการโรงเรียน', rpt_signer('ผู้อำนวยการ')]]).$cut.'</div>';
 }
 

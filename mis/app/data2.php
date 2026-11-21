@@ -746,13 +746,14 @@ function rows_task_study_record()
     // กิจกรรมพัฒนาผู้เรียน
     $acts = '';
     $j = 0;
+    $actRows = [];
     foreach (array_filter($all, fn($c) => (int) $c['type'] === 9) as $c) {
         $rs = $rooms[(int) $c['id']] ?? [];
         $n = array_sum($rs);
         $d = array_sum($done[(int) $c['id']] ?? []);
         $st = md_get('approved', (int) $c['id']) !== null ? ['ok', $d, $n] : (md_get('ask', (int) $c['id']) !== null ? ['ask', $d, $n] : [$n && $d >= $n ? 'wait' : 'not', $d, $n]);
-        $acts .= tr([++$j, h($c['course_code']), h($c['course_name']), h(implode(', ', array_map(fn($r) => class_room_short($c['class'], $r), array_keys($rs)))), [$n, ' align="center"'],
-            [record_status_cell($st), ' style="white-space:nowrap"'], $st[0] === 'wait' ? $cb('subjectconfirm', $c['id'].'-0') : '', $st[0] === 'ask' ? $cb('subjectcancel', $c['id'].'-0') : '', $actEdit($c, 0)]);
+        $actRows[] = [$c, [h($c['course_code']), h($c['course_name']), h(implode(', ', array_map(fn($r) => class_room_short($c['class'], $r), array_keys($rs)))), [$n, ' align="center"'],
+            [record_status_cell($st), ' style="white-space:nowrap"'], $st[0] === 'wait' ? $cb('subjectconfirm', $c['id'].'-0') : '', $st[0] === 'ask' ? $cb('subjectcancel', $c['id'].'-0') : '', $actEdit($c, 0)]];
     }
     // กิจกรรมที่ลงทะเบียนให้ห้องที่เป็นครูประจำชั้น (ครูประจำชั้นบันทึกผล)
     $myRoom = my_advisor_room();
@@ -761,8 +762,12 @@ function rows_task_study_record()
             continue;
         }
         $st = record_status($c, $myRoom, [(int) $c['id'] => [$myRoom => (int) $c['d']]], (int) $c['n']);
-        $acts .= tr([++$j, h($c['course_code']), h($c['course_name']), h(class_room_short($c['class'], $myRoom)).' <span class="gray_12">(ครูประจำชั้น)</span>', [(int) $c['n'], ' align="center"'],
-            [record_status_cell($st), ' style="white-space:nowrap"'], $st[0] === 'wait' ? $cb('subjectconfirm', $c['id'].'-'.$myRoom) : '', $st[0] === 'ask' ? $cb('subjectcancel', $c['id'].'-'.$myRoom) : '', $actEdit($c, $myRoom)]);
+        $actRows[] = [$c, [h($c['course_code']), h($c['course_name']), h(class_room_short($c['class'], $myRoom)).' <span class="gray_12">(ครูประจำชั้น)</span>', [(int) $c['n'], ' align="center"'],
+            [record_status_cell($st), ' style="white-space:nowrap"'], $st[0] === 'wait' ? $cb('subjectconfirm', $c['id'].'-'.$myRoom) : '', $st[0] === 'ask' ? $cb('subjectcancel', $c['id'].'-'.$myRoom) : '', $actEdit($c, $myRoom)]];
+    }
+    // เรียงกิจกรรม: แนะแนว > ลูกเสือ-เนตรนารี > ชุมนุม > กิจกรรมเพื่อสังคมฯ
+    foreach (act_sort($actRows, fn($r) => $r[0]) as [$c, $cells]) {
+        $acts .= tr(array_merge([++$j], $cells));
     }
     $btn = fn($id, $title, $msg, $none, $field, $func, $label) => '<th style="width:24px;text-align:center;height:35px" class="nosort"><div style="float:left;margin:0px 5px"><span style="float:left"><a class="icontooltip" title="'.$title.'" href="javascript:void(0);" onclick="CheckSelectboxes(\'<br>'.$msg.'\',\'<br>'.$none.'\',\''.$field.'[]\',\'task\',\'study_record\',\''.$func.'\');return false;" id="'.$id.'">&nbsp;&nbsp;'.$label.'&nbsp;&nbsp;</a></span></div></th>';
     $actTable = '<tr><td>&nbsp;</td></tr><tr id="titleList2"><td><div class="titlenav" style="width:969px"><span style="float:left;white-space:nowrap"><span id="Listtitle">&nbsp;</span><h1 style="font-size:23px; white-space:nowrap">กิจกรรมพัฒนาผู้เรียน</h1></span></div></td></tr>'

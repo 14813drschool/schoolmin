@@ -144,7 +144,7 @@ function pp6_birth(?string $date): string
 /** ผลการเรียนของภาคเรียน */
 function pp6_term_grades(int $sid, int $y, int $t): array
 {
-    return q('SELECT G.*, C.`course_code`, C.`course_name`, C.`credit`, C.`type` ctype, C.`period` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE G.`student_id`=? AND C.`year`=? AND C.`term`=? ORDER BY C.`type`, C.`course_code`', [$sid, $y, $t]);
+    return act_sort(q('SELECT G.*, C.`course_code`, C.`course_name`, C.`credit`, C.`type` ctype, C.`period` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE G.`student_id`=? AND C.`year`=? AND C.`term`=? ORDER BY C.`type`, C.`course_code`', [$sid, $y, $t]));
 }
 
 /** คะแนนคุณลักษณะ/อ่านคิดเขียนของภาคเรียน [ข้อ => ระดับ] */
@@ -458,7 +458,7 @@ function act_task_report_pp6_Print(): void
             $mg = [5, 11, 5, 9];
             $style = 'table.blacktable th { font-size:16pt!important; font-weight:bold; line-height:19pt; white-space:nowrap; border-right:1px solid #000; border-bottom:1px solid #000; text-align:center; padding:2px 0px; } table.blacktable td { font-size:16pt!important; font-weight:normal; line-height:19pt; white-space:nowrap; padding:2px 8px; }';
             $gs = pp6_term_grades($sid, $year, $term);
-            usort($gs, fn($a, $b) => [(int) $a['ctype'], sara_rank((string) $a['course_code']), (string) $a['course_code']] <=> [(int) $b['ctype'], sara_rank((string) $b['course_code']), (string) $b['course_code']]);
+            usort($gs, fn($a, $b) => [(int) $a['ctype'], (int) $a['ctype'] === 9 ? act_rank((string) $a['course_name']) : 0, sara_rank((string) $a['course_code']), (string) $a['course_code']] <=> [(int) $b['ctype'], (int) $b['ctype'] === 9 ? act_rank((string) $b['course_name']) : 0, sara_rank((string) $b['course_code']), (string) $b['course_code']]);
             $att = rpt_attendance(array_map(fn($g) => (int) $g['course_id'], $gs));
             $tr = '';
             $acts = '';

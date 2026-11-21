@@ -569,7 +569,7 @@ function adm_score_sum(bool $post)
 /** ผลการเรียนทุกภาคของนักเรียน */
 function student_grades(int $sid): array
 {
-    return q('SELECT G.*, C.`course_code`, C.`course_name`, C.`credit`, C.`year`, C.`term`, C.`type` ctype, C.`class` cclass FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE G.`student_id`=? ORDER BY C.`year`, C.`term`, C.`course_code`', [$sid]);
+    return act_sort(q('SELECT G.*, C.`course_code`, C.`course_name`, C.`credit`, C.`year`, C.`term`, C.`type` ctype, C.`class` cclass FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE G.`student_id`=? ORDER BY C.`year`, C.`term`, C.`course_code`', [$sid])); // กิจกรรมเรียง แนะแนว > ลูกเสือ > ชุมนุม > เพื่อสังคม
 }
 
 function gpa_of(array $grades): ?float

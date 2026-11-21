@@ -166,7 +166,7 @@ function adm_grade_edit(bool $post)
         }
         admin_done('grade_edit', '&student='.$sid.'&yt='.rawurlencode($ytk));
     }
-    $gs = q('SELECT G.*, C.`course_code`, C.`course_name`, C.`credit`, C.`type` ctype, C.`class` cclass, C.`year`, C.`term` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE G.`student_id`=? AND C.`year`=? AND C.`term`=? ORDER BY C.`type`, C.`course_code`', [$sid, $y, $t]);
+    $gs = act_sort(q('SELECT G.*, C.`course_code`, C.`course_name`, C.`credit`, C.`type` ctype, C.`class` cclass, C.`year`, C.`term` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE G.`student_id`=? AND C.`year`=? AND C.`term`=? ORDER BY C.`type`, C.`course_code`', [$sid, $y, $t]));
     usort($gs, fn($a, $b) => [(int) $a['ctype'], sara_rank((string) $a['course_code']), (string) $a['course_code']] <=> [(int) $b['ctype'], sara_rank((string) $b['course_code']), (string) $b['course_code']]);
     $base = a_url('grade_edit', '&student='.$sid.'&yt='.rawurlencode($ytk));
     $rows = '';

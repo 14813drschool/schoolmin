@@ -332,6 +332,45 @@ function my_advisor_room(): int
     return $p ? (int) $p['room'] : 0;
 }
 
+/** ลำดับกิจกรรมพัฒนาผู้เรียน: แนะแนว, ลูกเสือ-เนตรนารี, ชุมนุม, กิจกรรมเพื่อสังคมและสาธารณประโยชน์ */
+function act_rank(string $name): int
+{
+    foreach ([1 => '/แนะแนว/u', 2 => '/ลูกเสือ|เนตรนารี|ยุวกาชาด|ผู้บำเพ็ญ/u', 3 => '/ชุมนุม/u', 4 => '/สังคม|สาธารณ/u'] as $k => $re) {
+        if (preg_match($re, $name)) {
+            return $k;
+        }
+    }
+    return 5;
+}
+
+/**
+ * เรียงเฉพาะแถวกิจกรรมพัฒนาผู้เรียนตามลำดับกิจกรรม (แถวรายวิชาอื่นอยู่ตำแหน่งเดิม)
+ * $get: แถว -> ['type'|'ctype', 'course_name', 'course_code']
+ */
+function act_sort(array $rows, ?callable $get = null): array
+{
+    $get ??= fn($r) => $r;
+    $isAct = fn($r) => (int) (($get($r)['ctype'] ?? null) ?? ($get($r)['type'] ?? 0)) === 9;
+    $pos = [];
+    $acts = [];
+    foreach (array_values($rows) as $i => $r) {
+        if ($isAct($r)) {
+            $pos[] = $i;
+            $acts[] = $r;
+        }
+    }
+    if (count($acts) < 2) {
+        return array_values($rows);
+    }
+    $grp = fn($r) => (string) ($get($r)['year'] ?? '').'|'.(string) ($get($r)['term'] ?? '');
+    usort($acts, fn($a, $b) => [$grp($a), act_rank((string) $get($a)['course_name']), (string) $get($a)['course_code']] <=> [$grp($b), act_rank((string) $get($b)['course_name']), (string) $get($b)['course_code']]);
+    $out = array_values($rows);
+    foreach ($pos as $k => $i) {
+        $out[$i] = $acts[$k];
+    }
+    return $out;
+}
+
 /** ครูประจำชั้นของห้องนี้ ที่บันทึกผลกิจกรรมพัฒนาผู้เรียนของห้องได้ */
 function act_advisor_of(array $c, int $room): bool
 {

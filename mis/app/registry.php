@@ -868,6 +868,46 @@ function set_room_history(int $sid, int $y, int $room, $number = null): void
         return;
     }
     md_set('stroom', $sid, (string) $y, '', json_encode(['class' => $room ? room_class($room) : 0, 'room' => $room, 'number' => $number === '' || $number === null ? null : (int) $number]));
+    if ($room) {
+        // ผลการเรียน/การลงทะเบียนของปีนั้น ใช้ห้องตามประวัติ (ไม่ใช่ห้องปัจจุบัน)
+        q('UPDATE {grade} G JOIN {course} C ON C.`id`=G.`course_id` SET G.`room`=?'.($number === '' || $number === null ? '' : ', G.`number`='.(int) $number).' WHERE G.`student_id`=? AND C.`year`=?', [$room, $sid, $y]);
+    }
+}
+
+/**
+ * ผลการเรียนปีที่ผ่านมา: ปรับห้อง/เลขที่ในข้อมูลลงทะเบียนให้ตรงกับประวัติห้องเรียนของนักเรียนปีนั้น
+ * (ข้อมูลที่นำเข้าก่อนบันทึกประวัติห้อง จะถูกบันทึกเป็นห้องปัจจุบัน ทำให้ครูประจำชั้นปีนั้นไม่เห็นข้อมูล)
+ */
+function sync_hist_grade_rooms(): void
+{
+    $rows = md_rows('stroom');
+    if (!$rows) {
+        return;
+    }
+    $cur = cur_term()[0];
+    $want = [];
+    foreach ($rows as $r) {
+        $d = json_decode((string) $r['value'], true) ?: [];
+        if ((int) ($d['room'] ?? 0) && (int) $r['r2'] < $cur) {
+            $want[(int) $r['r1']][(int) $r['r2']] = [(int) $d['room'], $d['number'] ?? null];
+        }
+    }
+    if (!$want) {
+        return;
+    }
+    $sids = array_keys($want);
+    foreach (array_chunk($sids, 500) as $chunk) {
+        foreach (q('SELECT G.`id`, G.`student_id`, G.`room`, G.`number`, C.`year` FROM {grade} G JOIN {course} C ON C.`id`=G.`course_id` WHERE C.`year`<? AND G.`student_id` IN ('.implode(',', $chunk).')', [$cur]) as $g) {
+            $w = $want[(int) $g['student_id']][(int) $g['year']] ?? null;
+            if (!$w) {
+                continue;
+            }
+            $num = $w[1] === null || $w[1] === '' ? $g['number'] : (int) $w[1];
+            if ((int) $g['room'] !== $w[0] || (string) $g['number'] !== (string) $num) {
+                q('UPDATE {grade} SET `room`=?, `number`=? WHERE `id`=?', [$w[0], $num, (int) $g['id']]);
+            }
+        }
+    }
 }
 
 /** ห้องของนักเรียนรายปีที่ผ่านมา [ปี => ['class','room','number']] */

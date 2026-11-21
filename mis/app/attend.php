@@ -510,6 +510,11 @@ function auto_enroll(bool $force = false): void
         return;
     }
     $done = true;
+    if (md_get('auto_enroll', 'v') !== '2') {
+        // ครั้งเดียว: ผลการเรียนปีที่ผ่านมาที่บันทึกเป็นห้องปัจจุบัน ปรับให้ตรงประวัติห้องเรียน
+        sync_hist_grade_rooms();
+        md_set('auto_enroll', 'v', '', '', '2');
+    }
     $stamp = (int) md_get('auto_enroll', 'stamp');
     if (!$force && $stamp > time() - 600) {
         return;

@@ -804,6 +804,9 @@ function adm_csv_import(bool $post)
             $result = msg_box('ไม่พบข้อมูลในไฟล์ — กรุณาเลือกไฟล์ .csv', false);
         } else {
             auto_enroll_dirty();
+            if (in_array($key, ['scores', 'enroll', 'stroom'], true)) {
+                sync_hist_grade_rooms(); // ปีที่ผ่านมา: ใช้ห้องตามประวัติห้องเรียน
+            }
             $result = msg_box('นำเข้า "'.h($sets[$key][0]).'" เรียบร้อย: เพิ่มใหม่ '.$add.' รายการ, ปรับปรุง '.$upd.' รายการ'.($errs ? ', <b style="color:#C0392B">ผิดพลาด '.count($errs).' แถว</b>' : ''), !$errs);
             if ($errs) {
                 $er = '';

@@ -236,14 +236,14 @@ function rpt_card_page(array $s, int $y, int $t, string $mode, array $att): stri
             $pct = $att[(int) $g['course_id']][$sid] ?? null;
             $credits += is_numeric($g['grade']) ? (float) $g['credit'] : 0;
             $tr .= '<tr><td class="c">'.($i + 1).'</td><td>'.h($g['course_code']).'</td><td>'.h($g['course_name']).'</td><td class="c">'.h(COURSE_TYPES[(int) $g['ctype']] ?? '').'</td><td class="c">'.h($g['credit']).'</td>'
-                .'<td class="c">'.(int) $g['midterm'].'</td><td class="c">'.(int) $g['final'].'</td><td class="c">'.((int) $g['midterm'] + (int) $g['final']).'</td><td class="c">'.($pct === null ? '-' : number_format($pct, 0)).'</td><td class="c"><b>'.h(rpt_g($g['grade'])).'</b></td></tr>';
+                .'<td class="c">'.(int) $g['midterm'].'</td><td class="c">'.(int) $g['final'].'</td><td class="c">'.((int) $g['midterm'] + (int) $g['final']).'</td><td class="c">'.($pct === null ? '-' : number_format($pct, 0)).'</td><td class="c" style="white-space:nowrap"><b>'.h(trim((string) $g['grade']) === '' ? 'ยังไม่ครบ' : rpt_g($g['grade'])).'</b></td></tr>';
         }
         if (count($terms) > 1) {
             $body .= '<div style="margin-top:6px"><b>ภาคเรียนที่ '.$tt.'</b></div>';
         }
         $body .= '<table style="margin-top:4px"><tr><th style="width:28px">ที่</th><th style="width:70px">รหัสวิชา</th><th>รายวิชา</th><th style="width:60px">ประเภท</th><th style="width:48px">หน่วยกิต</th><th style="width:52px">ระหว่างภาค</th>'
             .'<th style="width:48px">ปลายภาค</th><th style="width:40px">รวม</th><th style="width:48px">เวลาเรียน %</th><th style="width:52px">ผลการเรียน</th></tr>'.($tr ?: '<tr><td colspan="10" class="c">ยังไม่มีผลการเรียน</td></tr>')
-            .'<tr><td colspan="4" class="r">หน่วยกิตที่ได้ / ผลการเรียนเฉลี่ยภาคเรียนนี้ (GPA)</td><td class="c">'.$credits.'</td><td colspan="4"></td><td class="c"><b>'.rpt_gpa_cell($gs).'</b></td></tr></table>';
+            .'<tr><td colspan="4" class="r">หน่วยกิตที่ได้ / ผลการเรียนเฉลี่ยภาคเรียนนี้ (GPA)</td><td class="c">'.$credits.'</td><td colspan="4"></td><td class="c" style="white-space:nowrap"><b>'.rpt_gpa_cell($gs).'</b></td></tr></table>';
     }
     $lvNow = class_level($s['class']);
     $gpax = rpt_gpa_cell(array_filter(student_grades($sid), fn($g) => ($lvNow === '' || in_array(grade_level($g), [$lvNow, ''], true)) && ((int) $g['year'] < $y || ((int) $g['year'] === $y && (int) $g['term'] <= max(array_column($terms, 1))))));

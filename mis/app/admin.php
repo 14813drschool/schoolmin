@@ -317,6 +317,10 @@ function run_admin(string $option, string $func): void
     } else {
         [$sub, $html, $buttons] = [$label, $body, ''];
     }
+    if ($func !== '' && $fn !== 'adm_'.$option && !preg_match('/Print|Export/', $func)) {
+        // หน้าย่อยที่ไม่มีปุ่มกลับ: เพิ่มปุ่มย้อนกลับไปหน้ารายการหลัก
+        $html = add_back_bar($html, a_url($option), (string) $buttons);
+    }
     render_admin($label, admin_head($mname, $sec, $label, $sub ?: $label, $buttons).saved_msg().$html.'</div>', $mk);
 }
 
@@ -862,6 +866,7 @@ function adm_permission(bool $post)
 
 function adm_course(bool $post)
 {
+    act_merge_dups(); // รวมกิจกรรมพัฒนาผู้เรียนซ้ำ (ไม่มีรหัส + มีรหัส ชื่อเดียวกัน)
     [$y, $t] = term();
     $rows = '';
     $courses = q('SELECT C.*, U.`name` teacher FROM {course} C LEFT JOIN {user} U ON U.`id`=C.`teacher_id` WHERE C.`year`=? AND C.`term`=? ORDER BY C.`class`, C.`type`, C.`course_code`', [$y, $t]);

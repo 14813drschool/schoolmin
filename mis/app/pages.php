@@ -116,6 +116,10 @@ function run_page(): void
         $vars += ['{{TBODY'.$i.'}}' => ''];
     }
     $content = strtr($tpl, $vars);
+    // หน้าย่อย (func) ที่ไม่มีปุ่มกลับ: เพิ่มปุ่มย้อนกลับไปหน้ารายการหลัก
+    if ($func !== '' && !preg_match('/Print|Export/', $func) && ($provider === 'rows_'.$key.'_'.$func || strpos($key, $func) !== false)) {
+        $content = add_back_bar($content, '?module='.rawurlencode($module).'&option='.rawurlencode($option));
+    }
     // ตารางที่ไม่มีข้อมูล: ใส่แถว "ไม่พบข้อมูล" (สคริปต์เรียงตารางเดิมต้องมีอย่างน้อย 1 แถว)
     $content = preg_replace_callback('/(<thead>(?:(?!<\/thead>).)*<\/thead>\s*<tbody[^>]*>)\s*(<\/tbody>)/s', function ($m) {
         $n = max(1, preg_match_all('/<th\b/', $m[1]));

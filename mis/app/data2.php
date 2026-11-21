@@ -106,6 +106,23 @@ function saved_msg(): string
     return ($_GET['msg'] ?? '') === 'saved' ? msg_box('บันทึกข้อมูลเรียบร้อยแล้ว') : '';
 }
 
+/** หน้าย่อยที่ยังไม่มีปุ่มกลับ: เพิ่มปุ่ม "ย้อนกลับ" ไปหน้ารายการหลัก */
+function add_back_bar(string $html, string $href, string $also = ''): string
+{
+    if (preg_match('/(?:>|\s)(?:ย้อน)?กลับ\s*(?:&nbsp;)*<\/(?:a|span)>|value="(?:ย้อน)?กลับ"|title=["\'](?:ย้อน)?กลับ["\']|MM_swapImage\(["\']icon_back|history\.back\(/u', $html.$also)) {
+        return $html;
+    }
+    $bar = '<div style="width:983px;margin:0 auto 8px;text-align:right">'.btn('ย้อนกลับ', h($href), 'back').'</div>';
+    $mark = '<div style="margin-top:10px;min-height:750px;z-index:100">';
+    $i = strpos($html, $mark);
+    if ($i !== false) {
+        $k = strpos($html, 'tiny_style.css">', $i);
+        $at = $k !== false ? $k + strlen('tiny_style.css">') : $i + strlen($mark);
+        return substr($html, 0, $at).$bar.substr($html, $at);
+    }
+    return $bar.$html;
+}
+
 function btn(string $label, string $href, string $icon = 'add'): string
 {
     $icon = ['back' => 'x', 'edit' => 'wrench', 'up' => 'add'][$icon] ?? $icon;

@@ -473,16 +473,43 @@ function rows_academic_activity()
 }
 
 /** ฝ่ายวิชาการ: ลงทะเบียนกิจกรรมพัฒนาผู้เรียน (จากรายการกิจกรรมพัฒนาผู้เรียน) ให้นักเรียนทั้งห้อง */
+/**
+ * รวมกิจกรรมซ้ำ: กิจกรรมเดิมที่ไม่มีรหัส กับกิจกรรมที่มีรหัส ชื่อ/ระดับชั้น/ปี/ภาคเรียนเดียวกัน
+ * เก็บรายการเดิม (ผลประเมิน/สถานะอนุมัติเดิม) แล้วใส่รหัสให้ — รหัสต่างกันไม่รวม
+ */
+function act_merge_dups(): void
+{
+    foreach (q('SELECT B.`id` keep, C.`id` dup, C.`course_code` code FROM {course} B JOIN {course} C ON C.`type`=9 AND C.`course_code`<>\'\' AND C.`year`=B.`year` AND C.`term`=B.`term` AND C.`class`=B.`class` AND TRIM(C.`course_name`)=TRIM(B.`course_name`) AND C.`id`<>B.`id`'
+        .' WHERE B.`type`=9 AND B.`course_code`=\'\' ORDER BY B.`id`, C.`id`') as $r) {
+        $keep = q1('SELECT `course_code` FROM {course} WHERE `id`=?', [(int) $r['keep']]);
+        if (!$keep || !q1('SELECT 1 x FROM {course} WHERE `id`=?', [(int) $r['dup']])) {
+            continue;
+        }
+        if ((string) $keep['course_code'] !== '' && (string) $keep['course_code'] !== (string) $r['code']) {
+            continue; // ได้รหัสอื่นไปแล้ว (รหัสต่างกัน ไม่รวม)
+        }
+        imp_merge_course((int) $r['dup'], (int) $r['keep']);
+        q('UPDATE {course} SET `course_code`=? WHERE `id`=?', [(string) $r['code'], (int) $r['keep']]);
+    }
+}
+
 function adm_act_enroll(bool $post)
 {
     [$y, $t] = term();
     $byc = rooms_by_class();
     // กิจกรรมของภาคเรียนนี้จากรายการกิจกรรม: ภาคเรียน 1-2 หรือตรงกับภาคเรียนที่เลือกดู
     $cat = array_filter(act_catalog(), fn($d) => in_array((string) ($d['term'] ?? ''), ['', '1-2', (string) $t], true));
+    act_merge_dups();
     $courses = q('SELECT * FROM {course} WHERE `type`=9 AND `year`=? AND `term`=?', [$y, $t]);
     $find = function (array $d, int $class) use (&$courses) {
         foreach ($courses as $c) {
             if ((string) $c['course_code'] === (string) ($d['code'] ?? '') && (int) $c['class'] === $class) {
+                return $c;
+            }
+        }
+        // กิจกรรมเดิมที่ยังไม่มีรหัส (ชื่อเดียวกัน) = กิจกรรมเดียวกัน
+        foreach ($courses as $c) {
+            if ((string) $c['course_code'] === '' && trim((string) $c['course_name']) === trim((string) ($d['name'] ?? '')) && (int) $c['class'] === $class) {
                 return $c;
             }
         }
@@ -520,6 +547,9 @@ function adm_act_enroll(bool $post)
                 $c = q1('SELECT * FROM {course} WHERE `type`=9 AND `year`=? AND `term`=? AND `course_code`=? AND `class`=? ORDER BY `id` DESC', [$y, $t, (string) ($d['code'] ?? ''), $it['class']]);
             }
             $cid = (int) $c['id'];
+            if ((string) $c['course_code'] === '' && (string) ($it['d']['code'] ?? '') !== '') {
+                q('UPDATE {course} SET `course_code`=? WHERE `id`=?', [mb_substr((string) $it['d']['code'], 0, 20), $cid]);
+            }
             $have = array_map('intval', array_column(q('SELECT DISTINCT `room` FROM {grade} WHERE `course_id`=?', [$cid]), 'room'));
             foreach (array_diff($want, $have) as $room) {
                 foreach (q('SELECT S.`id`, S.`number` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`room`=? AND U.`active`=1', [$room]) as $s) {
@@ -598,7 +628,8 @@ function rows_task_study_record_ActRecord()
     $body = saved_msg().$js.$info.'<form name="actrec" method="post" action="?module=task&option=study_record&func=SaveActRecord&SubjectNum='.(int) $c['id'].'&RoomNum='.$room.'">'
         .list_table('บันทึกผลการประเมินกิจกรรมพัฒนาผู้เรียน', [['เลขที่', ' style="width:50px;text-align:center"'], 'รหัสนักเรียน', 'ชื่อ-นามสกุล', ['ห้อง', ' style="text-align:center"'], ['เวลาเข้าร่วม (ชั่วโมง)', ' style="text-align:center"'],
             ['ไม่ผ่านการปฏิบัติกิจกรรม', ' style="text-align:center"'], ['ผลการประเมิน', ' style="text-align:center"']], $rows ?: '<tr><td colspan="7" align="center">ยังไม่มีนักเรียนลงทะเบียนกิจกรรมนี้</td></tr>', '', $btns).'</form>';
-    return sub_page('task_study_record', $body, 'บันทึกผลกิจกรรมพัฒนาผู้เรียน');
+    $back = "<div style='float:left;margin:0px 2px'> <a href='?module=task&option=study_record' onMouseOver=\"MM_swapImage('icon_back','','../icon_tools/icon_back.png',1);\" onMouseOut=\"MM_swapImgRestore();\"><img id='icon_back' name='icon_back' src='../icon_tools/hicon_back.png' border='0' title='กลับ' align='top'/></a> </div>";
+    return d_with_buttons(sub_page('task_study_record', $body, 'บันทึกผลกิจกรรมพัฒนาผู้เรียน'), $back);
 }
 
 function act_task_study_record_SaveActRecord(): void

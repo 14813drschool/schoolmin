@@ -173,7 +173,7 @@ function rpt_room_name(int $rid): string
 function rpt_print(string $title, string $body, bool $landscape = false): void
 {
     mis_headers();
-    echo '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>'.h($title).'</title><link rel="stylesheet" href="/mis/css/thaisansbold.css"><link rel="stylesheet" href="/mis/css/sarabun.css"><style>'
+    echo '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>'.h($title).'</title><link rel="shortcut icon" href="/mis/images/favicon.ico"><link rel="stylesheet" href="/mis/css/thaisansbold.css"><link rel="stylesheet" href="/mis/css/sarabun.css"><style>'
         .'@page{size:A4 '.($landscape ? 'landscape' : 'portrait').';margin:10mm 12mm}*{box-sizing:border-box}body{margin:0;background:#888;font:13px/1.35 "TH Sarabun New",sans-serif;font-size-adjust:0.545;color:#000}.page *{font-family:"TH Sarabun New",sans-serif}'
         .'.page{width:'.($landscape ? '297mm' : '210mm').';min-height:'.($landscape ? '210mm' : '297mm').';margin:10px auto;background:#fff;padding:10mm 12mm;page-break-after:always;position:relative}'
         .'.page:last-child{page-break-after:auto}h1,h2,h3{font-family:"TH Sarabun New",sans-serif;font-weight:bold;margin:2px 0;text-align:center}h1{font-size:28px}h2{font-size:22px}h3{font-size:18px}'
@@ -604,7 +604,7 @@ function rp_page(string $title, string $func, array $c, int $room, string $body,
         }
     }
     mis_headers();
-    echo '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>'.h($title).'</title><link rel="stylesheet" href="/mis/css/thaisansbold.css"><link rel="stylesheet" href="/mis/css/sarabun.css"><style>'
+    echo '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>'.h($title).'</title><link rel="shortcut icon" href="/mis/images/favicon.ico"><link rel="stylesheet" href="/mis/css/thaisansbold.css"><link rel="stylesheet" href="/mis/css/sarabun.css"><style>'
         .'@page{size:A4 portrait;margin:4mm 8mm}body{margin:0;background:#fff;font:18.67px/1.15 "TH Sarabun New",sans-serif;color:#000}'
         .'.pv-top{background:#FBFBFB;display:flex;justify-content:space-between;align-items:center;padding:0 10px;border-bottom:1px solid #9FD8E6;margin:10px 10px 0}.pv-top select{font:13px Tahoma;height:22px}'
         .'.pv-bar{margin:0 10px;background:linear-gradient(90deg,#71C7F1,#63B5EC);color:#fff;text-align:center;font-size:24px;padding:8px 0;margin-top:8px;font-family:thaisansbold,"TH Sarabun New"}'

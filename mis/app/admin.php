@@ -1152,8 +1152,12 @@ function school_address(bool $withPhone = false): string
 {
     $parts = array_filter([cfg('addr_no', ''), cfg('addr_moo', '') !== '' ? 'หมู่ '.cfg('addr_moo') : '', cfg('addr_tambon', '') !== '' ? 'ต.'.cfg('addr_tambon') : '',
         cfg('addr_amphoe', '') !== '' ? 'อ.'.cfg('addr_amphoe') : '', cfg('addr_province', '') !== '' ? 'จ.'.cfg('addr_province') : '', (string) cfg('addr_zip', '')], fn($x) => (string) $x !== '');
-    $a = $parts ? implode(' ', $parts) : (string) cfg('address', '7 หมู่ 3 ต.เวียงพางคำ อ.แม่สาย จ.เชียงราย');
-    return $a.($withPhone && cfg('phone', '') !== '' ? ' โทรศัพท์ '.cfg('phone') : '');
+    $a = $parts ? implode(' ', $parts) : trim((string) cfg('address', ''));
+    if ($a === '') {
+        $a = '7 หมู่ 3 ต.เวียงพางคำ อ.แม่สาย จ.เชียงราย'; // ค่าเริ่มต้นตามต้นฉบับ (ยังไม่ได้ตั้งค่าข้อมูลโรงเรียน)
+    }
+    $ph = trim((string) cfg('phone', ''));
+    return $a.($withPhone ? ' โทรศัพท์ '.($ph !== '' ? $ph : '0-5373-1268') : '');
 }
 
 /** ตราโรงเรียน (อัปโหลดได้ที่การตั้งค่า > ข้อมูลโรงเรียน) */

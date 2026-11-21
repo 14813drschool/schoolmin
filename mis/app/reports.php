@@ -174,6 +174,13 @@ function rpt_gpa_text(?float $g): string
 
 function rpt_room_students(int $rid): array
 {
+    $y = rpt_term()[0];
+    if ($y < cur_term()[0]) {
+        // ปีการศึกษาที่ผ่านมา: นักเรียน/เลขที่ตามประวัติห้องเรียนของปีนั้น
+        $rows = year_room_students($rid, $y);
+        usort($rows, fn($a, $b) => [(int) $a['number'], (string) $a['student_id']] <=> [(int) $b['number'], (string) $b['student_id']]);
+        return $rows;
+    }
     return q('SELECT S.*, U.`name`, U.`sex` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE S.`room`=? AND U.`active`=1 ORDER BY S.`number`, S.`student_id`', [$rid]);
 }
 
@@ -248,7 +255,7 @@ function rpt_card_page(array $s, int $y, int $t, string $mode, array $att): stri
     $lvNow = class_level($s['class']);
     $gpax = rpt_gpa_cell(array_filter(student_grades($sid), fn($g) => ($lvNow === '' || in_array(grade_level($g), [$lvNow, ''], true)) && ((int) $g['year'] < $y || ((int) $g['year'] === $y && (int) $g['term'] <= max(array_column($terms, 1))))));
     $lv = fn($k) => ($a = score_avg($k, $sid)) === null ? '-' : level_text($a);
-    $adv = array_map(fn($p) => personnel_options()[$p] ?? '', room_advisors()[(int) $s['room']] ?? []);
+    $adv = array_map(fn($p) => personnel_options()[$p] ?? '', room_advisors_in_year($y)[(int) $s['room']] ?? []);
     $sum = '<table class="nb" style="margin-top:8px"><tr><td style="width:50%">ผลการเรียนเฉลี่ย'.($mode === 'year' ? 'ทั้งปี' : 'ภาคเรียนนี้').' <b>'.rpt_gpa_cell($yearGrades).'</b></td><td>ผลการเรียนเฉลี่ยสะสม (GPAX) <b>'.$gpax.'</b></td></tr>'
         .'<tr><td>คุณลักษณะอันพึงประสงค์ <b>'.$lv('char').'</b></td><td>การอ่าน คิดวิเคราะห์และเขียน <b>'.$lv('skill').'</b></td></tr>'
         .'<tr><td>สมรรถนะสำคัญของผู้เรียน <b>'.(($a = score_avg(preg_match('/ป\./', class_short((int) $s['class'])) ? 'capp' : 'capj', $sid)) === null ? '-' : level_text($a)).'</b></td><td></td></tr></table>';
@@ -370,7 +377,7 @@ function rpt_room(int $rid, int $y, int $t): void
         }
         $tr .= '<td class="c"><b>'.rpt_gpa_text($gpa[$id]).'</b></td><td class="c">'.($rank[$id] ?? '-').'</td></tr>';
     }
-    $adv = array_map(fn($p) => personnel_options()[$p] ?? '', room_advisors()[$rid] ?? []);
+    $adv = array_map(fn($p) => personnel_options()[$p] ?? '', room_advisors_in_year($y)[$rid] ?? []);
     rpt_print('สรุปผลการเรียน '.rpt_room_name($rid), '<div class="page">'.rpt_head('สรุปผลการเรียน ชั้น '.rpt_room_name($rid), 'ภาคเรียนที่ '.$t.' ปีการศึกษา '.$y.' &nbsp; ครูที่ปรึกษา '.h(implode(', ', array_filter($adv)) ?: '-'))
         .'<table><tr><th rowspan="2" style="width:30px">เลขที่</th><th rowspan="2" style="width:60px">เลขประจำตัว</th><th rowspan="2">ชื่อ-นามสกุล</th>'.$th.'<th rowspan="2" style="width:40px">GPA</th><th rowspan="2" style="width:36px">อันดับ</th></tr>'
         .'<tr>'.$cr.'</tr>'.($tr ?: '<tr><td colspan="'.(5 + count($courses)).'" class="c">ไม่พบนักเรียน</td></tr>').'</table>'
@@ -430,7 +437,10 @@ function rpt_rooms(): array
         }
         return $o;
     }
-    $rid = (int) (q1('SELECT `room` FROM {personnel} WHERE `id`=?', [(int) me()['id']])['room'] ?? 0);
+    $y = rpt_term()[0];
+    $rid = $y < cur_term()[0]
+        ? adv_room_in_year((int) me()['id'], $y) // ปีที่ผ่านมา: ห้องที่ปรึกษาของปีนั้น
+        : (int) (q1('SELECT `room` FROM {personnel} WHERE `id`=?', [(int) me()['id']])['room'] ?? 0);
     return $rid ? [$rid => rpt_room_name($rid)] : [];
 }
 
@@ -444,7 +454,7 @@ function rpt_run(): string
         $rid = (int) ($_GET['room'] ?? 0);
         $sid = (int) ($_GET['student'] ?? 0);
         if ($sid && !$rid) {
-            $rid = (int) (q1('SELECT `room` FROM {student} WHERE `id`=?', [$sid])['room'] ?? 0);
+            $rid = $y < cur_term()[0] ? (int) (year_rooms($y)[$sid]['room'] ?? 0) : (int) (q1('SELECT `room` FROM {student} WHERE `id`=?', [$sid])['room'] ?? 0);
         }
         if (!isset($rooms[$rid])) {
             return 'ไม่มีสิทธิ์พิมพ์เอกสารของห้องนี้';

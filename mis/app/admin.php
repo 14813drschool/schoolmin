@@ -469,7 +469,7 @@ function md_page(string $kind, string $option, string $label, array $fields, arr
                     if (in_array($ext, ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'zip', 'txt'], true)) {
                         $dir = ROOT_PATH.'datas/mis/';
                         @mkdir($dir, 0755, true);
-                        $fname = $kind.'_'.$id.'.'.$ext;
+                        $fname = preg_replace('/[^A-Za-z0-9_-]/', '', $kind.'_'.$id).'.'.$ext; // กันชื่อไฟล์มี ../ ออกนอกโฟลเดอร์
                         if (move_uploaded_file($_FILES[$n]['tmp_name'], $dir.$fname)) {
                             $d[$n] = $fname;
                             $d[$n.'_name'] = mb_substr((string) $_FILES[$n]['name'], 0, 120);

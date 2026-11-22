@@ -15,6 +15,12 @@ $result = $user === '' || $pass === '' ? ['success' => false] : \Index\Auth\Mode
 if (empty($result['success'])) {
     redirect('./?error=1');
 }
+// บัญชีที่ไม่ใช่บุคลากร/ผู้ดูแล/นักเรียน (เช่น สมัครสมาชิกเอง) เข้าระบบไม่ได้
+$ud = $result['user'] ?? [];
+$u = q1('SELECT * FROM {user} WHERE `id`=?', [(int) (is_array($ud) ? ($ud['id'] ?? 0) : ($ud->id ?? 0))]);
+if (!$u || !mis_user_allowed($u)) {
+    redirect('./?error=1');
+}
 mis_auth_cookie('auth_token', $result['token'], \Index\Auth\Model::TOKEN_EXPIRY);
 if (!empty($result['refresh_token'])) {
     mis_auth_cookie('refresh_token', $result['refresh_token'], \Index\Auth\Model::REFRESH_TOKEN_EXPIRY);

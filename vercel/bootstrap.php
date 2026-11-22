@@ -520,6 +520,11 @@ final class VercelSms
             $this->checkSetupKey();
         }
 
+        // ปิดการสมัครสมาชิกจากภายนอก (บัญชีครู/นักเรียนสร้างโดยผู้ดูแลในระบบสารสนเทศเท่านั้น)
+        if (preg_match('#^/(api|api\.php)/index/auth/register#i', preg_replace('#/+#', '/', $path))) {
+            $this->deny(403, 'ปิดการสมัครสมาชิก');
+        }
+
         // API: /api/... -> api.php (เหมือน RewriteRule ^api/(.*)$ api.php/$1)
         if (preg_match('#^/api/(.*)$#', $path, $m)) {
             if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {

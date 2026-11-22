@@ -90,6 +90,9 @@ function me(?array $override = null): ?array
         q('UPDATE {user_session} SET `last_seen`=NOW() WHERE `sid`=? AND `member_id`=?', [$u['sid'], (int) $u['id']]);
     }
     $p = q1('SELECT * FROM {personnel} WHERE `id`=?', [(int) $u['id']]);
+    if (!mis_user_allowed($u, (bool) $p)) {
+        return null; // บัญชีที่ไม่ใช่บุคลากร/ผู้ดูแล/นักเรียน (เช่น สมัครสมาชิกเองผ่าน API) ใช้ระบบไม่ได้
+    }
     // ดูปีการศึกษาย้อนหลัง: ห้องที่เป็นครูประจำชั้นตามประวัติของปีนั้น
     if ($p && function_exists('adv_room_in_year') && ($vy = term()[0]) !== cur_term()[0]) {
         $room = adv_room_in_year((int) $u['id'], $vy);
@@ -346,6 +349,44 @@ function mis_headers(): void
     header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
     header('Content-Type: text/html; charset=utf-8');
     header('Cache-Control: no-store');
+    header('X-Content-Type-Options: nosniff');
+    header('Referrer-Policy: same-origin');
+    header_remove('X-Powered-By'); // ไม่บอกรุ่น PHP ให้ภายนอก
+}
+
+/**
+ * กันการปลอมคำขอข้ามเว็บ (CSRF) ชั้นที่ 2 (ชั้นแรกคือคุกกี้ SameSite=Strict)
+ * คำขอที่เปลี่ยนข้อมูล — POST ทุกแบบ หรือลิงก์คำสั่ง (ลบ/อนุมัติ/ยกเลิก/เปิด-ปิด) — ต้องมาจากเว็บนี้เท่านั้น
+ * เบราว์เซอร์ส่ง Sec-Fetch-Site / Origin มาเอง เว็บอื่นปลอมไม่ได้
+ */
+function mis_csrf_guard(): void
+{
+    header_remove('X-Powered-By');
+    $post = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST';
+    $cmd = (bool) array_intersect_key($_GET, array_flip(['del', 'delete', 'toggle', 'ok', 'reject', 'cancel', 'open', 'Sara', 'seed', 'stamp', 'remove', 'approve', 'who']))
+        || preg_match('/^(Delete|Remove|Cancel|Approve|Reject)/', (string) ($_GET['func'] ?? ''));
+    if (!$post && !$cmd) {
+        return;
+    }
+    $site = strtolower((string) ($_SERVER['HTTP_SEC_FETCH_SITE'] ?? ''));
+    $origin = (string) ($_SERVER['HTTP_ORIGIN'] ?? '');
+    $hosts = [];
+    foreach (['HTTP_HOST', 'HTTP_X_FORWARDED_HOST'] as $k) {
+        foreach (explode(',', (string) ($_SERVER[$k] ?? '')) as $h) {
+            $h = strtolower(trim($h));
+            if ($h !== '') {
+                $hosts[] = preg_replace('/:\d+$/', '', $h);
+            }
+        }
+    }
+    $oh = strtolower((string) parse_url($origin, PHP_URL_HOST));
+    $bad = $site === 'cross-site'
+        || ($origin !== '' && $origin !== 'null' && $hosts && !in_array($oh, $hosts, true));
+    if ($bad) {
+        http_response_code(403);
+        header('Content-Type: text/plain; charset=utf-8');
+        exit('คำขอถูกปฏิเสธ: ต้องทำรายการจากหน้าเว็บของระบบเท่านั้น');
+    }
 }
 
 /* ---------------------------------------------------------------- เข้าสู่ระบบ (ใช้ร่วมกันหลายหน้า) */
@@ -360,6 +401,28 @@ function mis_login_user(int $uid): void
     \Index\Auth\Model::logLoginActivity($uid, 'Login successful', $ip);
     mis_auth_cookie('auth_token', $t['access_token'], \Index\Auth\Model::TOKEN_EXPIRY);
     mis_auth_cookie('refresh_token', $t['refresh_token'], \Index\Auth\Model::REFRESH_TOKEN_EXPIRY);
+}
+
+/**
+ * บัญชีที่ใช้ระบบได้: ผู้ดูแลหลัก, ผู้มีสิทธิ์ผู้ดูแล, บุคลากร (มีข้อมูลในทะเบียนบุคลากร) หรือนักเรียน
+ * บัญชีอื่น (เช่น สมัครสมาชิกเองจากภายนอก) เข้าระบบไม่ได้
+ */
+function mis_user_allowed(array $u, ?bool $personnel = null): bool
+{
+    $id = (int) ($u['id'] ?? 0);
+    if ($id <= 0) {
+        return false;
+    }
+    if ($id === 1 || (int) ($u['status'] ?? 0) === 1) {
+        return true;
+    }
+    if ($personnel ?? (bool) q1('SELECT `id` FROM {personnel} WHERE `id`=?', [$id])) {
+        return true;
+    }
+    if (q1('SELECT `id` FROM {student} WHERE `id`=?', [$id])) {
+        return true;
+    }
+    return (bool) user_modules($u);
 }
 
 /** ผู้ใช้เป็นนักเรียนหรือไม่ */

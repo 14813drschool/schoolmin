@@ -35,7 +35,7 @@ function run_page(): void
     // เปลี่ยนภาคเรียนที่ดู (ฟอร์มปีการศึกษาบนหัวเว็บ)
     if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['select_active']) && preg_match('/^\d{4}\|[123]$/', $_POST['select_active'])) {
         setcookie('mis_term', $_POST['select_active'], ['path' => '/mis/', 'httponly' => true, 'samesite' => 'Lax', 'secure' => !empty($_SERVER['HTTPS'])]);
-        redirect($_SERVER['REQUEST_URI'] ?? 'index.php');
+        redirect('/'.ltrim((string) ($_SERVER['REQUEST_URI'] ?? '/mis/edumain/index.php'), '/\\')); // กันเปลี่ยนทางไปเว็บอื่น (//เว็บอื่น)
     }
     if (!me()) {
         redirect('../');

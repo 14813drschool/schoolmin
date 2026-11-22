@@ -556,8 +556,8 @@ function adm_score_sum(bool $post)
     foreach ($courses as $i => $c) {
         $a = $avg[(int) $c['id']] ?? null;
         $g = $gc[(int) $c['id']] ?? [];
-        $cells = [$i + 1, h($c['course_code'].' '.$c['course_name']), h($c['teacher']), [array_sum($g), ' align="center"'], [$a ? number_format($a['m'], 2) : '-', ' align="center"'],
-            [$a ? number_format($a['f'], 2) : '-', ' align="center"'], [$a ? number_format($a['m'] + $a['f'], 2) : '-', ' align="center"'], [$a ? $a['mx'].' / '.$a['mn'] : '-', ' align="center"']];
+        $cells = [$i + 1, h($c['course_code'].' '.$c['course_name']), h($c['teacher']), [array_sum($g), ' align="center"'], [$a && $a['m'] !== null ? number_format((float) $a['m'], 2) : '-', ' align="center"'],
+            [$a && $a['f'] !== null ? number_format((float) $a['f'], 2) : '-', ' align="center"'], [$a && ($a['m'] !== null || $a['f'] !== null) ? number_format((float) $a['m'] + (float) $a['f'], 2) : '-', ' align="center"'], [$a && $a['mx'] !== null ? $a['mx'].' / '.$a['mn'] : '-', ' align="center"']];
         foreach (['4', '3', '2', '1', '0'] as $k) {
             $cells[] = [(int) ($g[$k] ?? 0) + (int) ($g[$k.'.5'] ?? 0), ' align="center"'];
         }
@@ -1077,7 +1077,7 @@ function adm_rep_summary(bool $post)
     $byType = [];
     foreach ($people as $p) {
         $id = (int) $p['id'];
-        $t = $ptype[$id] ?: 'ไม่ระบุประเภท';
+        $t = ($ptype[$id] ?? '') ?: 'ไม่ระบุประเภท';
         $byType[$t]['n'] = ($byType[$t]['n'] ?? 0) + 1;
         if (!empty($wt[$id]['in'])) {
             $k = $wt[$id]['in'] > $w['in'] ? 'late' : 'come';

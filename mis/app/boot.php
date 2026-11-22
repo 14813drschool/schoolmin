@@ -27,3 +27,5 @@ require MIS_APP.'stusys.php';
 require MIS_APP.'gradeedit.php';
 require MIS_APP.'attend.php';
 require MIS_APP.'pages.php';
+
+mis_csrf_guard();

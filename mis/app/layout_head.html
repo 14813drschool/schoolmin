@@ -49,6 +49,23 @@ if (navigator.userAgent.toLowerCase().indexOf("chrome") >= 0) {
 		var w=window.open("about:blank","misprint",feat());if(w){f.target="misprint";try{w.focus();}catch(x){}setTimeout(function(){f.target="_blank";},0);}
 	},true);
 })();
+/* หน้าต่างฟอร์ม (dz-ov): เปิด/ปิดด้วยแอนิเมชันเดียวกับ facebox ของระบบต้นฉบับ (faceformheight.js)
+   เปิด: พื้นหลังดำค่อย ๆ ทึบถึง 0.7 ใน 400ms + กล่องค่อย ๆ ปรากฏ 400ms / ปิด: กล่องจางหาย 400ms + พื้นหลังจางหาย 200ms / Esc หรือคลิกนอกกล่อง = ปิด */
+function dzOpen(i) {
+	var o = $('#' + i); if (!o.length) return;
+	var ov = $('#dz_overlay');
+	if (!ov.length) ov = $('<div id="dz_overlay"></div>').appendTo('body');
+	ov.stop(true, true).hide().css({position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: '#000', zIndex: 9998})
+		.css('opacity', +o.attr('data-op') || 0.7).fadeIn(+o.attr('data-in') || 400); /* ค่าตาม faceformheight.js; หน้าที่ต้นฉบับใช้ faceform.js กำหนด data-op=0.3 data-in=200 */
+	o.addClass('on').find('.dz-m').stop(true, true).hide().fadeIn('normal');
+}
+function dzClose(i) {
+	var o = $('#' + i); if (!o.length || !o.hasClass('on')) return;
+	o.find('.dz-m').stop(true, true).fadeOut(function () { o.removeClass('on'); $(this).show(); });
+	$('#dz_overlay').stop(true, true).fadeOut(200, function () { $(this).remove(); });
+}
+document.addEventListener('keydown', function (e) { if (e.keyCode === 27) $('.dz-ov.on').each(function () { dzClose(this.id); }); });
+document.addEventListener('click', function (e) { var t = e.target; if (t && t.classList && t.classList.contains('dz-ov') && t.classList.contains('on')) dzClose(t.id); });
 /* กล่องยืนยันในเว็บ (AlertBox) แทน confirm ของเบราว์เซอร์: el = ลิงก์/ปุ่ม/ฟอร์มที่กด, fn = ทำงานเมื่อกดตกลง (ถ้าไม่ระบุ จะกดซ้ำ/ส่งฟอร์มเดิม) */
 function misConfirm(el, msg, fn) {
 	if (el && el._misOk) { el._misOk = 0; return true; }

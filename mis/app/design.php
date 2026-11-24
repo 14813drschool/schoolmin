@@ -148,8 +148,8 @@ function rec_css(): string
 {
     return '<style>.rec-bar{border:1px solid #d3d3d3;border-radius:4px 4px 0 0;background:linear-gradient(#fff,#f3f3f3);padding:6px 10px;display:flex;align-items:center;justify-content:space-between}'
         .'.rec-bar h2{font-family:thaisansbold;font-weight:normal;font-size:24px;margin:0;color:#333}.rec-bar h2 i{color:#F7941D;margin-right:8px}.rec-bar+.dz-info{border-top:none!important;border-radius:0 0 4px 4px}'
-        .'.rec-tabs{margin-top:4px}.rec-tab{display:inline-block;background:#A9A9A9;color:#fff;font-family:thaisansbold;font-size:17px;padding:5px 10px 3px;border-radius:3px 3px 0 0;cursor:pointer;margin-right:3px}.rec-tab.on{background:#17B4B4}'
-        .'.rec-line{border-top:3px solid #17B4B4}.rec-pane{display:none}.rec-pane.on{display:block}'
+        .''
+        .''
         .'table.rec{border-collapse:collapse;width:100%;font:13px Tahoma}table.rec th{background:#FDE5DA;border:1px solid #9CCFD6;font-family:"TH Sarabun New","TH SarabunPSK",sans-serif;font-weight:bold;font-size:20px;color:#222;padding:3px 4px;text-align:center!important;vertical-align:middle}'
         .'table.rec th.b{background:#EDEDED}table.rec.u th{background:#EDFCBE}table.rec.u th.b,table.rec.u th.vt{background:#EDEDED}'
         .'table.rec th.vt{height:240px;vertical-align:bottom;padding:6px 2px;width:46px}table.rec th.vt div{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;margin:0 auto;font-size:18px;max-height:230px;overflow:hidden}'
@@ -178,8 +178,8 @@ function d_css(): string
         .'.dz-plus{float:right;display:inline-block;width:16px;height:16px;line-height:15px;text-align:center;background:#5ED39B;color:#fff!important;border-radius:3px;font-weight:bold;font-size:14px;text-decoration:none!important}'
         .'.dz-edit{color:#2EBD59!important;font-size:18px}.dz-red{color:#E00!important}'
         .'.dz-print{float:right;margin-top:10px}'
-        .'.dz-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:9999;overflow:auto}.dz-ov.on{display:block}'
-        .'.dz-m{background:#fff;margin:40px auto;border:6px solid #f2f2f2;outline:1px solid #ccc;border-radius:4px;box-shadow:0 4px 20px rgba(0,0,0,.3);text-align:left}'
+        .'.dz-ov{position:fixed;inset:0;background:transparent;display:none;z-index:9999;overflow:auto}.dz-ov.on{display:block}'
+        .'.dz-m{background:#fff;margin:30px auto;border:6px solid #f2f2f2;outline:1px solid #ccc;border-radius:4px;box-shadow:0 4px 20px rgba(0,0,0,.3);text-align:left}'
         .'.dz-m .hd{background:#F7F9FB;border-bottom:1px solid #ddd;padding:8px 10px;font-family:thaisansbold;font-size:21px;color:#333}.dz-m .hd i{color:#F7941D;margin-right:8px}.dz-m .hd .x{float:right;cursor:pointer;color:#999;font-size:18px}'
         .'.dz-m .bd{padding:10px 16px 14px}.dz-m .note{display:flex;gap:10px;align-items:center;border-bottom:1px solid #eee;padding:6px 0 8px;margin-bottom:8px;font-size:12px;color:#222}.dz-m .note i{color:#2BC3C9;font-size:22px}'
         .'.dz-m label{display:block;font-family:thaisansbold;font-size:18px;color:#222;margin:8px 0 2px}.dz-m .in{height:28px;border:1px solid #e3b7a6;border-left:3px solid #c0392b;background:#FFF8F2;padding:0 6px;font:14px Tahoma;box-sizing:border-box}'
@@ -341,9 +341,7 @@ function rows_task_design_measurement_DesignMeasurement()
     $body = d_css().saved_msg().'<div class="dz">'.d_info($c, $level, '<div class="ratio">นน.คะแนนคะแนนรายวิชา '.$rw.' : '.$rm.' : '.$rf.'</div><a href="javascript:void(0)" class="dz-addunit" onclick="dzOpen(\'mu0\')"><b><i class="fa fa-pencil-square-o"></i>เพิ่มหน่วยการเรียนรู้</b></a>')
         .'<div class="dz-h"><h2><i class="fa fa-book"></i>ตารางออกแบบการวัดและประเมินผล</h2><select onchange="location.href=this.value">'.$opts.'</select></div>'.$table
         .'<div class="dz-print"><a href="?module=task&option=design_measurement&func=PrintDesign&SubjectNum='.$cid.'" target="_blank" onMouseOver="MM_swapImage(\'icon_print\',\'\',\'../icon_tools/icon_print.png\',1);" onMouseOut="MM_swapImgRestore();"><img id="icon_print" src="../icon_tools/hicon_print.png" border="0" title="พิมพ์"/></a></div><div style="clear:both"></div></div>'
-        .$modals.'<script>function dzOpen(i){var e=document.getElementById(i);if(e)e.classList.add("on")}function dzClose(i){document.getElementById(i).classList.remove("on")}'
-        .'document.addEventListener("keydown",function(e){if(e.key==="Escape")document.querySelectorAll(".dz-ov.on").forEach(function(x){x.classList.remove("on")})});'
-        .'document.querySelectorAll(".dz-ov").forEach(function(o){o.addEventListener("click",function(e){if(e.target===o)o.classList.remove("on")})});</script>';
+        .$modals; // เปิด/ปิดหน้าต่างฟอร์ม: dzOpen/dzClose (แอนิเมชันแบบ facebox ใน layout_head)
     $page = sub_page('task_design_measurement', $body, 'ออกแบบการวัดและประเมินผล');
     $page['__CONTENT__'] = preg_replace('/(<h1 class="blue_title"[^>]*>)[^<]*(<\/h1>)/u', '${1}รายชื่อนักเรียนที่รับผิดชอบการสอน$2', $page['__CONTENT__'], 1);
     return d_with_buttons($page, d_head_buttons([['copy_design', 'javascript:dzOpen(\'mcopy\')', 'คัดลอกการออกแบบ'], ['back', '?module=task&option=design_measurement', 'กลับ']]));
@@ -564,13 +562,24 @@ function rows_task_study_record_Record()
         return '<td class="c">'.$pr.'</td><td class="c">'.($n ? number_format($pr * 100 / $n, 0) : '100').'</td>';
     };
     $unitMarkAll = array_sum(array_map(fn($u) => (float) $u['mark'], $units));
-    $saveBar = fn($label) => $locked ? '' : '<div class="rec-save"><a href="javascript:void(0)" class="sv" onclick="document.forms.rec.submit()"><i class="fa fa-pencil-square-o"></i> '.h($label).'</a><a href="javascript:void(0)" class="cl" onclick="document.forms.rec.reset();recColor()">✕ เคลียร์</a></div>';
+    // ปุ่มบันทึก/เคลียร์ท้ายตาราง: แบบเดียวกับต้นฉบับ (formframefooter + #Savebtns / #Clearbtns ของ main.css)
+    $saveBar = function ($label) use ($locked) {
+        if ($locked) {
+            return '';
+        }
+        $sum = mb_strpos($label, 'กลางภาค') !== false; // แท็บกลางภาค/ปลายภาค: ปุ่มกว้างกว่า และไอคอนเลื่อนขึ้นเหมือนต้นฉบับ
+        $im = $sum ? ' style="margin-top:-5px"' : '';
+        return '<div class="formframefooter" style="width:972px;margin-top:0;padding-top:5px;padding-bottom:10px"><div style="float:right;width:'.($sum ? 320 : 260).'px">'
+            .'<span style="float:left;width:'.($sum ? 240 : 180).'px;text-align:right;margin-right:3px"><a href="javascript:void(0)" id="Savebtns" style="display:block" onclick="document.forms.rec.submit();return false"><img src="../icon_tools/vec_add_white.png" border="0" height="18"'.$im.'/> '.h($label).'</a></span>'
+            .'<span style="margin-left:3px;float:left;width:65px"><a href="javascript:void(0)" id="Clearbtns" style="display:block" onclick="document.forms.rec.reset();recColor();return false"><img src="../icon_tools/vec_x_white.png" border="0" height="14"'.$im.'/> เคลียร์</a></span>'
+            .'</div></div>';
+    };
     // แท็บรายหน่วย
     $tabs = '';
     $panes = '';
     $ti = 0;
     foreach ($units as $un => $u) {
-        $tabs .= '<span class="rec-tab" data-p="p'.$ti.'">หน่วยที่ '.$un.'</span>';
+        $tabs .= '<li class="rec-tab" data-p="p'.$ti.'"><a href="#p'.$ti.'">หน่วยที่ '.$un.'</a></li>';
         $th = '';
         $mx = '';
         foreach ($u['tasks'] as $tn => $t) {
@@ -600,7 +609,7 @@ function rows_task_study_record_Record()
             .'<tr><th colspan="2">เวลาเรียน</th><th colspan="'.($n + 1).'">'.h($u['title']).'</th><th>รวม</th></tr>'
             .'<tr><th class="b">คาบ</th><th class="b">ร้อยละ</th>'.$th.'<th class="b">รวม</th><th class="b">เต็ม</th></tr>'
             .'<tr class="max"><td colspan="3" style="background:#EDFCBE"></td><td>'.$total.'</td><td>100</td>'.$mx.'<td>'.h((string) (float) $u['mark']).'</td><td>'.h((string) $unitMarkAll).'</td></tr>'
-            .($rows ?: '<tr><td colspan="'.(6 + $n).'" class="c">ไม่มีนักเรียนลงทะเบียน</td></tr>').'</table>'.$saveBar('บันทึกคะแนนหน่วยที่ '.$un).'</div>';
+            .($rows ?: '<tr><td colspan="'.(6 + $n).'" class="c">ไม่มีนักเรียนลงทะเบียน</td></tr>').'</table>'.$saveBar('บันทึกคะแนนระหว่างเรียน').'</div>';
         $ti++;
     }
     // แท็บสรุป
@@ -647,7 +656,7 @@ function rows_task_study_record_Record()
             .'<td class="c sum"><b class="'.($tot < PASS_SCORE ? 'bad' : 'ok').'">'.($has ? $tot : '').'</b></td><td class="c sum"><b class="'.(in_array($grade, ['0', 'ร', 'มส'], true) ? 'bad' : 'ok').'">'.h($grade).'</b></td>'
             .'<td class="c fix">'.$fixCell.'</td><td class="c fix"><b class="'.(isset($fix['score']) && (float) $fix['score'] < PASS_SCORE ? 'bad' : 'ok').'">'.h((string) ($fix['score'] ?? '')).'</b></td><td class="c fix"><b class="'.(($fix['new'] ?? '') === '0' ? 'bad' : 'ok').'">'.h((string) ($fix['new'] ?? '')).'</b></td></tr>';
     }
-    $tabs .= '<span class="rec-tab" data-p="p'.$ti.'">กลางภาค ปลายภาค และสรุปรวม</span>';
+    $tabs .= '<li class="rec-tab" data-p="p'.$ti.'"><a href="#p'.$ti.'">กลางภาค ปลายภาค และสรุปรวม</a></li>';
     $panes .= '<div class="rec-pane" id="p'.$ti.'"><table class="rec"><tr><th rowspan="3" style="width:46px">เลขที่</th><th rowspan="3" style="width:56px">รหัส</th><th rowspan="3">ชื่อ-นามสกุล</th><th colspan="10" class="big">คะแนนสอบและผลการเรียน ประจำภาคเรียนที่ '.(int) $c['term'].' ปีการศึกษา '.(int) $c['year'].'</th></tr>'
         .'<tr><th colspan="2">เวลาเรียน</th><th>รายหน่วย</th><th>กลางภาค</th><th>ปลายภาค</th><th colspan="2">คะแนนรวมและสรุปผล</th><th colspan="3">แก้ไข</th></tr>'
         .'<tr><th class="b">คาบ</th><th class="b">ร้อยละ</th><th class="b">รวม</th><th class="b">คะแนน</th><th class="b">คะแนน</th><th class="b">รวม</th><th class="b">เกรด</th><th rowspan="2" class="b">แก้</th><th class="b">รวม</th><th class="b">เกรด</th></tr>'
@@ -662,9 +671,14 @@ function rows_task_study_record_Record()
     $body = d_css().$style.saved_msg().$lockMsg.'<div class="dz"><div class="rec-bar"><h2><i class="fa fa-list-ul"></i>โอนคะแนนและผลการเรียน</h2><select onchange="location.href=this.value" style="height:24px;min-width:160px">'.$opts.'</select></div>'
         .d_info($c, $level, '<div class="ratio">อัตราส่วนคะแนนรายวิชา '.$r1.' : '.$r2.' : '.$r3.'</div>')
         .'<form name="rec" method="post" action="?module=task&option=study_record&func=SaveRecord&SubjectNum='.(int) $c['id'].'&RoomNum='.$room.'"><input type="hidden" name="tab" id="rec-tab" value=""/>'
-        .'<div class="rec-tabs">'.$tabs.'</div><div class="rec-line"></div>'.$panes
+        .'<link rel="stylesheet" type="text/css" href="../css/tabs.css"/><link rel="stylesheet" type="text/css" href="../css/jquery.sBubble-0.1.1.css"/>'
+        .'<link rel="stylesheet" type="text/css" href="../css/tabset/typography.css"/><link rel="stylesheet" type="text/css" href="../css/tabset/animatetabs.css"/>'
+        // แท็บหน่วย: โครงสร้าง/CSS/สคริปต์ tabslet เดียวกับต้นฉบับ (สลับหน่วยค่อย ๆ ปรากฏ)
+        .'<div class="tabs tabs_active"><ul class="horizontal">'.$tabs.'</ul>'.$panes.'</div>'
+        .'<script type="text/javascript" src="../scripts/tabset/waypoints.min.js"></script><script type="text/javascript" src="../scripts/tabset/waypoints-sticky.min.js"></script>'
+        .'<script type="text/javascript" src="../scripts/tabset/jquery.tabslet.min.js"></script><script type="text/javascript" src="../scripts/tabset/initializerstabsmooth.js"></script>'
         .'</form></div>'
-        .'<div class="dz-ov" id="mfix"><div class="dz-m" style="width:430px"><form method="post" action="?module=task&option=study_record&func=SaveFix&SubjectNum='.(int) $c['id'].'&RoomNum='.$room.'"><input type="hidden" name="gid" id="fx-gid"/>'
+        .'<div class="dz-ov" id="mfix" data-op="0.3" data-in="200"><div class="dz-m" style="width:430px;margin-top:150px"><form method="post" action="?module=task&option=study_record&func=SaveFix&SubjectNum='.(int) $c['id'].'&RoomNum='.$room.'"><input type="hidden" name="gid" id="fx-gid"/>'
         .'<div class="hd"><i class="fa fa-list-ul"></i>บันทึกคะแนนสอบแก้ไข<span class="x" onclick="dzClose(\'mfix\')">✕</span></div><div class="bd"><div style="display:flex;gap:10px;align-items:center;background:#F7F7F7;border:1px solid #eee;padding:8px;font-size:13px;clear:both;float:none;width:auto"><i class="fa fa-commenting" style="color:#2BC3C9;font-size:22px"></i><span id="fx-name"></span></div>'
         .'<div id="fx-sp" style="margin:10px 0 0 86px;clear:both"><label style="display:inline;font-family:Tahoma;font-size:13px;margin:0"><input type="checkbox" name="special" value="1" id="fx-special"/> กรณีพิเศษ</label></div>'
         .'<div style="display:flex;align-items:center;gap:10px;margin-top:10px;clear:both"><span style="width:76px;font-size:13px;white-space:nowrap">คะแนนแก้</span><input class="in" name="score" id="fx-score" style="width:150px" maxlength="5" oninput="var v=parseFloat(this.value),t=this;if(!isNaN(v)&&v>100){t.blur();recMsg(\'ไม่อนุญาตให้บันทึกคะแนนมากกว่า 100 คะแนน\',function(){t.value=\'\';t.focus()})}"/><span style="font-size:13px">คะแนน</span></div></div>'
@@ -673,8 +687,11 @@ function rows_task_study_record_Record()
         // เครื่องที่ไม่มีฟอนต์ TH Sarabun New ใช้ฟอนต์เริ่มต้นของเครื่อง ขนาดเล็กลงให้พอดีหัวตาราง
         .'var chk=function(){try{var c=document.createElement("canvas").getContext("2d"),t="กขคงabc123",w=function(f){c.font="40px "+f;return c.measureText(t).width};'
         .'if(w("\\"TH Sarabun New\\",monospace")===w("monospace")&&w("\\"TH SarabunPSK\\",monospace")===w("monospace"))document.body.classList.add("no-sarabun")}catch(e){}};document.fonts&&document.fonts.load?document.fonts.load("20px \\"TH Sarabun New\\"").then(chk,chk):chk()})();'
-        .'(function(){var tabs=document.querySelectorAll(".rec-tab");function show(id){tabs.forEach(function(t){t.classList.toggle("on",t.dataset.p===id)});document.querySelectorAll(".rec-pane").forEach(function(p){p.classList.toggle("on",p.id===id)});document.getElementById("rec-tab").value=id}'
-        .'tabs.forEach(function(t){t.addEventListener("click",function(){show(t.dataset.p)})});var m=location.search.match(/[?&]tab=(p\d+)/);show(m&&document.getElementById(m[1])?m[1]:tabs[tabs.length-1].dataset.p);'
+        .'(function(){var tabs=$(".tabs_active > ul li");var m=location.search.match(/[?&]tab=(p\d+)/);var act=tabs.length;'
+        .'tabs.each(function(k){if(m&&$(this).data("p")===m[1])act=k+1});document.getElementById("rec-tab").value=tabs.eq(act-1).data("p")||"";'
+        // tabslet ตามต้นฉบับ: active / click / href / animation:true
+        .'$(".tabs_active").tabslet({active:act,mouseevent:"click",attribute:"href",animation:true});'
+        .'tabs.click(function(){document.getElementById("rec-tab").value=$(this).data("p")});'
         .'document.querySelectorAll(".rec-in").forEach(function(i){i.addEventListener("input",function(){recColor(i);recMax(i)})});recColor();'
         // กดบันทึก: ถ้ายังมีช่องที่เกินคะแนนเต็ม แจ้งเตือนและไม่บันทึก
         .'var f=document.forms.rec;if(f){var sub=f.submit;f.submit=function(){var bad=[].slice.call(f.querySelectorAll(".rec-in")).filter(function(i){return recOver(i)||recNaN(i)});if(bad.length){recMax(bad[0]);return}sub.call(f)}}})();'
@@ -695,7 +712,7 @@ function rows_task_study_record_Record()
         .'i.classList.toggle("err",e);i.classList.toggle("ok",!e&&i.value!==""&&mx>0&&v>=mx/2);i.classList.toggle("bad",!e&&i.value!==""&&mx>0&&v<mx/2)})}'
         .'function recFix(g,n,no,isR,sc,sp){document.getElementById("fx-gid").value=g;document.getElementById("fx-name").textContent=n+" เลขที่ "+no;document.getElementById("fx-sp").style.display=isR?"":"none";'
         .'document.getElementById("fx-special").checked=!!sp;document.getElementById("fx-score").value=sc;dzOpen("mfix");document.getElementById("fx-score").focus()}'
-        .'function dzOpen(i){document.getElementById(i).classList.add("on")}function dzClose(i){document.getElementById(i).classList.remove("on")}document.addEventListener("keydown",function(e){if(e.key==="Escape")dzClose("mfix")});</script>';
+        .'</script>';
     $page = sub_page('task_study_record', $body, 'รายงานผลการเรียน');
     $back = "<div style='float:left;margin:0px 2px'> <a href='?module=task&option=study_record' onMouseOver=\"MM_swapImage('icon_back','','../icon_tools/icon_back.png',1);\" onMouseOut=\"MM_swapImgRestore();\"><img id='icon_back' name='icon_back' src='../icon_tools/hicon_back.png' border='0' title='กลับ' align='top'/></a> </div>";
     return d_with_buttons($page, rpt_record_buttons($c, $room).$back);

@@ -785,8 +785,9 @@ function adm_personnel_Edit(bool $post)
         ['สิทธิ์การใช้งาน', $pc, false],
         ['สถานะ', sel('active', ['1' => 'ปฏิบัติงานปกติ', '0' => 'พ้นสภาพ/ลาออก'], $p['active'] ?? 1), false],
         ['รหัสผ่าน', inp('password', '', 200, 'password', 'autocomplete="new-password" placeholder="'.($p ? 'เว้นว่างถ้าไม่เปลี่ยน' : 'อย่างน้อย 6 ตัวอักษร').'"'), !$p],
+        ['ลายเซ็น', person_sign_field($id), false],
     ];
-    return [$p ? 'แก้ไขข้อมูลบุคลากร' : 'เพิ่มบุคลากร', admin_form($p ? 'แก้ไขข้อมูลบุคลากร' : 'เพิ่มบุคลากร', a_url('personnel', '&func=Save&id='.$id), $rows, a_url('personnel'))];
+    return [$p ? 'แก้ไขข้อมูลบุคลากร' : 'เพิ่มบุคลากร', (!empty($_GET['signerr']) ? msg_box('บันทึกข้อมูลแล้ว แต่ไม่ได้บันทึกลายเซ็น: ไฟล์ลายเซ็นต้องเป็นรูป PNG/JPG/GIF ไม่เกิน 2 MB', false) : '').admin_form($p ? 'แก้ไขข้อมูลบุคลากร' : 'เพิ่มบุคลากร', a_url('personnel', '&func=Save&id='.$id), $rows, a_url('personnel'))];
 }
 
 function adm_personnel_Save(bool $post)
@@ -819,13 +820,58 @@ function adm_personnel_Save(bool $post)
             q('UPDATE {personnel} SET `class`=0, `room`=0 WHERE `id`=?', [$oid]);
         }
     }
+    $signErr = person_sign_save((int) $uid);
     $vals = [(int) ($_POST['position'] ?? 0), (int) ($_POST['department'] ?? 0), min(127, max(0, (int) ($_POST['order'] ?? 0))), $cid, $room];
     if (q1('SELECT 1 x FROM {personnel} WHERE `id`=?', [$uid])) {
         q('UPDATE {personnel} SET `position`=?, `department`=?, `order`=?, `class`=?, `room`=? WHERE `id`=?', array_merge($vals, [$uid]));
     } else {
         q('INSERT INTO {personnel} (`position`,`department`,`order`,`class`,`room`,`id`) VALUES (?,?,?,?,?,?)', array_merge($vals, [$uid]));
     }
+    if ($signErr !== '') {
+        redirect(a_url('personnel', '&func=Edit&id='.(int) $uid.'&signerr=1')); // ข้อมูลอื่นบันทึกแล้ว แจ้งเฉพาะลายเซ็น
+    }
     admin_done('personnel');
+}
+
+/** ช่องอัปโหลดลายเซ็นบุคลากร (ใช้ในใบรายงานผลการเรียน ปพ.6 และหนังสือราชการ) */
+function person_sign_field(int $id): string
+{
+    $u = person_sign_url($id);
+    return '<div style="display:flex;gap:12px;align-items:flex-start"><div style="width:220px;height:70px;border:1px solid #ccc;border-radius:3px;background:#fff;display:flex;align-items:center;justify-content:center">'
+        .($u !== '' ? '<img src="'.h($u).'" style="max-width:210px;max-height:64px"/>' : '<span class="gray_12">ยังไม่มีลายเซ็น</span>').'</div><div>'
+        .'<input type="file" name="person_sign" accept="image/png,image/jpeg,image/gif" style="width:260px;font-size:12px"/>'
+        .'<div class="gray_12" style="font-size:11px;margin-top:2px">PNG พื้นหลังโปร่งใสดีที่สุด ไม่เกิน 2 MB — ขึ้นในใบรายงานผลการเรียน ปพ.6 และหนังสือที่เลือกบุคลากรนี้เป็นผู้ลงนาม</div>'
+        .($u !== '' ? '<label style="font-size:12px"><input type="checkbox" name="person_sign_del" value="1" style="width:auto;height:auto;vertical-align:-2px"/> ลบลายเซ็น</label>' : '').'</div></div>';
+}
+
+/** บันทึก/ลบลายเซ็นบุคลากร: คืนข้อความผิดพลาด หรือ '' */
+function person_sign_save(int $uid): string
+{
+    if ($uid <= 0) {
+        return '';
+    }
+    $up = $_FILES['person_sign'] ?? null;
+    $del = !empty($_POST['person_sign_del']);
+    $has = $up && (int) $up['error'] === 0 && (int) $up['size'] > 0;
+    if (!$del && !$has) {
+        return '';
+    }
+    $ext = '';
+    if ($has) {
+        $ext = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/gif' => 'gif'][(string) mime_content_type($up['tmp_name'])] ?? '';
+        if ($ext === '' || (int) $up['size'] > 2 * 1024 * 1024 || !@getimagesize($up['tmp_name'])) {
+            return 'ไฟล์ลายเซ็นต้องเป็นรูป PNG/JPG/GIF ไม่เกิน 2 MB';
+        }
+    }
+    $dir = ROOT_PATH.'datas/sign';
+    is_dir($dir) || mkdir($dir, 0777, true);
+    foreach (glob($dir.'/'.$uid.'_*') ?: [] as $f) {
+        is_file($f) && unlink($f);
+    }
+    if ($has) {
+        move_uploaded_file($up['tmp_name'], $dir.'/'.$uid.'_'.bin2hex(random_bytes(8)).'.'.$ext); // ชื่อสุ่ม: เดา URL ลายเซ็นไม่ได้
+    }
+    return '';
 }
 
 function adm_personnel_Delete(bool $post)

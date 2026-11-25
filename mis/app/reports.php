@@ -104,14 +104,57 @@ function director_sign_url(): string
             return '/datas/school/director_sign.'.$e.'?v='.filemtime($f);
         }
     }
-    return '';
+    // ไม่ได้อัปโหลดที่หน้าผู้บริหาร: ใช้ลายเซ็นบุคลากรของผู้อำนวยการ (ถ้ามี)
+    $pid = person_id_by_name(rpt_signer('ผู้อำนวยการ'));
+    return $pid ? person_sign_url($pid) : '';
 }
 
 /** รูปลายเซ็นผู้อำนวยการวางทับเส้นลงชื่อ (ไม่ทำให้ระยะบรรทัดเปลี่ยน) */
 function director_sign_img(int $left = 20, int $h = 44): string
 {
-    $u = director_sign_url();
+    return sign_overlay(director_sign_url(), $left, $h);
+}
+
+/** รูปลายเซ็นวางทับเส้นลงชื่อ (ไม่ทำให้ระยะบรรทัดเปลี่ยน) */
+function sign_overlay(string $u, int $left = 20, int $h = 44): string
+{
     return $u === '' ? '' : '<span style="position:relative;display:inline-block;width:0;height:0;vertical-align:baseline"><img src="'.h($u).'" alt="" style="position:absolute;left:'.$left.'px;bottom:-6px;height:'.$h.'px;max-width:180px"/></span>';
+}
+
+/** ลายเซ็นบุคลากร (อัปโหลดที่ "กำหนดข้อมูลบุคลากร") URL หรือ '' */
+function person_sign_url(int $uid): string
+{
+    if ($uid <= 0) {
+        return '';
+    }
+    // ชื่อไฟล์ <id>_<สุ่ม>.<ext> เดา URL ไม่ได้
+    foreach (glob(ROOT_PATH.'datas/sign/'.$uid.'_*') ?: [] as $f) {
+        if (preg_match('/^'.$uid.'_[0-9a-f]{16}\.(png|jpg|gif)$/', basename($f))) {
+            return '/datas/sign/'.basename($f).'?v='.filemtime($f);
+        }
+    }
+    return '';
+}
+
+/** รหัสบุคลากรจากชื่อ-นามสกุล (ไม่สนช่องว่าง) หรือ 0 */
+function person_id_by_name(string $name): int
+{
+    $k = preg_replace('/\s+/u', '', $name);
+    if ($k === '') {
+        return 0;
+    }
+    foreach (personnel_options() as $id => $n) {
+        if (preg_replace('/\s+/u', '', (string) $n) === $k) {
+            return (int) $id;
+        }
+    }
+    return 0;
+}
+
+/** ลายเซ็นของบุคลากรตามชื่อ วางทับเส้นลงชื่อ */
+function person_sign_img(string $name, int $left = 20, int $h = 44): string
+{
+    return sign_overlay(person_sign_url(person_id_by_name($name)), $left, $h);
 }
 
 /** เวลาเรียนร้อยละของนักเรียนในรายวิชา [course => [sid => pct]] */
@@ -214,11 +257,12 @@ function rpt_head(string $title, string $sub = '', bool $addr = false): string
     return '<div class="head"><img src="'.h(rpt_logo()).'" alt=""/><div><h2>'.h(cfg('school_name', 'โรงเรียนดรุณราษฎร์วิทยา')).'</h2>'.($addr ? '<div class="c" style="font-size:13px;margin:-2px 0 2px">'.h(school_address()).'</div>' : '').'<h3>'.h($title).'</h3>'.($sub !== '' ? '<div class="c small">'.$sub.'</div>' : '').'</div></div>';
 }
 
-function rpt_signs(array $who): string
+function rpt_signs(array $who, bool $personSigns = false): string
 {
     $o = '<div class="sign">';
     foreach ($who as [$role, $name]) {
-        $sig = preg_match('/^ผู้อำนวยการ/u', $role) ? director_sign_img(40) : '';
+        // ผู้อำนวยการ: ลายเซ็นผู้อำนวยการ / ใบรายงานผลการเรียน: ลายเซ็นบุคลากรตามชื่อ (ครูที่ปรึกษา รองฯ วิชาการ)
+        $sig = preg_match('/^ผู้อำนวยการ/u', $role) ? director_sign_img(40) : ($personSigns && $name !== '' ? person_sign_img($name, 40) : '');
         $o .= '<div>ลงชื่อ '.$sig.'..................................<br>('.($name !== '' ? h($name) : '..................................').')<br>'.h($role).'</div>';
     }
     return $o.'</div>';
@@ -264,7 +308,7 @@ function rpt_card_page(array $s, int $y, int $t, string $mode, array $att): stri
     $cut = '<div class="cut small">✂ ส่วนส่งคืนโรงเรียน &nbsp; ข้าพเจ้า ...................................................... ผู้ปกครองของ '.h($s['name']).' ชั้น '.h(rpt_room_name((int) $s['room']))
         .' ได้รับทราบผลการเรียนแล้ว<br><br>ความคิดเห็นของผู้ปกครอง ..................................................................................................................... ลงชื่อ ................................ ผู้ปกครอง</div>';
     return '<div class="page">'.rpt_head($title, '', true).$info.$body.$sum
-        .rpt_signs([['ครูที่ปรึกษา', $adv[0] ?? ''], ['รองผู้อำนวยการฝ่ายวิชาการ', rpt_signer('วิชาการ')], ['ผู้อำนวยการโรงเรียน', rpt_signer('ผู้อำนวยการ')]]).$cut.'</div>';
+        .rpt_signs([['ครูที่ปรึกษา', $adv[0] ?? ''], ['รองผู้อำนวยการฝ่ายวิชาการ', rpt_signer('วิชาการ')], ['ผู้อำนวยการโรงเรียน', rpt_signer('ผู้อำนวยการ')]], true).$cut.'</div>';
 }
 
 function rpt_card(array $students, int $y, int $t, string $mode): void

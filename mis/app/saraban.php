@@ -101,7 +101,13 @@ function sb_garuda(): string
             return '/datas/school/garuda.'.$e.'?v='.filemtime($f);
         }
     }
-    return '';
+    return '/mis/images/garuda.png?v=1'; // ตราครุฑมาตรฐาน (ค่าเริ่มต้น)
+}
+
+/** มีตราครุฑที่อัปโหลดเองหรือไม่ */
+function sb_garuda_custom(): bool
+{
+    return strpos(sb_garuda(), '/datas/') === 0;
 }
 
 function adm_sb_settings(bool $post)
@@ -144,7 +150,7 @@ function sb_settings_form(array $c): array
             .($g !== '' ? '<img src="'.h($g).'" style="max-width:84px;max-height:94px"/>' : '<span class="gray_12" style="text-align:center">ยังไม่มี<br>ตราครุฑ</span>').'</div><div>'
             .'<input type="file" name="garuda" accept="image/png,image/jpeg,image/gif" style="width:260px;font-size:12px"/>'
             .$tip('ไฟล์ภาพตราครุฑ (PNG พื้นหลังโปร่งใสดีที่สุด) ไม่เกิน 3 MB — ระบบย่อให้สูง ๓ ซม. (หนังสือภายนอก คำสั่ง ประกาศ) และ ๑.๕ ซม. (บันทึกข้อความ) ตามระเบียบ')
-            .($g !== '' ? '<label style="font-size:12px"><input type="checkbox" name="garuda_del" value="1" style="width:auto;height:auto;vertical-align:-2px"/> ลบตราครุฑ</label>' : '').'</div></div>', false],
+            .(sb_garuda_custom() ? '<label style="font-size:12px"><input type="checkbox" name="garuda_del" value="1" style="width:auto;height:auto;vertical-align:-2px"/> ลบไฟล์ที่อัปโหลด (กลับไปใช้ตราครุฑมาตรฐาน)</label>' : '<div style="font-size:12px;color:#27AE60">ใช้ตราครุฑมาตรฐานของระบบอยู่ — อัปโหลดเฉพาะเมื่อต้องการเปลี่ยนไฟล์</div>').'</div></div>', false],
         ['รูปแบบเลขที่ หนังสือภายนอก / ประทับตรา / รับรอง', inp('fmt_out', $c['fmt_out'], 260).$tip('{n} = เลขทะเบียนหนังสือส่ง (เริ่ม ๑ ใหม่ทุกปีปฏิทิน), {y} = ปี พ.ศ. เช่น <b>ศธ ๐๔๐๐๗.๖๓๔/{n}</b> หรือ <b>ดร {n}/{y}</b>'), false],
         ['รูปแบบเลขที่ บันทึกข้อความ', inp('fmt_memo', $c['fmt_memo'], 260).$tip('ใช้ทะเบียนแยกจากหนังสือภายนอก'), false],
         ['รูปแบบเลขที่ คำสั่ง', inp('fmt_order', $c['fmt_order'], 260).$tip('ตามระเบียบ: ที่ ลำดับ/ปี พ.ศ. เช่น {n}/{y}'), false],
@@ -246,7 +252,7 @@ function adm_sb_letter(bool $post)
     $addBox = '<div style="width:983px;box-sizing:border-box;margin:0 auto 10px;text-align:left;padding:10px 12px 4px;border:1px dashed #33cc99;border-radius:4px;background:#FCFCFC">'
         .'<b style="display:block;margin-bottom:6px">ออกหนังสือใหม่</b>'.$add
         .'<a href="'.h(a_url('sb_settings')).'" style="float:right;font-size:12px;margin-top:6px">ตั้งค่าตราครุฑ / รูปแบบเลขที่</a>'
-        .(sb_garuda() === '' ? '<div style="clear:both;color:#C0392B;font-size:12px;margin:2px 0 6px">ยังไม่ได้อัปโหลดตราครุฑ — <a href="'.h(a_url('sb_settings')).'">อัปโหลดที่ตั้งค่างานสารบรรณ</a></div>' : '<div style="clear:both"></div>').'</div>';
+        .'<div style="clear:both"></div></div>';
     return ['ทะเบียนหนังสือส่ง ปี พ.ศ. '.$y, $addBox.$filter.list_table('ทะเบียนหนังสือส่ง ปี พ.ศ. '.h($y),
         [['#', ' style="width:30px"'], 'เลขที่', 'ลงวันที่', 'ประเภท', 'เรื่อง', 'เรียน/ถึง', 'ผู้ลงนาม/ผู้ร้อง', ['', ' style="width:80px"']], $rows, count($list).' รายการ')];
 }

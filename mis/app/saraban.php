@@ -65,6 +65,7 @@ const SB_FIELDS = [
     'q_deliver' => ['quote'],
     'q_plans' => ['quote'],
     'ct_cust' => ['contract'],
+    'ct_logo' => ['contract'],
     'ct_a' => ['contract'],
     'ct_la' => ['contract'],
     'ct_b' => ['contract'],
@@ -314,7 +315,7 @@ function sb_form(string $id, string $type): array
             'sign_pid' => person_id_by_name($c['sign_name']), 'sign_hide' => '',
             'q_issuer' => 'school', 'q_vendor' => sb_quote_school(), 'q_vat' => 'none', 'q_valid' => '30', 'q_deliver' => '', 'q_items' => [], 'q_plans' => [],
             'ct_a' => implode(' ', array_filter(array_map('trim', explode("\n", $c['org'])))), 'ct_la' => 'ฝ่ายที่หนึ่ง', 'ct_lb' => 'ฝ่ายที่สอง', 'ct_plan' => 'month', 'ct_periods' => '12',
-            'ct_start' => date('Y-m-d')];
+            'ct_start' => date('Y-m-d'), 'ct_logo' => '1'];
         if ($type === 'contract') {
             $d['place'] = $c['org_name'];
         }
@@ -388,6 +389,7 @@ function sb_form(string $id, string $type): array
         'q_valid' => ['ยืนราคา', inp('q_valid', $v('q_valid'), 60).' วัน นับจากวันที่เสนอราคา', false],
         'q_plans' => ['ประมาณการค่าใช้จ่าย<br><span class="gray_12" style="font-weight:normal">(ไม่ใช่ยอดเรียกเก็บจริง)</span>', sb_plans_editor(is_array($d['q_plans'] ?? null) ? $d['q_plans'] : []), false],
         'ct_cust' => ['ผู้สมัคร/ผู้ซื้อบริการ (คู่สัญญา)', sb_ct_cust_sel($v('ct_cust')).$tip('เลือกเพื่อเติมข้อมูลฝ่ายที่สอง และให้คู่สัญญาเห็นสัญญา/ยอดชำระในระบบ (เข้าระบบหน้าเดียวกับนักเรียน)'), false],
+        'ct_logo' => ['ตราโรงเรียน', '<label><input type="checkbox" name="ct_logo" value="1"'.($v('ct_logo') !== '0' ? ' checked' : '').' style="width:auto;height:auto;vertical-align:-2px"/> แสดงตราโรงเรียนกึ่งกลางหัวสัญญา</label>', false],
         'ct_a' => ['ฝ่ายที่หนึ่ง (โรงเรียน)', $ta('ct_a', 45).$tip('ชื่อและที่ตั้ง — ผู้ลงนามแทนเลือกที่ช่อง "ผู้ลงนาม" ด้านล่าง (ลายเซ็นขึ้นได้)'), false],
         'ct_la' => ['เรียกฝ่ายที่หนึ่งว่า', inp('ct_la', $v('ct_la'), 200, 'text', 'list="ct_labels"').' และฝ่ายที่สองว่า '.inp('ct_lb', $v('ct_lb'), 200, 'text', 'list="ct_labels"')
             .'<datalist id="ct_labels"><option value="ฝ่ายที่หนึ่ง"><option value="ฝ่ายที่สอง"><option value="ผู้ให้บริการ"><option value="ผู้ใช้บริการ"><option value="ผู้ให้เช่า"><option value="ผู้เช่า"><option value="ผู้ว่าจ้าง"><option value="ผู้รับจ้าง"><option value="ผู้ขาย"><option value="ผู้ซื้อ"></datalist>', false],
@@ -401,7 +403,7 @@ function sb_form(string $id, string $type): array
     ];
     // ลำดับช่อง (ช่องที่ไม่ใช้กับประเภทที่เลือกจะถูกซ่อน): ใบเสนอราคาเรียง ผู้เสนอ > เลขที่/วันที่ > เรียน > รายการ > หมายเหตุ > ผู้ลงนาม
     $seq = ['type', 'q_issuer', 'q_vendor', 'no', 'urgency', 'date', 'org', 'memo_org', 'org_name', 'place', 'title', 'to', 'q_cust', 'ref', 'encl',
-        'ct_cust', 'ct_a', 'ct_b', 'ct_b_rep', 'ct_la', 'q_items', 'q_vat', 'q_plans', 'q_valid', 'q_deliver', 'body', 'ct_plan'];
+        'ct_cust', 'ct_logo', 'ct_a', 'ct_b', 'ct_b_rep', 'ct_la', 'q_items', 'q_vat', 'q_plans', 'q_valid', 'q_deliver', 'body', 'ct_plan'];
     $rows = array_merge(array_replace(array_flip($seq), array_intersect_key($rows, array_flip($seq))), $rows);
     $tr = '';
     foreach ($rows as $k => [$label, $html, $req]) {
@@ -526,6 +528,7 @@ function sb_save()
     }
     // หนังสือสัญญา
     $d['ct_plan'] = isset(CT_PLANS[$d['ct_plan']]) ? $d['ct_plan'] : 'month';
+    $d['ct_logo'] = !empty($_POST['ct_logo']) ? '1' : '0';
     $d['ct_amount'] = (string) round((float) str_replace([',', ' '], '', $d['ct_amount']), 2);
     $d['ct_periods'] = (string) max(1, min(120, (int) $d['ct_periods']));
     $d['ct_start'] = $d['ct_start'] !== '' ? be_date_to_iso($d['ct_start'], '') : '';
@@ -724,7 +727,8 @@ function sb_contract_print(array $d): string
     $w = array_slice(array_values(array_filter(array_map('trim', explode("\n", $v('ct_w'))), 'strlen')), 0, 2);
     $sigs = $box($la, $v('sign_name'), $v('sign_pos'), $sigA).$box($lb, $v('ct_b_rep') ?: $bName, $v('ct_b_pos'))
         .$box('พยาน', $w[0] ?? '').$box('พยาน', $w[1] ?? '');
-    return '<div class="c b" style="font-size:20pt">สัญญา'.sb_t($title).'</div>'
+    return (($d['ct_logo'] ?? '1') !== '0' ? '<div class="c"><img src="'.h(rpt_logo()).'" alt="" style="height:2.5cm;margin-bottom:6pt"/></div>' : '')
+        .'<div class="c b" style="font-size:20pt">สัญญา'.sb_t($title).'</div>'
         .($v('no') !== '' ? '<div style="text-align:right;margin-top:4pt">สัญญาเลขที่ '.sb_t($v('no')).'</div>' : '')
         .'<div class="p" style="margin-top:12pt">'.sb_t($pre).'</div><div class="p">คู่สัญญาได้ตกลงกันมีข้อความดังต่อไปนี้</div>'.$cl
         .'<div class="p" style="margin-top:12pt">สัญญานี้ทำขึ้นเป็นสองฉบับ มีข้อความถูกต้องตรงกัน คู่สัญญาได้อ่านและเข้าใจข้อความโดยละเอียดตลอดแล้ว จึงได้ลงลายมือชื่อไว้เป็นสำคัญต่อหน้าพยาน และคู่สัญญาต่างยึดถือไว้ฝ่ายละหนึ่งฉบับ</div>'

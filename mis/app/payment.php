@@ -603,7 +603,8 @@ function adm_cust(bool $post)
     }
     return ['ผู้สมัคร / ผู้ซื้อบริการ', '<p style="width:983px;margin:0 auto 8px;text-align:left" class="gray_12">ผู้สมัครลงทะเบียนเองที่หน้าระบบนักเรียน (ลิงก์ "สมัครใช้บริการ") — อนุมัติแล้วเข้าระบบด้วยอีเมลหรือเบอร์โทร เห็นเฉพาะหน้าการเงิน สัญญา และใบเสร็จของตนเอง</p>'
         .'<div style="width:983px;margin:0 auto 8px;text-align:left">'.$tabs.'</div>'
-        .list_table('ผู้สมัคร / ผู้ซื้อบริการ', [['#', ' style="width:30px"'], 'ชื่อ / หน่วยงาน', 'บริการที่สนใจ', 'สมัครเมื่อ', 'สถานะ', 'ค้างชำระ', ['', ' style="width:170px"']], $rows, $i.' ราย')];
+        .list_table('ผู้สมัคร / ผู้ซื้อบริการ', [['#', ' style="width:30px"'], 'ชื่อ / หน่วยงาน', 'บริการที่สนใจ', 'สมัครเมื่อ', 'สถานะ', 'ค้างชำระ', ['', ' style="width:170px"']], $rows, $i.' ราย',
+            btn('เพิ่มผู้ซื้อ / ผู้สมัคร', a_url('cust', '&func=Edit'), 'add')), head_btn('เพิ่ม', a_url('cust', '&func=Edit'), 'add')];
 }
 
 function adm_cust_Edit(bool $post)

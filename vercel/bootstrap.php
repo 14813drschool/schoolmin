@@ -502,7 +502,7 @@ final class VercelSms
 
         // ไฟล์และโฟลเดอร์ที่ห้ามเปิดจากภายนอก
         if (strpos($path, '..') !== false
-            || preg_match('#^/(settings|vercel|mis/app)(/|$)|^/datas/(logs|cache)(/|$)|/\.|\.(md|sql|sqlite3?|log|bak|orig|dist|cache|gz|json\.lock)$#i', $path)
+            || preg_match('#^/(settings|vercel|mis/app)(/|$)|^/datas/(logs|cache|private)(/|$)|/\.|\.(md|sql|sqlite3?|log|bak|orig|dist|cache|gz|json\.lock)$#i', $path)
             || preg_match('#^/install/(sample|settings)(/|$)|^/install/cli-#', $path)
             || preg_match('#(^|/)(error_log|sql_log)\.php$#', $path)) {
             $this->deny(404);

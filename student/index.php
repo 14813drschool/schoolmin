@@ -10,12 +10,14 @@ require dirname(__DIR__).'/mis/app/boot.php';
 require __DIR__.'/layout.php';
 require __DIR__.'/forms.php';
 require __DIR__.'/pages.php';
+require __DIR__.'/customer.php';
 
 $p = preg_replace('/[^a-z0-9_]/', '', (string) ($_GET['p'] ?? 'home'));
 $err = '';
 
 /* ---------------------------------------------------------------- ออกจากระบบ */
 if ($p === 'logout') {
+    cust_logout();
     $token = $_COOKIE['auth_token'] ?? '';
     if ($token !== '') {
         $payload = \Index\Auth\Model::verifyToken($token);
@@ -59,6 +61,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['login'])) {
             }
         }
     }
+    // 3) ผู้สมัคร/ผู้ซื้อบริการ: อีเมลหรือเบอร์โทร + รหัสผ่าน (เฉพาะบัญชีที่โรงเรียนอนุมัติแล้ว)
+    if (!$uid && !empty($rate['allowed']) && $user !== '' && $pass !== '') {
+        [$cu, $cuErr] = cust_check_login($user, $pass);
+        if ($cu) {
+            \Index\Auth\Model::recordLoginAttempt($user, $ip, true);
+            cust_login((string) $cu['id']);
+            redirect('./');
+        }
+        if ($cuErr !== '') {
+            $err = $cuErr;
+        }
+    }
     if ($uid) {
         \Index\Auth\Model::recordLoginAttempt($user, $ip, true);
         mis_login_user($uid);
@@ -72,6 +86,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['login'])) {
 
 $me = me();
 if (!$me) {
+    if ($p === 'signup') {
+        cu_signup();
+        exit;
+    }
+    if ($cu = cust_session()) {
+        cu_portal($cu, $p);
+        exit;
+    }
     st_login_page($err);
     exit;
 }

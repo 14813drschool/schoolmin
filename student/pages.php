@@ -560,7 +560,7 @@ function st_fin(array $S, bool $post): string
     if ($pay) {
         $o .= '<p style="margin:12px 0 0" class="c-ok"><i class="fa fa-check-circle"></i> ชำระเงินแล้วเมื่อ '.h(th_date((string) ($pay['date'] ?? ''), ' ')).' ('.h(PAY_METHOD[$pay['method'] ?? ''] ?? '').')</p>';
     } elseif ($sum > 0 && !in_array('bank', st_menu_off(), true)) {
-        $o .= '<p style="margin:12px 0 0"><a class="btn info sm" href="?p=bank"><i class="fa fa-qrcode"></i> เอกสารชำระผ่านธนาคาร</a></p>';
+        $o .= '<p style="margin:12px 0 0">'.(!in_array('payonline', st_menu_off(), true) ? '<a class="btn ok sm" href="?p=payonline"><i class="fa fa-qrcode"></i> ชำระเงินออนไลน์ (QR / แนบสลิป)</a> ' : '').'<a class="btn info sm" href="?p=bank"><i class="fa fa-qrcode"></i> เอกสารชำระผ่านธนาคาร</a></p>';
     }
     return $o;
 }

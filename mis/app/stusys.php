@@ -13,7 +13,7 @@ const ST_MENU = [
         'club' => 'ลงทะเบียนกิจกรรม', 'chars' => 'ประเมินคุณลักษณะ (นักเรียน)', 'charp' => 'ประเมินคุณลักษณะ (ผู้ปกครอง)', 'docreq' => 'ร้องขอเอกสาร (ปพ.)',
         '-1' => '-', 'grade' => 'ผลการสอบแก้ตัว / พิมพ์ใบเกรด', 'cap' => 'ประเมินสมรรถนะสำคัญ', 'analyze' => 'แบบสอบถามวิเคราะห์ผู้เรียน',
     ]],
-    'การเงิน' => ['fa-pencil-square-o', ['fin' => 'รายละเอียดการเงิน', 'bank' => 'เอกสารชำระผ่านธนาคาร', 'shop' => 'จองสินค้าอุปกรณ์การเรียน', '-1' => '-', 'fund' => 'ทุนการศึกษา']],
+    'การเงิน' => ['fa-pencil-square-o', ['fin' => 'รายละเอียดการเงิน', 'payonline' => 'ชำระเงินออนไลน์ (QR / แนบสลิป)', 'bank' => 'เอกสารชำระผ่านธนาคาร', 'shop' => 'จองสินค้าอุปกรณ์การเรียน', '-1' => '-', 'fund' => 'ทุนการศึกษา']],
     'บุคลิกภาพ' => ['fa-pencil-square-o', [
         'good' => 'กิจกรรมนักเรียน', 'behave' => 'พฤติกรรมนักเรียน', 'sdq' => 'ประเมินพฤติกรรมนักเรียนประเมินตนเอง', 'q9' => 'ประเมินโรคซึมเศร้า 9Q', 'sdqp' => 'ประเมินผู้ปกครอง',
         '-1' => '-', 'eq' => 'ประเมินความฉลาดทางอารมณ์', 'profile' => 'ข้อมูลส่วนตัวเพิ่มเติม',
@@ -394,10 +394,18 @@ function adm_stu_bank(bool $post)
 {
     $b = st_bank_cfg();
     if ($post) {
-        foreach (['bank', 'branch', 'acc_no', 'acc_name', 'promptpay', 'due', 'note'] as $k) {
+        foreach (['bank', 'branch', 'acc_no', 'acc_name', 'promptpay', 'due', 'note', 'pp_name', 'rc_fmt'] as $k) {
             $b[$k] = mb_substr(trim((string) ($_POST[$k] ?? '')), 0, $k === 'note' ? 500 : 120);
         }
         $b['promptpay'] = preg_replace('/\D/', '', $b['promptpay']);
+        $b['pp_type'] = isset(PP_TYPES[(string) ($_POST['pp_type'] ?? '')]) ? (string) $_POST['pp_type'] : '';
+        $b['rc_fmt'] = str_contains($b['rc_fmt'], '{n}') ? $b['rc_fmt'] : '{n}/{y}';
+        if ($b['promptpay'] !== '' && $b['pp_type'] === '') {
+            $b['pp_type'] = ['10' => 'phone', '13' => 'citizen', '15' => 'ewallet'][(string) strlen($b['promptpay'])] ?? '';
+        }
+        if (($ppErr = pay_check_pp($b['pp_type'], $b['promptpay'])) !== '') {
+            return msg_box($ppErr, false).adm_stu_bank(false);
+        }
         if (!empty($_POST['qr_del'])) {
             $b['qr'] = '';
         }
@@ -415,7 +423,11 @@ function adm_stu_bank(bool $post)
     $in = fn($k, $w = 300, $ph = '') => inp($k, $b[$k], $w, 'text', $ph !== '' ? 'placeholder="'.h($ph).'"' : '');
     return saved_msg().stu_note('ข้อมูลนี้แสดงในเมนู "เอกสารชำระผ่านธนาคาร" ของระบบนักเรียน พร้อมรายการค่าบำรุงการศึกษาของภาคเรียน (กำหนดที่โมดูลรับชำระเงิน) — ถ้าใส่หมายเลขพร้อมเพย์ ระบบจะสร้าง QR พร้อมยอดเงินของนักเรียนแต่ละคนให้อัตโนมัติ')
         .admin_form('บัญชีรับชำระเงิน / QR พร้อมเพย์', a_url('stu_bank'), [['ธนาคาร', $in('bank', 300, 'เช่น ธนาคารกรุงไทย'), false], ['สาขา', $in('branch'), false], ['เลขที่บัญชี', $in('acc_no', 200), false], ['ชื่อบัญชี', $in('acc_name', 400), false],
-            ['หมายเลขพร้อมเพย์', $in('promptpay', 200, 'เบอร์โทร 10 หลัก / เลขผู้เสียภาษี 13 หลัก'), false],
+            ['สร้าง QR พร้อมเพย์ด้วย', sel('pp_type', ['' => '- เลือกประเภทหมายเลข -'] + array_map(fn($x) => $x[0].' ('.$x[1].' หลัก)', PP_TYPES), (string) ($b['pp_type'] ?? '')), false],
+            ['หมายเลขพร้อมเพย์', $in('promptpay', 200, 'เบอร์โทร 10 หลัก / เลขบัตร 13 หลัก').' <span class="gray_12">ระบบสร้าง QR ตามยอดเงินของแต่ละรายการให้อัตโนมัติ</span>', false],
+            ['ชื่อผู้รับเงินที่แสดงในแอปธนาคาร', inp('pp_name', (string) ($b['pp_name'] ?? ''), 400, 'text', 'placeholder="ชื่อบัญชีที่ผูกกับพร้อมเพย์ เช่น โรงเรียนดรุณราษฎร์วิทยา"')
+                .'<div class="gray_12" style="color:#C00;font-weight:bold">แสดงในหน้าชำระเงินพร้อมคำเตือน !!! ให้ผู้โอนตรวจสอบชื่อผู้รับเงินปลายทางก่อนยืนยันการโอน — ต้องตรงกับชื่อที่แอปธนาคารแสดงเมื่อสแกน QR</div>', false],
+            ['รูปแบบเลขที่ใบเสร็จ (ชำระออนไลน์)', inp('rc_fmt', (string) ($b['rc_fmt'] ?? '{n}/{y}'), 200).' <span class="gray_12">{n} = ลำดับ (เริ่มใหม่ทุกปี พ.ศ.), {y} = ปี พ.ศ. เช่น RC{y}-{n}</span>', false],
             ['หรือรูป QR ชำระเงิน', '<input type="file" name="qr" accept="image/png,image/jpeg"/>'.($b['qr'] !== '' ? ' <a href="/datas/mis/'.h($b['qr']).'" target="_blank">ดูรูปเดิม</a> <label><input type="checkbox" name="qr_del" value="1"/> ลบรูป</label>' : ''), false],
             ['กำหนดชำระภายใน', $in('due', 300, 'เช่น 30 พฤศจิกายน 2569'), false], ['หมายเหตุ', txt('note', $b['note']), false]], a_url('stu_portal'));
 }

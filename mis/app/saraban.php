@@ -24,7 +24,10 @@ const SB_TYPES = [
     'cert' => ['หนังสือรับรอง', 'out'],
     'petition' => ['คำร้อง', ''],
     'quote' => ['ใบเสนอราคา', 'quote'],
+    'contract' => ['หนังสือสัญญา', 'contract'],
 ];
+
+const CT_PLANS = ['month' => 'รายเดือน', 'year' => 'รายปี', 'once' => 'ครั้งเดียว'];
 
 const SB_VAT = ['none' => 'ไม่มีภาษีมูลค่าเพิ่ม', 'incl' => 'ราคารวมภาษีมูลค่าเพิ่ม ๗% แล้ว', 'excl' => 'บวกภาษีมูลค่าเพิ่ม ๗% เพิ่ม'];
 
@@ -32,20 +35,20 @@ const SB_URGENCY = ['' => 'ปกติ', 'ด่วน' => 'ด่วน', 'ด
 
 /** ช่องในฟอร์มที่แต่ละประเภทใช้ */
 const SB_FIELDS = [
-    'no' => ['ext', 'memo', 'stamp', 'order', 'announce', 'cert', 'quote'],
+    'no' => ['ext', 'memo', 'stamp', 'order', 'announce', 'cert', 'quote', 'contract'],
     'urgency' => ['ext', 'memo', 'stamp'],
     'org' => ['ext', 'cert'],
     'memo_org' => ['memo'],
     'org_name' => ['stamp', 'order', 'announce'],
-    'place' => ['petition'],
-    'title' => ['ext', 'memo', 'order', 'announce', 'petition', 'quote'],
+    'place' => ['petition', 'contract'],
+    'title' => ['ext', 'memo', 'order', 'announce', 'petition', 'quote', 'contract'],
     'to' => ['ext', 'memo', 'stamp', 'petition', 'quote'],
     'ref' => ['ext'],
     'encl' => ['ext'],
     'closing' => ['ext'],
-    'sign_pid' => ['ext', 'memo', 'order', 'announce', 'cert', 'quote'],
-    'sign_name' => ['ext', 'memo', 'order', 'announce', 'cert', 'quote'],
-    'sign_pos' => ['ext', 'memo', 'order', 'announce', 'cert', 'quote'],
+    'sign_pid' => ['ext', 'memo', 'order', 'announce', 'cert', 'quote', 'contract'],
+    'sign_name' => ['ext', 'memo', 'order', 'announce', 'cert', 'quote', 'contract'],
+    'sign_pos' => ['ext', 'memo', 'order', 'announce', 'cert', 'quote', 'contract'],
     'sender' => ['petition'],
     'approve' => ['petition'],
     'dept' => ['ext', 'stamp'],
@@ -60,6 +63,19 @@ const SB_FIELDS = [
     'q_vat' => ['quote'],
     'q_valid' => ['quote'],
     'q_deliver' => ['quote'],
+    'q_plans' => ['quote'],
+    'ct_cust' => ['contract'],
+    'ct_a' => ['contract'],
+    'ct_la' => ['contract'],
+    'ct_b' => ['contract'],
+    'ct_b_rep' => ['contract'],
+    'ct_b_pos' => ['contract'],
+    'ct_lb' => ['contract'],
+    'ct_plan' => ['contract'],
+    'ct_amount' => ['contract'],
+    'ct_periods' => ['contract'],
+    'ct_start' => ['contract'],
+    'ct_w' => ['contract'],
 ];
 
 /* ================================================================ ค่าตั้ง */
@@ -92,7 +108,7 @@ function sb_cfg_default(): array
     $phone = trim((string) cfg('phone', '')) ?: '0 5373 1268';
     $dir = function_exists('rpt_signer') ? rpt_signer('ผู้อำนวยการ') : '';
     return [
-        'fmt_out' => '{n}/{y}', 'fmt_memo' => '{n}/{y}', 'fmt_order' => '{n}/{y}', 'fmt_announce' => '', 'fmt_quote' => '{n}/{y}',
+        'fmt_out' => '{n}/{y}', 'fmt_memo' => '{n}/{y}', 'fmt_order' => '{n}/{y}', 'fmt_announce' => '', 'fmt_quote' => '{n}/{y}', 'fmt_contract' => '{n}/{y}',
         'org' => implode("\n", array_filter([$school, $l1, $l2])),
         'memo_org' => $school.' โทร. '.$phone,
         'org_name' => $school,
@@ -167,6 +183,7 @@ function sb_settings_form(array $c): array
         ['รูปแบบเลขที่ บันทึกข้อความ', inp('fmt_memo', $c['fmt_memo'], 260).$tip('ใช้ทะเบียนแยกจากหนังสือภายนอก'), false],
         ['รูปแบบเลขที่ คำสั่ง', inp('fmt_order', $c['fmt_order'], 260).$tip('ตามระเบียบ: ที่ ลำดับ/ปี พ.ศ. เช่น {n}/{y}'), false],
         ['รูปแบบเลขที่ ประกาศ', inp('fmt_announce', $c['fmt_announce'], 260).$tip('เว้นว่าง = ประกาศไม่มีเลขที่'), false],
+        ['รูปแบบเลขที่ หนังสือสัญญา', inp('fmt_contract', $c['fmt_contract'], 260), false],
         ['รูปแบบเลขที่ ใบเสนอราคา (ในนามโรงเรียน)', inp('fmt_quote', $c['fmt_quote'], 260).$tip('ใบเสนอราคาในนามร้านค้า ใช้เลขที่ของร้านที่พิมพ์เอง'), false],
         ['ส่วนราชการเจ้าของหนังสือ (หนังสือภายนอก/รับรอง)', $ta('org').$tip('บรรทัดแรกชื่อโรงเรียน บรรทัดถัดไปที่ตั้ง — พิมพ์ชิดขวาบนหนังสือ'), false],
         ['ส่วนราชการ (บันทึกข้อความ)', inp('memo_org', $c['memo_org'], 520), false],
@@ -219,6 +236,11 @@ function adm_sb_letter(bool $post)
     if ($post && $func === 'Save') {
         return sb_save();
     }
+    // สร้างยอดชำระตามงวดของหนังสือสัญญา (seed=<id> ตรวจที่มาของคำขอโดย mis_csrf_guard)
+    if (isset($_GET['seed']) && ($cd = sb_doc((string) $_GET['seed'])) && ($cd['type'] ?? '') === 'contract') {
+        $n = bill_from_contract((string) $_GET['seed'], $cd);
+        redirect(a_url('bill', '&c='.rawurlencode((string) ($cd['ct_cust'] ?? '')).'&msg='.($n > 0 ? 'saved' : 'none')));
+    }
     if ($func === 'Edit') {
         return sb_form((string) ($_GET['id'] ?? ''), (string) ($_GET['type'] ?? ''));
     }
@@ -245,6 +267,9 @@ function adm_sb_letter(bool $post)
     foreach ($list as $i => [$id, $d]) {
         $urg = (string) ($d['urgency'] ?? '');
         $pr = '<a href="'.h(a_url('sb_letter', '&func=Print&id='.rawurlencode($id))).'" target="_blank" class="icontooltip" title="พิมพ์ / ดูตัวอย่าง"><img src="../icon_tools/vec_print_dark.png" height="17"/></a>';
+        if (($d['type'] ?? '') === 'contract' && ($d['ct_cust'] ?? '') !== '' && (float) ($d['ct_amount'] ?? 0) > 0) {
+            $pr .= ' <a href="'.h(a_url('sb_letter', '&seed='.rawurlencode($id))).'" title="สร้างยอดชำระทุกงวดให้คู่สัญญา" style="font-size:11px;white-space:nowrap" onclick="return confirm(\'สร้างยอดชำระตามงวดของสัญญานี้? (งวดที่สร้างแล้วจะไม่สร้างซ้ำ)\')">สร้างยอดชำระ</a>';
+        }
         $rows .= zrow([
             [$i + 1, ' align="center"'],
             [h($d['no'] ?? '') ?: '-', ' style="white-space:nowrap"'],
@@ -252,7 +277,7 @@ function adm_sb_letter(bool $post)
             h(SB_TYPES[$d['type'] ?? ''][0] ?? '').($urg !== '' ? ' <b style="color:#E00">'.h($urg).'</b>' : ''),
             ($d['type'] ?? '') === 'quote' ? h(trim(($d['title'] ?? '') !== '' ? $d['title'] : strtok((string) ($d['q_vendor'] ?? ''), "\n"))).' <span class="gray_12">('.number_format(sb_quote_calc($d)['total'], 2).' บาท)</span>'
                 : (h($d['title'] ?? '') ?: '<span class="gray_12">'.h(mb_substr((string) ($d['body'] ?? ''), 0, 60)).'</span>'),
-            h($d['to'] ?? ''),
+            h(($d['type'] ?? '') === 'contract' ? strtok((string) ($d['ct_b'] ?? ''), "\n") : ($d['to'] ?? '')),
             h(($d['type'] ?? '') === 'petition' ? ($d['sender'] ?? '') : ($d['sign_name'] ?? '')),
             [$pr.' '.edit_link(a_url('sb_letter', '&func=Edit&id='.rawurlencode($id))).' '.del_link(a_url('sb_letter', '&del='.rawurlencode($id))), ' align="center" style="white-space:nowrap" width="80"'],
         ], $i);
@@ -287,7 +312,12 @@ function sb_form(string $id, string $type): array
             'dept' => $c['dept'], 'tel' => $c['tel'], 'fax' => $c['fax'], 'email' => $c['email'], 'sign_name' => $c['sign_name'], 'sign_pos' => $c['sign_pos'],
             'place' => cfg('school_name', 'โรงเรียนดรุณราษฎร์วิทยา'), 'to' => $type === 'petition' ? 'ผู้อำนวยการ'.cfg('school_name', 'โรงเรียนดรุณราษฎร์วิทยา') : '', 'approve' => $c['approve'],
             'sign_pid' => person_id_by_name($c['sign_name']), 'sign_hide' => '',
-            'q_issuer' => 'school', 'q_vendor' => sb_quote_school(), 'q_vat' => 'none', 'q_valid' => '30', 'q_deliver' => '', 'q_items' => []];
+            'q_issuer' => 'school', 'q_vendor' => sb_quote_school(), 'q_vat' => 'none', 'q_valid' => '30', 'q_deliver' => '', 'q_items' => [], 'q_plans' => [],
+            'ct_a' => implode(' ', array_filter(array_map('trim', explode("\n", $c['org'])))), 'ct_la' => 'ฝ่ายที่หนึ่ง', 'ct_lb' => 'ฝ่ายที่สอง', 'ct_plan' => 'month', 'ct_periods' => '12',
+            'ct_start' => date('Y-m-d')];
+        if ($type === 'contract') {
+            $d['place'] = $c['org_name'];
+        }
     }
     $v = fn($k) => (string) ($d[$k] ?? '');
     $ta = fn($n, $hgt = 60, $ph = '') => '<textarea name="'.$n.'" class="general radius grayborder" style="width:640px;height:'.$hgt.'px;font-size:14px"'.($ph !== '' ? ' placeholder="'.h($ph).'"' : '').'>'.h($v($n)).'</textarea>';
@@ -333,8 +363,8 @@ function sb_form(string $id, string $type): array
         'org' => ['ส่วนราชการเจ้าของหนังสือ', $ta('org', 62).$tip('พิมพ์ชิดขวาด้านบน บรรทัดแรกชื่อส่วนราชการ บรรทัดถัดไปที่ตั้ง'), false],
         'memo_org' => ['ส่วนราชการ', inp('memo_org', $v('memo_org'), 640).$tip('ชื่อส่วนราชการเจ้าของเรื่อง/หน่วยงาน และหมายเลขโทรศัพท์'), false],
         'org_name' => ['ชื่อส่วนราชการ', inp('org_name', $v('org_name'), 640).$tip('คำสั่ง/ประกาศ พิมพ์เป็น "คำสั่ง<ชื่อส่วนราชการ>" — หนังสือประทับตรา พิมพ์เหนือวันที่เพื่อประทับตรา'), false],
-        'place' => ['เขียนที่', inp('place', $v('place'), 400), false],
-        'title' => ['เรื่อง', inp('title', $v('title'), 640), false],
+        'place' => ['<span id="sb_place_l">เขียนที่</span>', inp('place', $v('place'), 400), false],
+        'title' => ['<span id="sb_title_l">เรื่อง</span>', inp('title', $v('title'), 640, 'text', 'placeholder=""'), false],
         'to' => ['<span id="sb_to_l">เรียน</span>', inp('to', $v('to'), 640).$tip('คำขึ้นต้นและตำแหน่งผู้รับ เช่น ผู้อำนวยการสำนักงานคณะกรรมการส่งเสริมการศึกษาเอกชน'), false],
         'ref' => ['อ้างถึง', $ta('ref', 40).$tip('ถ้ามีหลายรายการ พิมพ์บรรทัดละรายการ (ใส่เลขลำดับเอง เช่น ๑. ...)'), false],
         'encl' => ['สิ่งที่ส่งมาด้วย', $ta('encl', 40).$tip('บรรทัดละรายการ เช่น ๑. ... จำนวน ๑ ฉบับ'), false],
@@ -356,11 +386,22 @@ function sb_form(string $id, string $type): array
         'q_items' => ['รายการ', $itHtml, true],
         'q_vat' => ['ภาษีมูลค่าเพิ่ม', $vatR, false],
         'q_valid' => ['ยืนราคา', inp('q_valid', $v('q_valid'), 60).' วัน นับจากวันที่เสนอราคา', false],
+        'q_plans' => ['ประมาณการค่าใช้จ่าย<br><span class="gray_12" style="font-weight:normal">(ไม่ใช่ยอดเรียกเก็บจริง)</span>', sb_plans_editor(is_array($d['q_plans'] ?? null) ? $d['q_plans'] : []), false],
+        'ct_cust' => ['ผู้สมัคร/ผู้ซื้อบริการ (คู่สัญญา)', sb_ct_cust_sel($v('ct_cust')).$tip('เลือกเพื่อเติมข้อมูลฝ่ายที่สอง และให้คู่สัญญาเห็นสัญญา/ยอดชำระในระบบ (เข้าระบบหน้าเดียวกับนักเรียน)'), false],
+        'ct_a' => ['ฝ่ายที่หนึ่ง (โรงเรียน)', $ta('ct_a', 45).$tip('ชื่อและที่ตั้ง — ผู้ลงนามแทนเลือกที่ช่อง "ผู้ลงนาม" ด้านล่าง (ลายเซ็นขึ้นได้)'), false],
+        'ct_la' => ['เรียกฝ่ายที่หนึ่งว่า', inp('ct_la', $v('ct_la'), 200, 'text', 'list="ct_labels"').' และฝ่ายที่สองว่า '.inp('ct_lb', $v('ct_lb'), 200, 'text', 'list="ct_labels"')
+            .'<datalist id="ct_labels"><option value="ฝ่ายที่หนึ่ง"><option value="ฝ่ายที่สอง"><option value="ผู้ให้บริการ"><option value="ผู้ใช้บริการ"><option value="ผู้ให้เช่า"><option value="ผู้เช่า"><option value="ผู้ว่าจ้าง"><option value="ผู้รับจ้าง"><option value="ผู้ขาย"><option value="ผู้ซื้อ"></datalist>', false],
+        'ct_b' => ['ฝ่ายที่สอง (คู่สัญญา)', $ta('ct_b', 45).$tip('ชื่อ/หน่วยงาน ที่อยู่ เลขประจำตัวผู้เสียภาษีหรือบัตรประชาชน'), false],
+        'ct_b_rep' => ['ผู้ลงนามฝ่ายที่สอง', inp('ct_b_rep', $v('ct_b_rep'), 300).' ตำแหน่ง '.inp('ct_b_pos', $v('ct_b_pos'), 250), false],
+        'ct_plan' => ['ค่าตอบแทน / การชำระเงิน', sel('ct_plan', CT_PLANS, $v('ct_plan') ?: 'month', 'style="width:120px"').' งวดละ '.inp('ct_amount', $v('ct_amount'), 110, 'text', 'inputmode="decimal" placeholder="0.00"').' บาท'
+            .' จำนวน '.inp('ct_periods', $v('ct_periods'), 50, 'text', 'inputmode="numeric"').' งวด เริ่มชำระงวดแรก '.inp('ct_start', $v('ct_start') !== '' ? iso_to_be($v('ct_start')) : '', 110, 'text', 'placeholder="วว/ดด/ปปปป"')
+            .$tip('ใส่ยอดเงินเพื่อพิมพ์ข้อสัญญาเรื่องการชำระเงินให้อัตโนมัติ และสร้างยอดชำระทุกงวดให้คู่สัญญา (ปุ่ม "สร้างยอดชำระ" ในทะเบียนหนังสือ) — เว้นว่าง = ไม่มีข้อนี้'), false],
+        'ct_w' => ['พยาน', $ta('ct_w', 40).$tip('บรรทัดละ ๑ คน (ไม่เกิน ๒ คน) เว้นว่างได้'), false],
         'q_deliver' => ['กำหนดส่งมอบ', 'ภายใน '.inp('q_deliver', $v('q_deliver'), 60).' วัน นับจากวันที่ได้รับใบสั่งซื้อ/สั่งจ้าง'.$tip('เว้นว่าง = ไม่พิมพ์บรรทัดนี้'), false],
     ];
     // ลำดับช่อง (ช่องที่ไม่ใช้กับประเภทที่เลือกจะถูกซ่อน): ใบเสนอราคาเรียง ผู้เสนอ > เลขที่/วันที่ > เรียน > รายการ > หมายเหตุ > ผู้ลงนาม
     $seq = ['type', 'q_issuer', 'q_vendor', 'no', 'urgency', 'date', 'org', 'memo_org', 'org_name', 'place', 'title', 'to', 'q_cust', 'ref', 'encl',
-        'q_items', 'q_vat', 'q_valid', 'q_deliver', 'body'];
+        'ct_cust', 'ct_a', 'ct_b', 'ct_b_rep', 'ct_la', 'q_items', 'q_vat', 'q_plans', 'q_valid', 'q_deliver', 'body', 'ct_plan'];
     $rows = array_merge(array_replace(array_flip($seq), array_intersect_key($rows, array_flip($seq))), $rows);
     $tr = '';
     foreach ($rows as $k => [$label, $html, $req]) {
@@ -378,8 +419,9 @@ function sb_form(string $id, string $type): array
         .'<span style="margin-left:3px;float:left;width:65px"><a href="'.h(a_url('sb_letter')).'" id="Clearbtns"><img src="../icon_tools/vec_x_white.png" border="0" height="14" style="margin-top:-5px"/> กลับ</a></span></div></div></form></div>'
         .'<script>function sbType(){var t=document.getElementById("sb_type").value;var r=document.querySelectorAll("tr.sbf");for(var i=0;i<r.length;i++){r[i].style.display=r[i].classList.contains("sbf-"+t)?"":"none";}'
         .'document.getElementById("sb_to_l").textContent=t==="stamp"?"ถึง":"เรียน";'
-        .'document.getElementById("sb_body_l").textContent=t==="quote"?"หมายเหตุ / เงื่อนไข":"ข้อความ";document.getElementById("sb_body_t").style.display=t==="quote"?"none":"";'
-        .'var bs=document.getElementById("sb_body_l").parentNode.querySelector(".warningfiilsign");if(bs)bs.firstChild.nodeValue=t==="quote"?"":"*";'
+        .'document.getElementById("sb_body_l").textContent=t==="quote"?"หมายเหตุ / เงื่อนไข":(t==="contract"?"ข้อสัญญา (บรรทัดละ ๑ ข้อ)":"ข้อความ");document.getElementById("sb_body_t").style.display=t==="quote"?"none":"";'
+        .'var bs=document.getElementById("sb_body_l").parentNode.querySelector(".warningfiilsign");if(bs)bs.firstChild.nodeValue=(t==="quote"||t==="contract")?"":"*";'
+        .'document.getElementById("sb_title_l").textContent=t==="contract"?"ชื่อสัญญา":"เรื่อง";document.getElementById("sb_place_l").textContent=t==="contract"?"ทำที่":"เขียนที่";'
         .'document.querySelector("textarea[name=body]").style.height=t==="quote"?"70px":"230px";}sbType();'
         // ใบเสนอราคา: สลับค่าเริ่มต้นเมื่อเปลี่ยนผู้เสนอราคา + คำนวณยอด
         .'var QD='.json_encode(['school' => ['q_vendor' => sb_quote_school(), 'sign_pid' => (string) person_id_by_name($c['sign_name']), 'sign_name' => $c['sign_name'], 'sign_pos' => $c['sign_pos'], 'to' => ''],
@@ -415,7 +457,7 @@ function sb_save()
         return ['ไม่พบหนังสือ', msg_box('ไม่พบหนังสือที่ต้องการแก้ไข', false)];
     }
     $type = isset(SB_TYPES[(string) ($_POST['type'] ?? '')]) ? (string) $_POST['type'] : 'ext';
-    $long = ['org', 'ref', 'encl', 'sign_pos', 'approve', 'cc', 'q_vendor', 'q_cust'];
+    $long = ['org', 'ref', 'encl', 'sign_pos', 'approve', 'cc', 'q_vendor', 'q_cust', 'ct_a', 'ct_b', 'ct_w'];
     $d = ['type' => $type];
     foreach (array_keys(SB_FIELDS) as $k) {
         $val = str_replace("\r", '', (string) ($_POST[$k] ?? ''));
@@ -457,14 +499,42 @@ function sb_save()
                 break;
             }
         }
-        if (!$d['q_items']) {
-            return ['ออกใบเสนอราคา', msg_box('กรุณาใส่รายการอย่างน้อย ๑ รายการ', false).sb_form($id, $type)[1]];
+        $d['q_plans'] = [];
+        foreach ((array) ($_POST['pl_name'] ?? []) as $i => $pn) {
+            $pn = mb_substr(trim(preg_replace('/\s+/u', ' ', (string) $pn)), 0, 200);
+            $pp = $num($_POST['pl_price'][$i] ?? '');
+            if ($pn === '' && $pp === '') {
+                continue;
+            }
+            if ($pp !== '' && !is_numeric($pp)) {
+                return ['ออกใบเสนอราคา', msg_box('ราคาในประมาณการค่าใช้จ่ายต้องเป็นตัวเลข (แผนที่ '.($i + 1).')', false).sb_form($id, $type)[1]];
+            }
+            $per = (string) ($_POST['pl_period'][$i] ?? 'month');
+            $d['q_plans'][] = [$pn, isset(CT_PLANS[$per]) ? $per : 'month', $pp];
+            if (count($d['q_plans']) >= 30) {
+                break;
+            }
+        }
+        if (!$d['q_items'] && !$d['q_plans']) {
+            return ['ออกใบเสนอราคา', msg_box('กรุณาใส่รายการ หรือประมาณการค่าใช้จ่าย อย่างน้อย ๑ รายการ', false).sb_form($id, $type)[1]];
         }
         if (trim($d['q_vendor']) === '') {
             return ['ออกใบเสนอราคา', msg_box('กรุณาใส่ชื่อ/ที่อยู่ผู้เสนอราคา', false).sb_form($id, $type)[1]];
         }
-    } elseif (trim($d['body']) === '') {
+    } elseif ($type !== 'contract' && trim($d['body']) === '') {
         return ['ออกหนังสือ', msg_box('กรุณาพิมพ์ข้อความของหนังสือ', false).sb_form($id, $type)[1]];
+    }
+    // หนังสือสัญญา
+    $d['ct_plan'] = isset(CT_PLANS[$d['ct_plan']]) ? $d['ct_plan'] : 'month';
+    $d['ct_amount'] = (string) round((float) str_replace([',', ' '], '', $d['ct_amount']), 2);
+    $d['ct_periods'] = (string) max(1, min(120, (int) $d['ct_periods']));
+    $d['ct_start'] = $d['ct_start'] !== '' ? be_date_to_iso($d['ct_start'], '') : '';
+    $d['ct_cust'] = function_exists('cust_get') && cust_get($d['ct_cust']) ? $d['ct_cust'] : '';
+    if ($type === 'contract' && (trim($d['ct_b']) === '' || $d['title'] === '')) {
+        return ['ออกหนังสือสัญญา', msg_box('กรุณากรอกชื่อสัญญา (เรื่อง) และข้อมูลฝ่ายที่สอง', false).sb_form($id, $type)[1]];
+    }
+    if ($type === 'contract' && (float) $d['ct_amount'] < 0) {
+        $d['ct_amount'] = '0';
     }
     $by = (int) date('Y', $d['date'] !== '' ? strtotime($d['date']) : time()) + 543;
     $series = SB_TYPES[$type][1];
@@ -548,6 +618,117 @@ function sb_sign_url(array $d): string
         $u = director_sign_url(); // ลายเซ็นที่อัปโหลดไว้ในหน้าผู้บริหาร
     }
     return $u;
+}
+
+/* ================================================================ ประมาณการค่าใช้จ่าย / หนังสือสัญญา */
+
+/** ตารางแผนค่าใช้จ่าย (ประมาณการ) ในฟอร์มใบเสนอราคา */
+function sb_plans_editor(array $plans): string
+{
+    $row = fn($n, $per, $pr) => '<tr><td style="padding:2px"><input type="text" name="pl_name[]" value="'.h($n).'" class="general radius grayborder" style="width:300px;height:24px;font-size:13px" placeholder="เช่น แผนมาตรฐาน (ผู้ใช้ไม่เกิน 500 คน)"/></td>'
+        .'<td style="padding:2px">'.sel('pl_period[]', CT_PLANS, $per ?: 'month', 'style="width:110px;height:26px"').'</td>'
+        .'<td style="padding:2px"><input type="text" name="pl_price[]" value="'.h($pr).'" class="general radius grayborder" style="width:100px;height:24px;font-size:13px;text-align:right" inputmode="decimal"/></td>'
+        .'<td><a href="javascript:void(0)" onclick="var tb=this.closest(\'tbody\');if(tb.rows.length>1)this.closest(\'tr\').remove();else tb.querySelectorAll(\'input\').forEach(function(e){e.value=\'\'});" title="ลบ"><img src="../icon_tools/vec_bin_dark.png" height="14"/></a></td></tr>';
+    $rows = '';
+    foreach ($plans ?: [['', 'month', '']] as $p) {
+        $rows .= $row((string) ($p[0] ?? ''), (string) ($p[1] ?? 'month'), (string) ($p[2] ?? ''));
+    }
+    return '<table id="qpl" cellpadding="0" cellspacing="0" style="font-size:13px"><thead><tr style="background:#EAF6FD"><th style="padding:4px">แผน / รายการ</th><th style="padding:4px">รอบการชำระ</th><th style="padding:4px">ราคาต่อรอบ</th><th></th></tr></thead><tbody>'.$rows.'</tbody></table>'
+        .'<a href="javascript:void(0)" onclick="var tb=document.querySelector(\'#qpl tbody\'),tr=tb.rows[tb.rows.length-1].cloneNode(true);tr.querySelectorAll(\'input\').forEach(function(e){e.value=\'\'});tb.appendChild(tr);" style="display:inline-block;margin-top:6px;font-size:13px"><img src="../icon_tools/vec_add_dark.png" height="12" style="vertical-align:-1px"/> เพิ่มแผน</a>'
+        .'<div class="gray_12" style="font-size:11px;margin-top:2px">พิมพ์เป็นตาราง "ประมาณการค่าใช้จ่าย" พร้อมยอดเทียบต่อปี และหมายเหตุว่าไม่ใช่ยอดเรียกเก็บจริง (ยอดจริงเป็นไปตามสัญญา) — ใช้แทนหรือร่วมกับตารางรายการได้</div>';
+}
+
+function sb_plans_print(array $plans): string
+{
+    $tr = '';
+    foreach ($plans as $i => [$n, $per, $pr]) {
+        $price = $pr !== '' ? (float) $pr : null;
+        $yr = $price === null ? null : ($per === 'month' ? $price * 12 : ($per === 'year' ? $price : null));
+        $tr .= '<tr><td class="c">'.sb_t((string) ($i + 1)).'</td><td>'.sb_t((string) $n).'</td><td class="c">'.h(CT_PLANS[$per] ?? '').'</td><td class="r">'.sb_money($price).'</td><td class="r">'.($yr === null ? '-' : sb_money($yr)).'</td></tr>';
+    }
+    if ($tr === '') {
+        return '';
+    }
+    return '<div class="b" style="margin-top:12pt">ประมาณการค่าใช้จ่าย</div>'
+        .'<table class="qt" style="margin-top:4pt"><thead><tr><th style="width:1.2cm">ลำดับ</th><th>แผน / รายการ</th><th style="width:2.4cm">รอบการชำระ</th><th style="width:3cm">ราคาต่อรอบ<br>(บาท)</th><th style="width:3.2cm">ประมาณการต่อปี<br>(บาท)</th></tr></thead><tbody>'.$tr.'</tbody></table>'
+        .'<div class="qnote">* ราคาข้างต้นเป็นราคาประมาณการเพื่อประกอบการพิจารณาเท่านั้น <b>ไม่ใช่ยอดเรียกเก็บจริง</b> ยอดที่ต้องชำระจริงเป็นไปตามสัญญาที่ตกลงกัน</div>';
+}
+
+/** เลือกผู้สมัครเป็นคู่สัญญา (เติมข้อมูลฝ่ายที่สองให้) */
+function sb_ct_cust_sel(string $cur): string
+{
+    $map = [];
+    $opts = '<option value="">- ไม่เชื่อมกับผู้สมัคร (พิมพ์ข้อมูลเอง) -</option>';
+    foreach (function_exists('cust_all') ? cust_all() : [] as $id => $c) {
+        if (($c['status'] ?? '') !== 'active' && $id !== $cur) {
+            continue;
+        }
+        $b = trim(cust_label($c)."\n".trim((string) ($c['address'] ?? '')).(($c['taxid'] ?? '') !== '' ? "\nเลขประจำตัวผู้เสียภาษี/บัตรประชาชน ".$c['taxid'] : ''));
+        $map[$id] = [$b, (string) ($c['name'] ?? '')];
+        $opts .= '<option value="'.h($id).'"'.($id === $cur ? ' selected' : '').'>'.h(cust_label($c)).'</option>';
+    }
+    return '<select name="ct_cust" class="general radius grayborder" style="width:420px;height:25px" onchange="var m='.h(json_encode($map ?: new stdClass(), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)).'[this.value],f=this.form;if(m){f.elements.ct_b.value=m[0];f.elements.ct_b_rep.value=m[1];}">'.$opts.'</select>';
+}
+
+/** ข้อสัญญาเรื่องการชำระเงิน */
+function sb_ct_pay_clause(array $d): string
+{
+    $amt = (float) ($d['ct_amount'] ?? 0);
+    if ($amt <= 0) {
+        return '';
+    }
+    $la = (string) ($d['ct_la'] ?: 'ฝ่ายที่หนึ่ง');
+    $lb = (string) ($d['ct_lb'] ?: 'ฝ่ายที่สอง');
+    $plan = (string) ($d['ct_plan'] ?? 'once');
+    $n = $plan === 'once' ? 1 : max(1, (int) ($d['ct_periods'] ?? 1));
+    $money = fn($x) => number_format($x, 2).' บาท ('.sb_bahttext($x).')';
+    $start = (string) ($d['ct_start'] ?? '');
+    $due = $start !== '' ? ' โดยชำระงวดแรกภายในวันที่ '.strip_tags(sb_date($start, 'be')) : '';
+    $per = ['month' => 'เดือน', 'year' => 'ปี'][$plan] ?? '';
+    $txt = $plan === 'once'
+        ? $lb.'ตกลงชำระค่าตอบแทนตามสัญญานี้ให้แก่'.$la.' เป็นเงินจำนวน '.$money($amt).$due
+        : $lb.'ตกลงชำระค่าตอบแทนตามสัญญานี้ให้แก่'.$la.' เป็นราย'.$per.' '.$per.'ละ '.$money($amt).' จำนวน '.$n.' งวด รวมเป็นเงินทั้งสิ้น '.$money($amt * $n).$due
+            .($start !== '' ? ' และงวดถัดไปภายในวันเดียวกันของทุก'.$per : '');
+    return $txt.' ผ่านการชำระด้วย QR พร้อมเพย์ในระบบสารสนเทศของโรงเรียน หรือช่องทางอื่นที่'.$la.'กำหนด และแนบหลักฐานการชำระเงินทุกครั้ง';
+}
+
+function sb_contract_print(array $d): string
+{
+    $v = fn($k) => (string) ($d[$k] ?? '');
+    $la = $v('ct_la') ?: 'ฝ่ายที่หนึ่ง';
+    $lb = $v('ct_lb') ?: 'ฝ่ายที่สอง';
+    $b = array_values(array_filter(array_map('trim', explode("\n", $v('ct_b'))), 'strlen'));
+    $bName = $b[0] ?? '';
+    $title = preg_replace('/^สัญญา/u', '', $v('title'));
+    $pre = 'สัญญาฉบับนี้ทำขึ้น ณ '.$v('place').' เมื่อวันที่ '.strip_tags(sb_date($v('date'), 'be')).' ระหว่าง '.preg_replace('/\s+/u', ' ', $v('ct_a'))
+        .($v('sign_name') !== '' ? ' โดย'.$v('sign_name').($v('sign_pos') !== '' ? ' ตำแหน่ง'.preg_replace('/\s+/u', ' ', $v('sign_pos')) : '') : '')
+        .' ซึ่งต่อไปในสัญญานี้เรียกว่า “'.$la.'” ฝ่ายหนึ่ง กับ '.implode(' ', $b).($v('ct_b_rep') !== '' && $v('ct_b_rep') !== $bName ? ' โดย'.$v('ct_b_rep').($v('ct_b_pos') !== '' ? ' ตำแหน่ง'.$v('ct_b_pos') : '') : '')
+        .' ซึ่งต่อไปในสัญญานี้เรียกว่า “'.$lb.'” อีกฝ่ายหนึ่ง';
+    $cl = '';
+    $n = 0;
+    foreach (explode("\n", $v('body')) as $line) {
+        $line = trim($line);
+        if ($line === '') {
+            continue;
+        }
+        $n++;
+        $cl .= '<div class="p">'.(preg_match('/^ข้อ\s*[0-9๐-๙]/u', $line) ? sb_t($line) : 'ข้อ '.sb_t((string) $n).' '.sb_t($line)).'</div>';
+    }
+    if (($pc = sb_ct_pay_clause($d)) !== '') {
+        $n++;
+        $cl .= '<div class="p">ข้อ '.sb_t((string) $n).' '.sb_t($pc).'</div>';
+    }
+    $sigA = sb_sign_url($d);
+    $box = fn($role, $name, $pos = '', $sig = '') => '<div><span class="r1">ลงชื่อ <span class="ln">'.($sig !== '' ? '<img class="sgimg sgn" src="'.h($sig).'" alt="" style="bottom:-.2cm"/>' : '').'</span> '.h($role).'</span>'
+        .'<br>('.($name !== '' ? sb_t($name) : '<span style="display:inline-block;width:5cm"></span>').')'.($pos !== '' ? '<br>'.sb_lines($pos) : '').'</div>';
+    $w = array_slice(array_values(array_filter(array_map('trim', explode("\n", $v('ct_w'))), 'strlen')), 0, 2);
+    $sigs = $box($la, $v('sign_name'), $v('sign_pos'), $sigA).$box($lb, $v('ct_b_rep') ?: $bName, $v('ct_b_pos'))
+        .$box('พยาน', $w[0] ?? '').$box('พยาน', $w[1] ?? '');
+    return '<div class="c b" style="font-size:20pt">สัญญา'.sb_t($title).'</div>'
+        .($v('no') !== '' ? '<div style="text-align:right;margin-top:4pt">สัญญาเลขที่ '.sb_t($v('no')).'</div>' : '')
+        .'<div class="p" style="margin-top:12pt">'.sb_t($pre).'</div><div class="p">คู่สัญญาได้ตกลงกันมีข้อความดังต่อไปนี้</div>'.$cl
+        .'<div class="p" style="margin-top:12pt">สัญญานี้ทำขึ้นเป็นสองฉบับ มีข้อความถูกต้องตรงกัน คู่สัญญาได้อ่านและเข้าใจข้อความโดยละเอียดตลอดแล้ว จึงได้ลงลายมือชื่อไว้เป็นสำคัญต่อหน้าพยาน และคู่สัญญาต่างยึดถือไว้ฝ่ายละหนึ่งฉบับ</div>'
+        .'<div class="csig">'.$sigs.'</div>';
 }
 
 /* ================================================================ ใบเสนอราคา */
@@ -686,9 +867,10 @@ function sb_quote_print(array $d): string
         .'<div class="qinfo"><div class="qto">'.sb_row('เรียน', sb_t($v('to')).(trim($v('q_cust')) !== '' ? '<br>'.sb_lines($v('q_cust')) : '')).'</div>'
         .'<div class="qno"><div>เลขที่ '.($v('no') !== '' ? sb_t($v('no')) : '<span style="display:inline-block;width:3cm"></span>').'</div><div>วันที่ '.sb_date($v('date')).'</div></div></div>'
         .($v('title') !== '' ? sb_row('เรื่อง', sb_t($v('title')), 'margin-top:6pt') : '')
-        .'<div class="p" style="margin-top:8pt">'.($v('q_issuer') === 'vendor' ? 'ข้าพเจ้า ' : '').sb_t($lines[0] ?? '').' ขอเสนอราคาพัสดุ/บริการ ดังรายการต่อไปนี้</div>'
-        .'<table class="qt"><thead><tr><th style="width:1.2cm">ลำดับ</th><th>รายการ</th><th style="width:1.7cm">จำนวน</th><th style="width:1.6cm">หน่วย</th><th style="width:2.5cm">ราคาต่อหน่วย<br>(บาท)</th><th style="width:2.7cm">จำนวนเงิน<br>(บาท)</th></tr></thead>'
-        .'<tbody>'.$tr.'</tbody><tfoot>'.$tot.'</tfoot></table>'
+        .'<div class="p" style="margin-top:8pt">'.($v('q_issuer') === 'vendor' ? 'ข้าพเจ้า ' : '').sb_t($lines[0] ?? '').($c['rows'] ? ' ขอเสนอราคาพัสดุ/บริการ ดังรายการต่อไปนี้' : ' ขอเสนอประมาณการค่าใช้จ่าย ดังต่อไปนี้').'</div>'
+        .($c['rows'] ? '<table class="qt"><thead><tr><th style="width:1.2cm">ลำดับ</th><th>รายการ</th><th style="width:1.7cm">จำนวน</th><th style="width:1.6cm">หน่วย</th><th style="width:2.5cm">ราคาต่อหน่วย<br>(บาท)</th><th style="width:2.7cm">จำนวนเงิน<br>(บาท)</th></tr></thead>'
+        .'<tbody>'.$tr.'</tbody><tfoot>'.$tot.'</tfoot></table>' : '')
+        .sb_plans_print(is_array($d['q_plans'] ?? null) ? $d['q_plans'] : [])
         .($cond !== '' ? '<div class="qcond">'.$cond.'</div>' : '')
         .'<div class="sig"><div class="cl"><span class="ghost">ขอแสดงความนับถือ</span></div><div class="sw"><div class="si">'
         .'<div style="height:1.4cm"></div><div>ลงชื่อ<span class="dl in" style="width:5cm;position:relative">'.(($su = sb_sign_url($d)) !== '' ? '<img class="sgimg sgn" src="'.h($su).'" alt="" style="bottom:-.15cm"/>' : '').'</span>ผู้เสนอราคา</div><div>('.$sigName.')</div>'
@@ -787,6 +969,12 @@ function adm_sb_letter_Print(bool $post)
     if (!$d) {
         rpt_print('ไม่พบหนังสือ', '<div class="page">ไม่พบหนังสือ</div>');
     }
+    sb_print_out($id, $d, null);
+}
+
+/** พิมพ์หนังสือ A4 — $bar = แถบปุ่มด้านบน (null = ปุ่มของผู้ดูแล: พิมพ์ / แก้ไข / กลับ) */
+function sb_print_out(string $id, array $d, ?string $bar): void
+{
     $type = (string) ($d['type'] ?? 'ext');
     $v = fn($k) => (string) ($d[$k] ?? '');
     $no = $v('no') !== '' ? sb_t($v('no')) : '<span style="display:inline-block;width:3cm"></span>';
@@ -855,6 +1043,9 @@ function adm_sb_letter_Print(bool $post)
         case 'quote':
             $body = sb_quote_print($d);
             break;
+        case 'contract':
+            $body = sb_contract_print($d);
+            break;
         default: // หนังสือภายนอก
             $encl = trim($v('encl'));
             $body = sb_urg($d)
@@ -900,12 +1091,13 @@ function adm_sb_letter_Print(bool $post)
         .'.qinfo{display:flex;justify-content:space-between;gap:.6cm;margin-top:10pt}.qto{flex:1}.qno{white-space:nowrap}'
         .'.qt{width:100%;border-collapse:collapse;margin-top:8pt;font-size:15pt}.qt th,.qt td{border:1px solid #000;padding:1pt 5pt;vertical-align:top}.qt th{font-weight:bold;text-align:center;line-height:1.05;vertical-align:middle}'
         .'.qt .r{text-align:right;white-space:nowrap}.qt .c{text-align:center}.qt tr{break-inside:avoid}.qtot td{vertical-align:middle}'
-        .'.qcond{margin-top:10pt}'
+        .'.qcond{margin-top:10pt}.qnote{font-size:14pt;margin-top:4pt}'
+        .'.csig{display:grid;grid-template-columns:1fr 1fr;gap:22pt .8cm;margin-top:26pt;break-inside:avoid;text-align:center}.csig .ln{position:relative;display:inline-block;width:4.2cm;border-bottom:1px dotted #000;height:1.1em}.csig .r1{white-space:nowrap}'
         .'.sgimg{position:absolute;left:50%;bottom:.05cm;transform:translateX(-50%);height:1.5cm;max-width:5.5cm;object-fit:contain}'
         .'.bar{position:sticky;top:0;background:#333;color:#fff;padding:8px;text-align:center;z-index:9;font:13px Tahoma}.bar button{font:14px Tahoma;padding:4px 14px;margin:0 4px}'
         .'@media print{body{background:#fff}.sheet{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}.bar{display:none}.nokrut{visibility:hidden}}'
         .'</style></head><body>'
-        .'<div class="bar"><button onclick="window.print()">🖨 พิมพ์ / บันทึกเป็น PDF</button><button onclick="location.href=\''.h(a_url('sb_letter', '&func=Edit&id='.rawurlencode($id))).'\'">แก้ไข</button>'.$back
+        .'<div class="bar">'.($bar ?? '<button onclick="window.print()">🖨 พิมพ์ / บันทึกเป็น PDF</button><button onclick="location.href=\''.h(a_url('sb_letter', '&func=Edit&id='.rawurlencode($id))).'\'">แก้ไข</button>'.$back)
         .' <span style="font-size:12px">กระดาษ A4 แนวตั้ง · ระยะขอบ: ค่าเริ่มต้น · ปิด "หัวกระดาษและท้ายกระดาษ" · เปิด "กราฟิกพื้นหลัง"</span></div>'
         .'<div class="sheet"><div class="pg">'.$body.'</div></div>'
         // ชื่อในวงเล็บอยู่กึ่งกลางใต้คำลงท้าย: วัดความกว้างคำลงท้ายจริง

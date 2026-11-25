@@ -204,10 +204,10 @@ function st_login_page(string $err, bool $loggedOther = false): void
     $body = '<div class="lg-bg"><div class="lgbox"><div class="l1"><img src="'.h(school_logo_abs()).'" alt="logo"><h3>Welcome</h3><p><b>'.h(st_school()).'</b><br>'.h(st_school_address()).($phone !== '' ? '<br>โทร. '.h($phone) : '').'</p></div>'
         .'<div class="l2"><form method="post" action="./"><h3>Student System Login</h3><div class="sub">ระบบนักเรียน '.h(st_school()).'</div>'
         .($err !== '' ? '<div class="msg no">'.h($err).($loggedOther ? ' (<a href="?p=logout">ออกจากระบบบัญชีนี้</a>)' : '').'</div>' : '')
-        .'<input type="hidden" name="login" value="1"><input class="in" name="username" inputmode="numeric" placeholder="รหัสประจำตัวนักเรียน *" autocomplete="username" required>'
-        .'<input class="in" type="password" name="password" placeholder="รหัสบัตรประชาชนนักเรียน *" autocomplete="current-password" required>'
+        .'<input type="hidden" name="login" value="1"><input class="in" name="username" placeholder="รหัสประจำตัวนักเรียน / อีเมลผู้สมัคร *" autocomplete="username" required>'
+        .'<input class="in" type="password" name="password" placeholder="รหัสบัตรประชาชนนักเรียน / รหัสผ่านผู้สมัคร *" autocomplete="current-password" required>'
         .'<button class="btn" type="submit"><i class="fa fa-sign-in"></i> Enter Login</button></form>'
-        .'<div class="help">ชื่อผู้ใช้ = เลขประจำตัวนักเรียน, รหัสผ่าน = เลขประจำตัวประชาชน 13 หลัก<br><a href="/mis/"><i class="fa fa-home"></i> กลับหน้าระบบสารสนเทศ</a></div>'
+        .'<div class="help">ชื่อผู้ใช้ = เลขประจำตัวนักเรียน, รหัสผ่าน = เลขประจำตัวประชาชน 13 หลัก<br>ผู้สมัคร/ผู้ซื้อบริการ: ใช้อีเมลหรือเบอร์โทรที่สมัครไว้ — <a href="?p=signup"><b>สมัครใช้บริการ</b></a><br><a href="/mis/"><i class="fa fa-home"></i> กลับหน้าระบบสารสนเทศ</a></div>'
         .($terms ? '<table class="tb"><tr><th>ภาคเรียน</th><th>ประกาศผลการเรียน</th><th>ประกาศผลสอบไม่ผ่าน</th></tr>'.$terms.'</table>' : '')
         .'</div></div></div>';
     echo st_doc('Student System | '.st_school(), $body);

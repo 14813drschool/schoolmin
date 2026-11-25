@@ -648,8 +648,8 @@ function signs(array $who): string
     $o = '<table style="margin-top:50px;border:none"><tr>';
     foreach ($who as $w) {
         $n = $w === 'นายทะเบียน' ? registrar_name() : (preg_match('/^ผู้อำนวยการ/u', $w) ? rpt_signer('ผู้อำนวยการ') : '');
-        $sig = preg_match('/^ผู้อำนวยการ/u', $w) ? director_sign_img(50) : '';
-        $o .= '<td style="border:none;text-align:center">ลงชื่อ '.$sig.'........................................<br>( '.($n !== '' ? h($n) : '........................................').' )<br>'.h($w).'</td>';
+        $sig = preg_match('/^ผู้อำนวยการ/u', $w) ? director_sign_center(40, '-6px', 150) : '';
+        $o .= '<td style="border:none;text-align:center">ลงชื่อ <span style="position:relative;display:inline-block">........................................'.$sig.'</span><br>( '.($n !== '' ? h($n) : '........................................').' )<br>'.h($w).'</td>';
     }
     return $o.'</tr></table>';
 }

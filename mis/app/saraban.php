@@ -691,7 +691,7 @@ function sb_quote_print(array $d): string
         .'<tbody>'.$tr.'</tbody><tfoot>'.$tot.'</tfoot></table>'
         .($cond !== '' ? '<div class="qcond">'.$cond.'</div>' : '')
         .'<div class="sig"><div class="cl"><span class="ghost">ขอแสดงความนับถือ</span></div><div class="sw"><div class="si">'
-        .'<div style="height:1.4cm"></div><div>ลงชื่อ<span class="dl in" style="width:5cm;position:relative">'.(($su = sb_sign_url($d)) !== '' ? '<img class="sgimg" src="'.h($su).'" alt="" style="bottom:-.15cm"/>' : '').'</span>ผู้เสนอราคา</div><div>('.$sigName.')</div>'
+        .'<div style="height:1.4cm"></div><div>ลงชื่อ<span class="dl in" style="width:5cm;position:relative">'.(($su = sb_sign_url($d)) !== '' ? '<img class="sgimg sgn" src="'.h($su).'" alt="" style="bottom:-.15cm"/>' : '').'</span>ผู้เสนอราคา</div><div>('.$sigName.')</div>'
         .($v('sign_pos') !== '' ? '<div>'.sb_lines($v('sign_pos')).'</div>' : '').'</div></div></div>';
 }
 
@@ -754,7 +754,7 @@ function sb_krut(float $cm, string $style): string
 function sb_sign(string $closing, string $name, string $pos, string $pre = '', string $sig = ''): string
 {
     $anchor = $closing !== '' ? sb_t($closing) : '<span class="ghost">ขอแสดงความนับถือ</span>';
-    $who = '<div style="height:1.9cm;position:relative">'.($sig !== '' ? '<img class="sgimg" src="'.h($sig).'" alt=""/>' : '').'</div><div>('.($name !== '' ? sb_t($name) : '<span style="display:inline-block;width:5cm"></span>').')</div>'.($pos !== '' ? '<div>'.sb_lines($pos).'</div>' : '');
+    $who = '<div style="height:1.9cm;position:relative">'.($sig !== '' ? '<img class="sgimg sgn" src="'.h($sig).'" alt=""/>' : '').'</div><div>('.($name !== '' ? sb_t($name) : '<span style="display:inline-block;width:5cm"></span>').')</div>'.($pos !== '' ? '<div>'.sb_lines($pos).'</div>' : '');
     return '<div class="sig"><div class="cl">'.$pre.$anchor.'</div><div class="sw"><div class="si">'.$who.'</div></div></div>';
 }
 
@@ -910,6 +910,6 @@ function adm_sb_letter_Print(bool $post)
         .'<div class="sheet"><div class="pg">'.$body.'</div></div>'
         // ชื่อในวงเล็บอยู่กึ่งกลางใต้คำลงท้าย: วัดความกว้างคำลงท้ายจริง
         .'<script>document.fonts&&document.fonts.ready.then(f);f();function f(){var s=document.querySelectorAll(".sig");for(var i=0;i<s.length;i++){var c=s[i].querySelector(".cl");s[i].querySelector(".si").style.setProperty("--half",(c.getBoundingClientRect().width/2)+"px");}}</script>'
-        .'</body></html>';
+        .sign_trim_js().'</body></html>';
     exit;
 }

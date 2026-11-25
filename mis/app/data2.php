@@ -179,7 +179,7 @@ function print_page(string $title, string $body): void
         .'<style>body{font:14px/1.35 "TH Sarabun New",sans-serif;font-size-adjust:0.545;margin:20px;color:#000}body *{font-family:"TH Sarabun New",sans-serif}h1,h2{font-weight:bold;text-align:center;margin:4px 0}'
         .'table{border-collapse:collapse;width:100%;margin-top:10px}th,td{border:1px solid #000;padding:4px 6px}th{background:#eee}.c{text-align:center}'
         .'.noprint{margin-bottom:10px}@media print{.noprint{display:none}}</style></head><body><div class="noprint"><button onclick="window.print()">พิมพ์</button> <button onclick="history.back()">กลับ</button></div>'
-        .$body.'</body></html>';
+        .$body.sign_trim_js().'</body></html>';
     exit;
 }
 

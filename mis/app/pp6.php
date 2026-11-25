@@ -236,7 +236,7 @@ function pp6_page(array $s, string $sub, string $tabs, string $style, string $bo
         .'<style type="text/css">'.$style.' @page { size: '.$size.' portrait; margin: '.$t.'mm '.$r.'mm '.$b.'mm '.$l.'mm; }</style>'
         .$body
         .'<div id="printfooter" class="no-print noticeprint">&nbsp;&nbsp;คำแนะนำสำหรับการพิมพ์ : ตั้งค่ากระดาษเป็น A4 และกำหนดระยะขอบของ Web Browser ดังนี้ &nbsp;&nbsp;&nbsp;&nbsp;Left = '.$l.'&nbsp;&nbsp;&nbsp;Right = '.$r.'&nbsp;&nbsp;&nbsp;Top = '.$t.'&nbsp;&nbsp;&nbsp;Bottom = '.$b.'&nbsp;&nbsp; </div>'
-        .'</center></body></html>';
+        .'</center>'.sign_trim_js().'</body></html>';
     exit;
 }
 
@@ -260,7 +260,7 @@ function pp6_line(): string
 function pp6_sign_learn(string $adv, string $dir): string
 {
     return '<div><table width="100%" border="0" cellpadding="0" cellspacing="0" style="font-size:15pt;line-height:22pt;margin:20px 0px 0px 0px;font-weight:bold;text-align:center"><tr>'
-        .'<td align="left">ลงชื่อ<span class="dottedLine" style="width:200px">'.person_sign_img($adv).'&nbsp;&nbsp;</span>ครูประจำชั้น</td><td style="width:2%">&nbsp;</td><td align="left">ลงชื่อ<span class="dottedLine" style="width:200px">'.director_sign_img().'&nbsp;&nbsp;</span>ผู้อำนวยการโรงเรียน</td></tr>'
+        .'<td align="left">ลงชื่อ<span class="dottedLine" style="width:200px;position:relative">&nbsp;&nbsp;'.person_sign_center($adv, 56, '-7px').'</span>ครูประจำชั้น</td><td style="width:2%">&nbsp;</td><td align="left">ลงชื่อ<span class="dottedLine" style="width:200px;position:relative">&nbsp;&nbsp;'.director_sign_center(56, '-7px').'</span>ผู้อำนวยการโรงเรียน</td></tr>'
         .'<tr><td align="left" style="padding-left:30px">(<span class="dottedLine" style="width:200px">&nbsp;'.h($adv).'&nbsp;</span>)</td><td>&nbsp;</td><td align="left" style="padding-left:30px">(<span class="dottedLine" style="width:200px">&nbsp;'.h($dir).'&nbsp;</span>)</td></tr></table></div>';
 }
 
@@ -346,7 +346,7 @@ function act_task_report_pp6_Print(): void
             .'<tr><td colspan="2" style="padding-top:20px; text-align:justify">'.$sp.'แบบรายงานผลการพัฒนาคุณภาพผู้เรียนเล่มนี้ เป็นเอกสารสำหรับสื่อสารระหว่างท่าน กับโรงเรียน เพื่อแจ้งผลการเรียนและข้อมูลบางอย่างของนักเรียนทั้งขณะอยู่ที่โรงเรียน และที่บ้านให้แต่ละฝ่ายได้รับทราบซึ่งจะช่วยให้เกิดความเข้าใจในตัวนักเรียนอย่างถูกต้อง อันจะเป็นประโยชน์ต่อการปรับปรุงแก้ไข หรือให้การสนับสนุนส่งเสริมนักเรียนต่อไป ฉะนั้นเมื่อท่านได้รับเอกสารนี้แล้ว ขอความกรุณาได้โปรดสละเวลาพิจารณาดูผลการเรียน เวลาเรียน และข้อเสนอแนะต่าง ๆ พร้อมกับให้ความเห็นเกี่ยวกับนักเรียนขณะอยู่ที่บ้านด้วย จึงเรียนมาเพื่อขอความร่วมมือ และขอขอบคุณมา ณ โอกาสนี้</td></tr>'
             .'<tr><td colspan="2" style="text-align:right;padding-top:40px"><div style="float:right;width:400px;text-align:center">ขอแสดงความนับถือ</div></td></tr>'
             .'<tr><td colspan="2" style="text-align:right;padding-top:70px"><div style="float:right;width:400px;text-align:center"><span style="float:left;padding-left:40px">(</span> '
-            .'<span style="float:left;width:300px">'.director_sign_img(80, 50).'&nbsp;'.($dir !== '' ? pp6_nb($dir) : '').'&nbsp;</span> <span style="float:left;width:300px;margin-left:-300px;margin-top:-10px;border-bottom:1.5px dotted #666666">&nbsp;</span> <span style="float:left">)</span></div></td></tr>'
+            .'<span style="float:left;width:300px;position:relative">'.director_sign_center(62, 'calc(100% - 12px)', 260).'&nbsp;'.($dir !== '' ? pp6_nb($dir) : '').'&nbsp;</span> <span style="float:left;width:300px;margin-left:-300px;margin-top:-10px;border-bottom:1.5px dotted #666666">&nbsp;</span> <span style="float:left">)</span></div></td></tr>'
             .'<tr><td colspan="2" style="text-align:right;padding-top:20px"><div style="float:right;width:400px;text-align:center"> ผู้อำนวยการ'.h($school).' </div></td></tr>'
             .'</table> &nbsp; &nbsp; </div></div>';
     } elseif ($tab === 3) {
@@ -451,7 +451,7 @@ function act_task_report_pp6_Print(): void
         $yt = $year.'/'.$term;
         $who = h($pre).'<span class="dottedLine1">&nbsp;'.h($fn).'&nbsp;&nbsp;&nbsp;'.h($sn).'&nbsp;</span>เลขประจำตัว<span class="dottedLine1">&nbsp;'.h((string) $s['student_id']).'&nbsp;</span>ระดับชั้น<span class="dottedLine1">&nbsp;'.h($lt.'.'.$lvn.'/'.$roomNo).'&nbsp;</span>เลขที่<span class="dottedLine1">&nbsp;'.h((string) $s['number']).'&nbsp;</span>';
         $logoRow = '<div style="width:21cm"><div style="display:table-cell;width:3cm">&nbsp;</div><div style="display:table-cell;text-align:center;width:15cm"><img src="'.h($logo).'" width="50" border="0" align="middle" style="text-align:center" /></div><div style="display: table-cell;white-space:nowrap;vertical-align:top;width:3cm;text-align:right"><span class="circle" style="float:right;width:30px;height:30px;text-align:center;font-size:18pt;display:none">5</span></div></div>';
-        $signEval = fn($dl, $w, $w1, $w2) => '<div><table width="100%" border="0" cellpadding="0" cellspacing="0" class="eval_sign"><tr><td style="width:'.$w1.'">&nbsp;</td><td'.($w2 ? ' style="width:'.$w2.'"' : '').' align="left">ลงชื่อ<span class="'.$dl.'" style="width:'.$w.'px">'.person_sign_img($advName).'&nbsp;&nbsp;</span>ครูประจำชั้น</td><td style="width:'.$w1.'">&nbsp;</td><td'.($w2 ? ' style="width:'.$w2.'"' : '').' align="left">ลงชื่อ<span class="'.$dl.'" style="width:'.$w.'px">'.director_sign_img().'&nbsp;&nbsp;</span>ผู้อำนวยการโรงเรียน</td></tr>'
+        $signEval = fn($dl, $w, $w1, $w2) => '<div><table width="100%" border="0" cellpadding="0" cellspacing="0" class="eval_sign"><tr><td style="width:'.$w1.'">&nbsp;</td><td'.($w2 ? ' style="width:'.$w2.'"' : '').' align="left">ลงชื่อ<span class="'.$dl.'" style="width:'.$w.'px;position:relative">&nbsp;&nbsp;'.person_sign_center($advName, 56, '-7px').'</span>ครูประจำชั้น</td><td style="width:'.$w1.'">&nbsp;</td><td'.($w2 ? ' style="width:'.$w2.'"' : '').' align="left">ลงชื่อ<span class="'.$dl.'" style="width:'.$w.'px;position:relative">&nbsp;&nbsp;'.director_sign_center(56, '-7px').'</span>ผู้อำนวยการโรงเรียน</td></tr>'
             .'<tr><td'.($w2 ? '' : ' align="left"').'>&nbsp;</td><td align="left" style="padding-left:30px"><span class="'.$dl.'" style="width:'.$w.'px;border:none">('.($w2 ? '&nbsp;' : '').h($advName).($w2 ? '&nbsp;' : '').')</span></td><td>&nbsp;</td><td align="left" style="padding-left:30px"><span class="'.$dl.'" style="width:'.$w.'px;border:none">('.($w2 ? '&nbsp;' : '').h($dir).($w2 ? '&nbsp;' : '').')</span></td></tr></table></div>';
         $evalCss = ' table.eval_sign { margin:40px 0px 0px 0px;text-align:center } table.eval_sign td { font-weight:bold; font-size:16pt; line-height:17pt; white-space:nowrap!important; }';
         if ($stab === 1 || $stab === 4) {
@@ -583,11 +583,11 @@ function act_task_report_pp6_Print(): void
             .'<div style="margin:3px 0px 0px 0px"><table width="100%" border="0" cellspacing="0" cellpadding="0" class="blacktable">'
             .'<tr><td align="center" valign="middle">การประเมินผลการเรียนระดับชั้น</td><td align="center" valign="middle" style="width:30%">ผลการตัดสิน</td><td colspan="4" align="center" valign="middle" style="width:30%;border-bottom:none">&nbsp;</td></tr>'
             .$r('ผลการเรียนรายวิชา', $pass, '&nbsp;', 'middle', 'padding-left:10px')
-            .$r('ผลการประเมินการอ่าน คิดวิเคราะห์และเขียน', $four, '('.($advName !== '' ? '&nbsp;&nbsp;&nbsp;'.pp6_nb($advName).'&nbsp;&nbsp;&nbsp;' : str_repeat('&nbsp;', 8)).')', 'bottom')
+            .$r('ผลการประเมินการอ่าน คิดวิเคราะห์และเขียน', $four, '<span style="position:relative;display:inline-block">('.($advName !== '' ? '&nbsp;&nbsp;&nbsp;'.pp6_nb($advName).'&nbsp;&nbsp;&nbsp;' : str_repeat('&nbsp;', 8)).')'.person_sign_center($advName, 54, 'calc(100% - 10px)').'</span>', 'bottom')
             .$r('ผลการประเมินคุณลักษณะอันพึงประสงค์', $four, 'ครูประจำชั้น', 'top')
             .$r('ผลการประเมินกิจกรรมพัฒนาผู้เรียน', $pass, '&nbsp;')
             .'<tr><td colspan="2" align="center" valign="middle" style="white-space:nowrap;height:60px;text-align:left;padding-left:10px"><span style="float:left;width:180px;font-weight:bold">สรุปผลการประเมิน</span> <span style="float:left;width:30px">☐</span> <span style="float:left;width:80px">&nbsp;ได้เลื่อนชั้น</span> <span style="float:left;width:30px">☐</span> <span style="float:left">&nbsp;ไม่ผ่านการเลื่อนชั้น</span></td>'
-            .'<td colspan="4" align="center" valign="bottom" style="border-bottom:none">'.director_sign_img(-60).'('.($dir !== '' ? '&nbsp;&nbsp;&nbsp;'.pp6_nb($dir).'&nbsp;&nbsp;&nbsp;' : str_repeat('&nbsp;', 8)).')</td></tr>'
+            .'<td colspan="4" align="center" valign="bottom" style="border-bottom:none"><span style="position:relative;display:inline-block">('.($dir !== '' ? '&nbsp;&nbsp;&nbsp;'.pp6_nb($dir).'&nbsp;&nbsp;&nbsp;' : str_repeat('&nbsp;', 8)).')'.director_sign_center(54, 'calc(100% - 10px)').'</span></td></tr>'
             .'<tr><td colspan="2" align="left" valign="middle" style="white-space:nowrap;height:60px;padding-left:10px"><span style="float:left;width:180px;font-weight:bold">อนุมัติผลการเรียน</span></td><td colspan="4" align="center" valign="top">ผู้อำนวยการโรงเรียน</td></tr></table></div>'
             .'<div style="font-size:24px;margin:10px 0px 0px 0px;font-weight:bold">ผลการประเมินคุณภาพการศึกษาขั้นพื้นฐานระดับชาติ</div>'
             .'<div style="margin:3px 0px 0px 0px"><table width="100%" border="0" cellspacing="0" cellpadding="0" class="blacktable" style="font-size:20px"><tr><td rowspan="2" align="center" valign="middle" style="font-size:24px;">กลุ่มสาระการเรียนรู้</td><td colspan="3" align="center" valign="middle" style="height:35px">ผลการประเมิน</td><td rowspan="2" align="center" valign="middle" style="width:30%">หมายเหตุ</td></tr>'

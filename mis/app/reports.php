@@ -121,6 +121,39 @@ function sign_overlay(string $u, int $left = 20, int $h = 44): string
     return $u === '' ? '' : '<span style="position:relative;display:inline-block;width:0;height:0;vertical-align:baseline"><img src="'.h($u).'" alt="" style="position:absolute;left:'.$left.'px;bottom:-6px;height:'.$h.'px;max-width:180px"/></span>';
 }
 
+/**
+ * ลายเซ็นวางกึ่งกลางกล่องแม่ (กล่องแม่ต้อง position:relative)
+ * $bottom: ระยะขอบล่างของรูปจากขอบล่างกล่องแม่ เช่น '-8px' = คร่อมเส้นลงชื่อ, 'calc(100% - 10px)' = เหนือชื่อ
+ */
+function sign_center(string $u, int $h = 54, string $bottom = '-8px', int $maxw = 230): string
+{
+    return $u === '' ? '' : '<img class="sgn" src="'.h($u).'" alt="" style="position:absolute;left:50%;bottom:'.$bottom.';transform:translateX(-50%);height:'.$h.'px;max-width:'.$maxw.'px;object-fit:contain;pointer-events:none"/>';
+}
+
+/** ตัดขอบว่าง/พื้นขาวรอบลายเซ็นตอนแสดงผล ให้ขนาดลายเซ็นพอดีความสูงที่กำหนด (ใช้ได้กับไฟล์ที่อัปโหลดไว้แล้วด้วย) */
+function sign_trim_js(): string
+{
+    return '<script>(function(){function t(i){if(i.dataset.t)return;i.dataset.t=1;try{var w=i.naturalWidth,h=i.naturalHeight;if(!w||!h)return;'
+        .'var c=document.createElement("canvas");c.width=w;c.height=h;var x=c.getContext("2d");x.drawImage(i,0,0);var d=x.getImageData(0,0,w,h),p=d.data,a=w,b=h,e=-1,f=-1;'
+        .'for(var y=0;y<h;y++)for(var z=0;z<w;z++){var k=(y*w+z)*4;if(p[k+3]<24||(p[k]>225&&p[k+1]>225&&p[k+2]>225))p[k+3]=0;else{if(z<a)a=z;if(z>e)e=z;if(y<b)b=y;if(y>f)f=y;}}'
+        .'if(e<0)return;x.putImageData(d,0,0);var m=Math.round(Math.max(e-a,f-b)*0.02)+2;a=Math.max(0,a-m);b=Math.max(0,b-m);e=Math.min(w-1,e+m);f=Math.min(h-1,f+m);'
+        .'var o=document.createElement("canvas");o.width=e-a+1;o.height=f-b+1;o.getContext("2d").drawImage(c,a,b,o.width,o.height,0,0,o.width,o.height);i.src=o.toDataURL("image/png");}catch(_){}}'
+        .'function r(){var L=document.querySelectorAll("img.sgn");for(var n=0;n<L.length;n++){var i=L[n];if(i.complete)t(i);else i.addEventListener("load",function(){t(this)});}}'
+        .'if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",r);else r();})();</script>';
+}
+
+/** ลายเซ็นผู้อำนวยการ กึ่งกลางกล่องแม่ */
+function director_sign_center(int $h = 54, string $bottom = '-8px', int $maxw = 230): string
+{
+    return sign_center(director_sign_url(), $h, $bottom, $maxw);
+}
+
+/** ลายเซ็นบุคลากรตามชื่อ กึ่งกลางกล่องแม่ */
+function person_sign_center(string $name, int $h = 54, string $bottom = '-8px', int $maxw = 230): string
+{
+    return $name === '' ? '' : sign_center(person_sign_url(person_id_by_name($name)), $h, $bottom, $maxw);
+}
+
 /** ลายเซ็นบุคลากร (อัปโหลดที่ "กำหนดข้อมูลบุคลากร") URL หรือ '' */
 function person_sign_url(int $uid): string
 {
@@ -248,7 +281,7 @@ function rpt_print(string $title, string $body, bool $landscape = false): void
         .'.bar{position:sticky;top:0;background:#333;color:#fff;padding:8px;text-align:center;z-index:9}.bar button{font:14px Tahoma;padding:4px 14px;margin:0 4px}'
         .'@media print{body{background:#fff}.page{margin:0;width:auto;min-height:0;padding:0}.bar{display:none}}</style></head><body>'
         .'<div class="bar"><button onclick="window.print()">🖨 พิมพ์</button><button onclick="history.length>1?history.back():window.close()">กลับ</button> <span class="small">ตั้งค่ากระดาษ A4 '.($landscape ? 'แนวนอน' : 'แนวตั้ง').' / ระยะขอบค่าเริ่มต้น</span></div>'
-        .$body.'</body></html>';
+        .$body.sign_trim_js().'</body></html>';
     exit;
 }
 
@@ -262,8 +295,8 @@ function rpt_signs(array $who, bool $personSigns = false): string
     $o = '<div class="sign">';
     foreach ($who as [$role, $name]) {
         // ผู้อำนวยการ: ลายเซ็นผู้อำนวยการ / ใบรายงานผลการเรียน: ลายเซ็นบุคลากรตามชื่อ (ครูที่ปรึกษา รองฯ วิชาการ)
-        $sig = preg_match('/^ผู้อำนวยการ/u', $role) ? director_sign_img(40) : ($personSigns && $name !== '' ? person_sign_img($name, 40) : '');
-        $o .= '<div>ลงชื่อ '.$sig.'..................................<br>('.($name !== '' ? h($name) : '..................................').')<br>'.h($role).'</div>';
+        $sig = preg_match('/^ผู้อำนวยการ/u', $role) ? director_sign_center(36, '-5px', 125) : ($personSigns ? person_sign_center($name, 36, '-5px', 125) : '');
+        $o .= '<div>ลงชื่อ <span style="position:relative;display:inline-block">..................................'.$sig.'</span><br>('.($name !== '' ? h($name) : '..................................').')<br>'.h($role).'</div>';
     }
     return $o.'</div>';
 }

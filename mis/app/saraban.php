@@ -713,18 +713,27 @@ function sb_ct_clauses(string $body, ?int &$n = 0): string
         } elseif (preg_match('/^ข้อ\s*([0-9๐-๙]+)\.?\s*(.*)$/u', $line, $m)) {   // ข้อหลักพิมพ์เลขเอง
             $n = (int) $ar($m[1]);
             $sub = [];
-            $out .= '<div class="p">ข้อ '.sb_t((string) $n).' '.sb_t($m[2]).'</div>';
+            $out .= '<div class="p">'.sb_cn('ข้อ '.sb_t((string) $n)).sb_t(trim($m[2])).'</div>';
             continue;
         } else {
             $n++;
             $sub = [];
-            $out .= '<div class="p">ข้อ '.sb_t((string) $n).' '.sb_t($line).'</div>';
+            $out .= '<div class="p">'.sb_cn('ข้อ '.sb_t((string) $n)).sb_t($line).'</div>';
             continue;
         }
         // ข้อย่อย: ย่อหน้าลึกขึ้นชั้นละ ๑ ซม.
-        $out .= '<div class="p" style="text-indent:'.(2.5 + 1.0 * $lv).'cm;margin-top:2pt">'.sb_t($num).' '.sb_t($txt).'</div>';
+        $out .= '<div class="p" style="text-indent:'.(2.5 + 1.0 * $lv).'cm;margin-top:2pt">'.sb_cn(sb_t($num)).sb_t(trim($txt)).'</div>';
     }
     return $out;
+}
+
+/**
+ * เลขข้อ (ข้อ ๑ / ๑.๑) เป็นก้อนเดียว ไม่มีช่องว่างให้การจัดชิดขอบไปยืด
+ * (ข้อความภาษาไทยมีช่องว่างน้อย เบราว์เซอร์จึงไปถ่างช่องว่างหลังเลขข้อจนห่างมาก)
+ */
+function sb_cn(string $numHtml): string
+{
+    return '<span class="cn">'.$numHtml.'</span>';
 }
 
 /** ข้อสัญญาเรื่องการชำระเงิน */
@@ -764,7 +773,7 @@ function sb_contract_print(array $d): string
     $cl = sb_ct_clauses($v('body'), $n);
     if (($pc = sb_ct_pay_clause($d)) !== '') {
         $n++;
-        $cl .= '<div class="p">ข้อ '.sb_t((string) $n).' '.sb_t($pc).'</div>';
+        $cl .= '<div class="p">'.sb_cn('ข้อ '.sb_t((string) $n)).sb_t($pc).'</div>';
     }
     $sigA = sb_sign_url($d);
     $box = fn($role, $name, $pos = '', $sig = '') => '<div><span class="r1">ลงชื่อ <span class="ln">'.($sig !== '' ? '<img class="sgimg sgn" src="'.h($sig).'" alt="" style="bottom:-.2cm"/>' : '').'</span> '.h($role).'</span>'
@@ -1125,7 +1134,7 @@ function sb_print_out(string $id, array $d, ?string $bar): void
         .'.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-top:-.45cm}.hdr .org{max-width:7.2cm}'
         .'.dt{padding-left:7.5cm;margin-top:8pt}'
         .'.row{display:flex}.row .lb{white-space:nowrap;margin-right:.35cm}.row .tx{flex:1}'
-        .'.p{text-indent:2.5cm;margin-top:8pt;text-align:justify;text-justify:inter-character}.gap{height:8pt}'
+        .'.p{text-indent:2.5cm;margin-top:8pt;text-align:justify;text-justify:inter-character}.cn{display:inline-block;text-indent:0;margin-right:.3em;white-space:nowrap}.gap{height:8pt}'
         .'.sig{margin-top:12pt;page-break-inside:avoid;break-inside:avoid}.sig .cl{margin-left:7.5cm;width:max-content}.sig .sw{margin-left:7.5cm;width:0;position:relative}'
         .'.ghost{visibility:hidden;display:block;height:0;overflow:hidden}.sig .si{width:11cm;text-align:center;margin-left:var(--half,1.65cm);transform:translateX(-50%)}'
         .'.contact{margin-top:14pt}.contact+.contact{margin-top:6pt}'

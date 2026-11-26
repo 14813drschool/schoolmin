@@ -210,19 +210,33 @@ function timetable_grid(string $tpl, callable $cell): string
     // หัวตาราง 2 แถว: เวลา (เทาเข้ม) / คาบที่ (เทาอ่อน)
     $out = "<tr>\n <th width=\"100\" rowspan=\"2\" align=\"center\" valign=\"middle\" class=\"head\" style=\"border-radius:0px\"><h1 style=\"font-size:25px\">วัน/เวลา</h1></th>";
     $row2 = '';
-    foreach (tt_periods() as $p => [$s, $e]) {
+    $pers = tt_periods();
+    foreach (tt_cols() as [$k, $p]) {
+        if ($k === 'b') { // ช่วงพัก
+            [$bn, $bs, $be] = tt_breaks()[$p];
+            $out .= "\n <td rowspan=\"2\" align=\"center\" valign=\"middle\" style=\"width:44px;background:#9E9E9E;color:#fff;border-left:1px solid #bbb\"><h1 style=\"font-size:13px;color:#fff;line-height:1.15\" title=\"".h($bn)."\">".($bs !== '' ? h(str_replace(':', '.', $bs)).'<br>-<br>'.h(str_replace(':', '.', $be)) : 'พัก').'</h1></td>';
+            continue;
+        }
+        [$s, $e] = $pers[$p];
         $out .= "\n <td align=\"center\" valign=\"middle\" style=\"height:30px;background:#9E9E9E;color:#fff;border-left:1px solid #bbb\"><h1 style=\"font-size:16px;color:#fff\">"
-            .h($s !== '' ? str_replace(':', '.', $s).'-'.str_replace(':', '.', $e) : '---').'</h1></td>';
+            .h($s !== '' ? tt_time_txt($s, $e) : '---').'</h1></td>';
         $row2 .= "\n <td align=\"center\" valign=\"middle\" class=\"schedule-period\" style=\"height:28px;border-left:1px solid #bbb;border-top-right-radius:0px\"><h1 style=\"font-size:18px\">คาบที่ $p</h1></td>";
     }
     $out .= "\n </tr>\n <tr>".$row2."\n </tr>";
-    foreach (tt_days() as $d => $name) {
+    $days = tt_days();
+    $first = true;
+    foreach ($days as $d => $name) {
         $color = TT_DAY_COLOR[$d] ?? '#ccc';
         $out .= "\n <tr>\n <td height=\"95\" align=\"center\" valign=\"middle\" bgcolor=\"$color\" class=\"schedule-weekday\" style=\"border-top:#aaa solid 1px\"><h1 style=\"font-size:25px;color:#fff\">".h($name).'</h1></td>';
-        foreach (tt_periods() as $p => $x) {
+        foreach (tt_cols() as [$k, $p]) {
+            if ($k === 'b') {
+                $out .= $first ? tt_break_td($p, count($days), 'font-size:18px;border-left:1px solid #bbb') : '';
+                continue;
+            }
             $out .= $cell($d, $p);
         }
         $out .= "\n </tr>";
+        $first = false;
     }
     return substr($tpl, 0, $start).$out."\n ".substr($tpl, $end);
 }

@@ -369,7 +369,8 @@ function sb_form(string $id, string $type): array
         'to' => ['<span id="sb_to_l">เรียน</span>', inp('to', $v('to'), 640).$tip('คำขึ้นต้นและตำแหน่งผู้รับ เช่น ผู้อำนวยการสำนักงานคณะกรรมการส่งเสริมการศึกษาเอกชน'), false],
         'ref' => ['อ้างถึง', $ta('ref', 40).$tip('ถ้ามีหลายรายการ พิมพ์บรรทัดละรายการ (ใส่เลขลำดับเอง เช่น ๑. ...)'), false],
         'encl' => ['สิ่งที่ส่งมาด้วย', $ta('encl', 40).$tip('บรรทัดละรายการ เช่น ๑. ... จำนวน ๑ ฉบับ'), false],
-        'body' => ['<span id="sb_body_l">ข้อความ</span>', $ta('body', 230).'<div id="sb_body_t">'.$tip('พิมพ์ย่อหน้าละ ๑ บรรทัด (กด Enter เมื่อขึ้นย่อหน้าใหม่) ระบบย่อหน้า ๒.๕ ซม. ให้อัตโนมัติ — บรรทัดว่างคือเว้นบรรทัด').'</div>', true],
+        'body' => ['<span id="sb_body_l">ข้อความ</span>', $ta('body', 230).'<div id="sb_body_t">'.$tip('พิมพ์ย่อหน้าละ ๑ บรรทัด (กด Enter เมื่อขึ้นย่อหน้าใหม่) ระบบย่อหน้า ๒.๕ ซม. ให้อัตโนมัติ — บรรทัดว่างคือเว้นบรรทัด').'</div>'
+            .'<div id="sb_body_ct" style="display:none">'.$tip('บรรทัดละ ๑ ข้อ ระบบใส่ "ข้อ ๑, ข้อ ๒ ..." ให้เอง — ข้อย่อยให้ขึ้นต้นบรรทัดด้วย <b>-</b> (ได้ ๑.๑, ๑.๒ ของข้อก่อนหน้า) หรือ <b>--</b> (ได้ ๑.๑.๑) หรือพิมพ์เลขเอง เช่น <b>๑.๑</b> ข้อความ').'</div>', true],
         'closing' => ['คำลงท้าย', inp('closing', $v('closing'), 300, 'text', 'list="sb_closing"').'<datalist id="sb_closing"><option value="ขอแสดงความนับถือ"><option value="ขอแสดงความนับถืออย่างยิ่ง"><option value="ขอแสดงความเคารพอย่างยิ่ง"><option value="ขอแสดงความเคารพอย่างสูง"></datalist>', false],
         'sign_pid' => ['ผู้ลงนาม', $signSel, false],
         'sign_name' => ['ชื่อผู้ลงนาม', inp('sign_name', $v('sign_name'), 300, 'text', 'list="sb_signers"').'<datalist id="sb_signers">'.implode('', array_map(fn($x) => '<option value="'.h($x[2]).'">', executives())).'</datalist>'.$tip('พิมพ์ในวงเล็บใต้ช่องลงชื่อ'), false],
@@ -421,7 +422,7 @@ function sb_form(string $id, string $type): array
         .'<span style="margin-left:3px;float:left;width:65px"><a href="'.h(a_url('sb_letter')).'" id="Clearbtns"><img src="../icon_tools/vec_x_white.png" border="0" height="14" style="margin-top:-5px"/> กลับ</a></span></div></div></form></div>'
         .'<script>function sbType(){var t=document.getElementById("sb_type").value;var r=document.querySelectorAll("tr.sbf");for(var i=0;i<r.length;i++){r[i].style.display=r[i].classList.contains("sbf-"+t)?"":"none";}'
         .'document.getElementById("sb_to_l").textContent=t==="stamp"?"ถึง":"เรียน";'
-        .'document.getElementById("sb_body_l").textContent=t==="quote"?"หมายเหตุ / เงื่อนไข":(t==="contract"?"ข้อสัญญา (บรรทัดละ ๑ ข้อ)":"ข้อความ");document.getElementById("sb_body_t").style.display=t==="quote"?"none":"";'
+        .'document.getElementById("sb_body_l").textContent=t==="quote"?"หมายเหตุ / เงื่อนไข":(t==="contract"?"ข้อสัญญา (บรรทัดละ ๑ ข้อ / ข้อย่อยขึ้นต้นด้วย -)":"ข้อความ");document.getElementById("sb_body_t").style.display=(t==="quote"||t==="contract")?"none":"";document.getElementById("sb_body_ct").style.display=t==="contract"?"":"none";'
         .'var bs=document.getElementById("sb_body_l").parentNode.querySelector(".warningfiilsign");if(bs)bs.firstChild.nodeValue=(t==="quote"||t==="contract")?"":"*";'
         .'document.getElementById("sb_title_l").textContent=t==="contract"?"ชื่อสัญญา":"เรื่อง";document.getElementById("sb_place_l").textContent=t==="contract"?"ทำที่":"เขียนที่";'
         .'document.querySelector("textarea[name=body]").style.height=t==="quote"?"70px":"230px";}sbType();'
@@ -673,6 +674,59 @@ function sb_ct_cust_sel(string $cur): string
     return '<select name="ct_cust" class="general radius grayborder" style="width:420px;height:25px" onchange="var m='.h(json_encode($map ?: new stdClass(), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)).'[this.value],f=this.form;if(m){f.elements.ct_b.value=m[0];f.elements.ct_b_rep.value=m[1];}">'.$opts.'</select>';
 }
 
+/**
+ * ข้อสัญญา บรรทัดละ ๑ ข้อ — ข้อย่อย:
+ *   ขึ้นต้นด้วย "-" = ข้อย่อย ๑.๑, ๑.๒ ... ของข้อก่อนหน้า, "--" = ข้อย่อยชั้นที่สาม ๑.๑.๑
+ *   หรือพิมพ์เลขเอง เช่น "๑.๑ ..." / "1.2 ..." / "ข้อ ๓ ..." (ระบบนับต่อจากเลขที่พิมพ์)
+ * $n = เลขข้อหลักสุดท้าย (ใช้ต่อกับข้อการชำระเงิน)
+ */
+function sb_ct_clauses(string $body, ?int &$n = 0): string
+{
+    $ar = fn(string $x) => strtr($x, ['๐' => '0', '๑' => '1', '๒' => '2', '๓' => '3', '๔' => '4', '๕' => '5', '๖' => '6', '๗' => '7', '๘' => '8', '๙' => '9']);
+    $n = 0;
+    $sub = [];     // ตัวนับข้อย่อยแต่ละชั้น
+    $out = '';
+    foreach (explode("\n", str_replace("\r", '', $body)) as $line) {
+        $line = trim($line);
+        if ($line === '') {
+            continue;
+        }
+        if (preg_match('/^(-{1,2})\s*(.*)$/u', $line, $m)) {            // ข้อย่อยแบบขีด
+            $lv = strlen($m[1]);
+            $txt = $m[2];
+            if ($n === 0) {
+                $n = 1;
+            }
+            $sub = array_slice($sub, 0, $lv);
+            for ($i = 0; $i < $lv; $i++) {
+                $sub[$i] = $sub[$i] ?? 0;
+            }
+            $sub[$lv - 1]++;
+            $num = $n.'.'.implode('.', $sub);
+        } elseif (preg_match('/^([0-9๐-๙]+(?:\.[0-9๐-๙]+){1,3})\.?\s+(.*)$/u', $line, $m)) { // ข้อย่อยพิมพ์เลขเอง
+            $parts = array_map('intval', explode('.', $ar($m[1])));
+            $n = $parts[0];
+            $sub = array_slice($parts, 1);
+            $lv = count($sub);
+            $txt = $m[2];
+            $num = $m[1];
+        } elseif (preg_match('/^ข้อ\s*([0-9๐-๙]+)\.?\s*(.*)$/u', $line, $m)) {   // ข้อหลักพิมพ์เลขเอง
+            $n = (int) $ar($m[1]);
+            $sub = [];
+            $out .= '<div class="p">ข้อ '.sb_t((string) $n).' '.sb_t($m[2]).'</div>';
+            continue;
+        } else {
+            $n++;
+            $sub = [];
+            $out .= '<div class="p">ข้อ '.sb_t((string) $n).' '.sb_t($line).'</div>';
+            continue;
+        }
+        // ข้อย่อย: ย่อหน้าลึกขึ้นชั้นละ ๑ ซม.
+        $out .= '<div class="p" style="text-indent:'.(2.5 + 1.0 * $lv).'cm;margin-top:2pt">'.sb_t($num).' '.sb_t($txt).'</div>';
+    }
+    return $out;
+}
+
 /** ข้อสัญญาเรื่องการชำระเงิน */
 function sb_ct_pay_clause(array $d): string
 {
@@ -707,16 +761,7 @@ function sb_contract_print(array $d): string
         .($v('sign_name') !== '' ? ' โดย'.$v('sign_name').($v('sign_pos') !== '' ? ' ตำแหน่ง'.preg_replace('/\s+/u', ' ', $v('sign_pos')) : '') : '')
         .' ซึ่งต่อไปในสัญญานี้เรียกว่า “'.$la.'” ฝ่ายหนึ่ง กับ '.implode(' ', $b).($v('ct_b_rep') !== '' && $v('ct_b_rep') !== $bName ? ' โดย'.$v('ct_b_rep').($v('ct_b_pos') !== '' ? ' ตำแหน่ง'.$v('ct_b_pos') : '') : '')
         .' ซึ่งต่อไปในสัญญานี้เรียกว่า “'.$lb.'” อีกฝ่ายหนึ่ง';
-    $cl = '';
-    $n = 0;
-    foreach (explode("\n", $v('body')) as $line) {
-        $line = trim($line);
-        if ($line === '') {
-            continue;
-        }
-        $n++;
-        $cl .= '<div class="p">'.(preg_match('/^ข้อ\s*[0-9๐-๙]/u', $line) ? sb_t($line) : 'ข้อ '.sb_t((string) $n).' '.sb_t($line)).'</div>';
-    }
+    $cl = sb_ct_clauses($v('body'), $n);
     if (($pc = sb_ct_pay_clause($d)) !== '') {
         $n++;
         $cl .= '<div class="p">ข้อ '.sb_t((string) $n).' '.sb_t($pc).'</div>';

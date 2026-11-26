@@ -67,7 +67,7 @@ function tt_periods(): array
     foreach (md_rows('periods') as $r) {
         $d = json_decode((string) $r['value'], true) ?: [];
         $no = (int) ($d['no'] ?? 0);
-        if ($no >= 1 && $no <= 15) {
+        if (($d['type'] ?? '') !== 'break' && $no >= 1 && $no <= 15) {
             $p[$no] = [(string) ($d['start'] ?? ''), (string) ($d['end'] ?? ''), (string) ($d['note'] ?? '')];
         }
     }
@@ -78,6 +78,62 @@ function tt_periods(): array
         }
     }
     return $p;
+}
+
+/** ช่วงพัก [หลังคาบที่ => [ชื่อ, เริ่ม, สิ้นสุด]] — ยังไม่เคยตั้งค่า: เว้นช่วงระหว่างคาบตั้งแต่ 40 นาที = พักกลางวัน */
+function tt_breaks(): array
+{
+    static $b = null;
+    if ($b !== null) {
+        return $b;
+    }
+    $b = [];
+    $pers = tt_periods();
+    $max = $pers ? max(array_keys($pers)) : 0;
+    foreach (md_rows('periods') as $r) {
+        $d = json_decode((string) $r['value'], true) ?: [];
+        $after = (int) ($d['after'] ?? 0);
+        if (($d['type'] ?? '') === 'break' && $after >= 1 && $after < $max) {
+            $b[$after] = [(string) ($d['name'] ?? '') ?: 'พักกลางวัน', (string) ($d['start'] ?? ''), (string) ($d['end'] ?? '')];
+        }
+    }
+    if (!$b && md_get('cfg', 'tt_breaks_set') === null) {
+        $prev = null;
+        foreach ($pers as $no => [$s, $e]) {
+            if ($prev !== null && $prev[1] !== '' && $s !== '' && strtotime($s) - strtotime($prev[1]) >= 40 * 60) {
+                $b[$prev[0]] = ['พักกลางวัน', $prev[1], $s];
+            }
+            $prev = [$no, $e];
+        }
+    }
+    ksort($b);
+    return $b;
+}
+
+/** คอลัมน์ตามลำดับเวลา: ['p', คาบที่] หรือ ['b', หลังคาบที่] */
+function tt_cols(): array
+{
+    $o = [];
+    $br = tt_breaks();
+    foreach (tt_periods() as $p => $x) {
+        $o[] = ['p', $p];
+        if (isset($br[$p])) {
+            $o[] = ['b', $p];
+        }
+    }
+    return $o;
+}
+
+/** ช่องพัก (แนวตั้ง รวมทุกวัน) */
+function tt_break_td(int $after, int $rows, string $style = ''): string
+{
+    [$n] = tt_breaks()[$after];
+    return '<td class="brk" rowspan="'.$rows.'" style="background:#EEEEEE;text-align:center;vertical-align:middle;padding:0'.($style !== '' ? ';'.$style : '').'"><div style="writing-mode:vertical-rl;margin:0 auto;color:#555;font-weight:bold">'.h($n).'</div></td>';
+}
+
+function tt_time_txt(string $s, string $e): string
+{
+    return $s !== '' ? str_replace(':', '.', $s).'-'.str_replace(':', '.', $e) : '';
 }
 
 function tt_period_label(int $no): string
@@ -456,18 +512,24 @@ function adm_timetable(bool $post)
 
     // ตาราง
     $head = '<tr><th class="dh">วัน / คาบ</th>';
-    foreach ($pers as $p => $x) {
-        $head .= '<th>'.tt_period_label($p).'</th>';
+    foreach (tt_cols() as [$k, $p]) {
+        $head .= $k === 'b' ? '<th style="width:28px;font-weight:normal;font-size:10px">พัก</th>' : '<th>'.tt_period_label($p).'</th>';
     }
     $rows = '';
+    $first = true;
     foreach ($days as $d => $dn) {
         $rows .= '<tr><th class="dh" style="background:'.(TT_DAY_COLOR[$d] ?? '#ccc').'">'.h($dn).'</th>';
-        foreach ($pers as $p => $x) {
+        foreach (tt_cols() as [$k, $p]) {
+            if ($k === 'b') {
+                $rows .= $first ? tt_break_td($p, count($days), 'font-size:12px') : '';
+                continue;
+            }
             $slot = $d.'-'.$p;
             [$o, $v, $c] = $cells[$slot];
             $rows .= '<td class="tt-c"'.($c ? ' style="background:'.tt_color($c).'"' : '').'><select name="c['.$slot.']" class="tt-s">'.$o.'</select><div class="tt-t"></div>'.$v.'</td>';
         }
         $rows .= '</tr>';
+        $first = false;
     }
     $conf = tt_conflicts_all();
     $confHtml = '';
@@ -638,19 +700,34 @@ function tt_print_page(string $title, string $sub, callable $cell, string $foot)
     // หัวตาราง 2 แถว: เวลา (เทาเข้ม) / คาบที่ (เทาอ่อน)
     $h1 = '<tr><th class="dh hd" rowspan="2">วัน/เวลา</th>';
     $h2 = '<tr>';
-    foreach (tt_periods() as $p => [$s, $e, $note]) {
-        $h1 .= '<th class="ht">'.($s !== '' ? h(str_replace(':', '.', $s)).'-'.h(str_replace(':', '.', $e)) : '&nbsp;').'</th>';
+    $pers = tt_periods();
+    $brs = tt_breaks();
+    foreach (tt_cols() as [$k, $p]) {
+        if ($k === 'b') {
+            [$bn, $bs, $be] = $brs[$p];
+            $h1 .= '<th class="ht hb" rowspan="2" title="'.h($bn).'">'.($bs !== '' ? h(str_replace(':', '.', $bs)).'<br>-<br>'.h(str_replace(':', '.', $be)) : 'พัก').'</th>';
+            continue;
+        }
+        [$s, $e] = $pers[$p];
+        $h1 .= '<th class="ht">'.($s !== '' ? h(tt_time_txt($s, $e)) : '&nbsp;').'</th>';
         $h2 .= '<th class="hp">คาบที่ '.$p.'</th>';
     }
     $head = $h1.'</tr>'.$h2;
     $rows = '';
-    foreach (tt_days() as $d => $dn) {
+    $first = true;
+    $days = tt_days();
+    foreach ($days as $d => $dn) {
         $bg = tt_tint($d);
         $rows .= '<tr><th class="dh dy" style="background:'.(TT_DAY_COLOR[$d] ?? '#ddd').'">'.h($dn).'</th>';
-        foreach (tt_periods() as $p => $x) {
+        foreach (tt_cols() as [$k, $p]) {
+            if ($k === 'b') {
+                $rows .= $first ? tt_break_td($p, count($days), 'font-size:15pt') : '';
+                continue;
+            }
             $rows .= '<td style="background:'.$bg.'">'.$cell($d.'-'.$p).'</td>';
         }
         $rows .= '</tr>';
+        $first = false;
     }
     [$y, $t] = term();
     return '<section class="pg"><div class="ph"><img src="'.h(rpt_logo()).'" alt=""/><div><div class="t1">'.h($title).'</div><div class="t2">'.h($sub !== '' ? $sub.' · ' : '').'ภาคเรียนที่ '.$t.' ปีการศึกษา '.$y.' · '.h((string) cfg('school_name', '')).'</div></div></div>'
@@ -661,7 +738,7 @@ function tt_print_page(string $title, string $sub, callable $cell, string $foot)
 function tt_print_summary(array $rows, string $colLabel): string
 {
     if (!$rows) {
-        return '';
+        return '<div class="smw"><p class="sme">ยังไม่มีรายวิชาในตารางนี้</p></div>';
     }
     $h = '';
     $tot = 0;
@@ -669,7 +746,7 @@ function tt_print_summary(array $rows, string $colLabel): string
         $tot += $n;
         $h .= '<tr><td>'.h($code).'</td><td>'.h($name).'</td><td>'.h($who).'</td><td class="c">'.$n.'</td></tr>';
     }
-    return '<table class="sm"><tr><th>รหัสวิชา</th><th>รายวิชา</th><th>'.$colLabel.'</th><th>คาบ/สัปดาห์</th></tr>'.$h.'<tr><td colspan="3" class="r"><b>รวม</b></td><td class="c"><b>'.$tot.'</b></td></tr></table>';
+    return '<div class="smw"><div class="smt">ข้อมูลรายวิชา</div><table class="sm"><tr><th>รหัสวิชา</th><th>รายวิชา</th><th>'.$colLabel.'</th><th>คาบ/สัปดาห์</th></tr>'.$h.'<tr><td colspan="3" class="r"><b>รวม</b></td><td class="c"><b>'.$tot.'</b></td></tr></table></div>';
 }
 
 /** สร้างหน้าพิมพ์: kind = room | teacher | venue, ids = รายการ */
@@ -736,6 +813,19 @@ function tt_print_out(string $kind, array $ids): void
                 continue;
             }
             $grid = tt_venue_grid($id);
+            $cnt = [];
+            foreach ($grid as $es) {
+                foreach ($es as $x) {
+                    $cnt[$x[1].'|'.$x[0]] = ($cnt[$x[1].'|'.$x[0]] ?? 0) + 1;
+                }
+            }
+            $sum = [];
+            foreach ($cnt as $k => $n) {
+                [$cid, $r] = explode('|', $k);
+                $c = $cs[(int) $cid] ?? [];
+                $sum[] = [$c['course_code'] ?? '', $c['course_name'] ?? '', room_short((int) $r).' · '.tt_teacher_label((string) ($c['teacher'] ?? '')), $n];
+            }
+            usort($sum, fn($a, $b) => strcmp($a[0].$a[2], $b[0].$b[2]));
             $pages .= tt_print_page('ตารางการใช้ '.$vs[$id], '', function ($slot) use ($grid, $cs) {
                 $es = $grid[$slot] ?? [];
                 if (!$es) {
@@ -744,11 +834,17 @@ function tt_print_out(string $kind, array $ids): void
                 $c = $cs[$es[0][1]] ?? [];
                 return tt_print_cell([['cd', h($c['course_code'] ?? '')], ['nm', h($c['course_name'] ?? '')], ['tc', h(implode(', ', array_map(fn($x) => room_short($x[0]), $es)))],
                     ['vn', h(tt_teacher_label((string) ($c['teacher'] ?? '')))]]);
-            }, '');
+            }, tt_print_summary($sum, 'ห้อง / ครูผู้สอน'));
         }
     }
     if ($pages === '') {
         $pages = '<section class="pg"><p>ไม่มีข้อมูลตาราง</p></section>';
+    }
+    // รูปแบบการพิมพ์: both = ตาราง + ข้อมูลรายวิชา, grid = เฉพาะตาราง, info = เฉพาะข้อมูลรายวิชา (?show=)
+    $show = in_array($_GET['show'] ?? '', ['both', 'grid', 'info'], true) ? (string) $_GET['show'] : 'both';
+    $opt = '';
+    foreach (['both' => 'ตารางเรียน + ข้อมูลรายวิชา', 'grid' => 'เฉพาะตารางเรียน', 'info' => 'เฉพาะข้อมูลรายวิชา'] as $k => $lb) {
+        $opt .= '<label><input type="radio" name="ttshow" value="'.$k.'"'.($k === $show ? ' checked' : '').'> '.$lb.'</label>';
     }
     mis_headers();
     echo '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>พิมพ์ตาราง</title><link rel="shortcut icon" href="/mis/images/favicon.ico"><link rel="stylesheet" href="/mis/css/sarabun.css"><style>'
@@ -757,13 +853,18 @@ function tt_print_out(string $kind, array $ids): void
         .'.ph{display:flex;align-items:center;gap:10px;margin-bottom:6px}.ph img{height:16mm}.t1{font-size:22pt;font-weight:bold;line-height:1.1}.t2{font-size:14pt}'
         .'table.g{width:100%;border-collapse:collapse;table-layout:fixed}table.g th,table.g td{border:1px solid #555;text-align:center;vertical-align:middle}'
         .'table.g th{font-size:13pt;line-height:1.1;padding:2px}table.g th.ht{background:#9E9E9E;color:#fff;font-weight:bold}table.g th.hp{background:#DCDCDC;color:#222;font-weight:normal}'
-        .'table.g th.dh{width:24mm}table.g th.hd{background:#9E9E9E;color:#fff;font-size:17pt}table.g th.dy{color:#fff;font-size:19pt;text-shadow:0 0 1px rgba(0,0,0,.25)}'
+        .'table.g th.hb{width:12mm;font-size:11pt;line-height:1}table.g th.dh{width:24mm}table.g th.hd{background:#9E9E9E;color:#fff;font-size:17pt}table.g th.dy{color:#fff;font-size:19pt;text-shadow:0 0 1px rgba(0,0,0,.25)}'
         .'table.g td{height:24mm;padding:1px 2px;line-height:1.1}.cd{font-weight:bold;font-size:14pt;color:#22B38C}.nm{font-size:13pt;color:#C36BE0}.tc{font-size:13pt;color:#E07B7B}.vn{font-size:11pt;font-style:italic;color:#777}'
         .'table.sm{border-collapse:collapse;margin-top:6px;font-size:13pt;min-width:60%}table.sm th,table.sm td{border:1px solid #888;padding:0 6px;line-height:1.15}table.sm th{background:#f2f3f4}.c{text-align:center}.r{text-align:right}'
+        .'.smt{font-size:15pt;font-weight:bold;margin-top:6px}.smw .sm{margin-top:2px}.sme{font-size:14pt;color:#777}'
+        .'body.m-grid .smw{display:none}body.m-grid table.g td{height:27mm}body.m-info table.g{display:none}body.m-info table.sm{width:100%;font-size:15pt}body.m-info .smt{font-size:18pt;margin:8px 0 4px}'
+        .'.bar label{margin:0 6px;cursor:pointer;font-size:13px}.bar .opt{display:inline-block;margin:0 10px;padding:2px 8px;background:#444;border-radius:4px}'
         .'.bar{position:sticky;top:0;background:#333;color:#fff;padding:8px;text-align:center;z-index:9;font:13px Tahoma}.bar button{font:14px Tahoma;padding:4px 14px;margin:0 4px}'
         .'@media print{body{background:#fff}.pg{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}.bar{display:none}}'
-        .'</style></head><body><div class="bar"><button onclick="window.print()">🖨 พิมพ์ / บันทึกเป็น PDF</button><button onclick="history.length>1?history.back():window.close()">กลับ</button>'
-        .' <span style="font-size:12px">กระดาษ A4 แนวนอน · ระยะขอบ: ค่าเริ่มต้น · เปิด "กราฟิกพื้นหลัง" (สีช่องวัน)</span></div>'.$pages.'</body></html>';
+        .'</style></head><body class="m-'.$show.'"><div class="bar"><button onclick="window.print()">🖨 พิมพ์ / บันทึกเป็น PDF</button><button onclick="history.length>1?history.back():window.close()">กลับ</button>'
+        .'<span class="opt">พิมพ์: '.$opt.'</span>'
+        .' <span style="font-size:12px">กระดาษ A4 แนวนอน · เปิด "กราฟิกพื้นหลัง" (สีช่องวัน)</span></div>'.$pages
+        .'<script>document.querySelectorAll("input[name=ttshow]").forEach(function(r){r.addEventListener("change",function(){document.body.className="m-"+r.value;try{var u=new URL(location.href);u.searchParams.set("show",r.value);history.replaceState(null,"",u);}catch(e){}});});</script></body></html>';
     exit;
 }
 
@@ -793,6 +894,143 @@ function act_task_teacher_timetable_Print(): void
         $ids = [(int) me()['id']];
     }
     tt_print_out($kind, array_slice($ids, 0, 300));
+}
+
+/* ================================================================ กำหนดคาบเรียน / ช่วงพัก (ผู้ดูแลระบบ + ฝ่ายวิชาการ) */
+
+/** แถวทั้งหมดตามลำดับเวลา: [type p|b, ชื่อ/หมายเหตุ, เริ่ม, สิ้นสุด] */
+function tt_period_rows(): array
+{
+    $o = [];
+    $pers = tt_periods();
+    $br = tt_breaks();
+    foreach (tt_cols() as [$k, $p]) {
+        $o[] = $k === 'b' ? ['b', $br[$p][0], $br[$p][1], $br[$p][2]] : ['p', $pers[$p][2], $pers[$p][0], $pers[$p][1]];
+    }
+    return $o;
+}
+
+/** ตรวจและบันทึก: คืนข้อความผิดพลาด ([] = สำเร็จ) */
+function tt_periods_save(array $type, array $name, array $start, array $end): array
+{
+    $rows = [];
+    $err = [];
+    $tm = fn($x) => preg_match('/^([01]?\d|2[0-3])[:.]([0-5]\d)$/', trim((string) $x), $m) ? sprintf('%02d:%02d', $m[1], $m[2]) : null;
+    foreach (array_values($type) as $i => $t) {
+        $t = $t === 'b' ? 'b' : 'p';
+        $s = $tm($start[$i] ?? '');
+        $e = $tm($end[$i] ?? '');
+        $label = $t === 'b' ? 'ช่วงพัก' : 'คาบที่ '.(count(array_filter($rows, fn($r) => $r[0] === 'p')) + 1);
+        if ($s === null || $e === null) {
+            $err[] = $label.': กรุณากรอกเวลาเริ่ม/สิ้นสุดแบบ ๒๔ ชั่วโมง เช่น 08:30 หรือ 13.40';
+            continue;
+        }
+        if ($e <= $s) {
+            $err[] = $label.': เวลาสิ้นสุดต้องหลังเวลาเริ่ม';
+        }
+        if ($rows && $s < $rows[count($rows) - 1][3]) {
+            $err[] = $label.': เวลาเริ่ม '.$s.' ทับกับช่วงก่อนหน้า (สิ้นสุด '.$rows[count($rows) - 1][3].')';
+        }
+        $rows[] = [$t, mb_substr(trim((string) ($name[$i] ?? '')), 0, 40), $s, $e];
+    }
+    $np = count(array_filter($rows, fn($r) => $r[0] === 'p'));
+    if ($np < 1) {
+        $err[] = 'ต้องมีคาบเรียนอย่างน้อย ๑ คาบ';
+    }
+    if ($np > 15) {
+        $err[] = 'กำหนดได้ไม่เกิน ๑๕ คาบ';
+    }
+    if ($rows && ($rows[0][0] === 'b' || $rows[count($rows) - 1][0] === 'b')) {
+        $err[] = 'ช่วงพักต้องอยู่ระหว่างคาบเรียน (ไม่ใช่ก่อนคาบแรกหรือหลังคาบสุดท้าย)';
+    }
+    foreach ($rows as $i => $r) {
+        if ($i && $r[0] === 'b' && $rows[$i - 1][0] === 'b') {
+            $err[] = 'มีช่วงพักติดกัน ๒ ช่วง — รวมเป็นช่วงเดียว';
+            break;
+        }
+    }
+    if ($err) {
+        return $err;
+    }
+    q('DELETE FROM {mis_data} WHERE `kind`=?', ['periods']);
+    $no = 0;
+    foreach ($rows as [$t, $n, $s, $e]) {
+        if ($t === 'p') {
+            $no++;
+            md_set('periods', 'p'.$no, '', '', json_encode(['no' => $no, 'start' => $s, 'end' => $e, 'note' => $n], JSON_UNESCAPED_UNICODE));
+        } else {
+            md_set('periods', 'b'.$no, '', '', json_encode(['type' => 'break', 'after' => $no, 'name' => $n !== '' ? $n : 'พักกลางวัน', 'start' => $s, 'end' => $e], JSON_UNESCAPED_UNICODE));
+        }
+    }
+    md_set('cfg', 'tt_breaks_set', '', '', '1');
+    return [];
+}
+
+function adm_periods(bool $post)
+{
+    if (!tt_can_edit()) {
+        return ['กำหนดคาบเรียน', msg_box('กำหนดคาบเรียนได้เฉพาะผู้ดูแลระบบและฝ่ายวิชาการ', false)];
+    }
+    $msg = '';
+    $rows = tt_period_rows();
+    if ($post) {
+        $type = (array) ($_POST['type'] ?? []);
+        $err = tt_periods_save($type, (array) ($_POST['name'] ?? []), (array) ($_POST['start'] ?? []), (array) ($_POST['end'] ?? []));
+        if (!$err) {
+            redirect(a_url('periods', '&done=1'));
+        }
+        $msg = msg_box(implode('<br>', array_map('h', $err)), false);
+        $rows = [];
+        foreach (array_values($type) as $i => $t) {
+            $rows[] = [$t === 'b' ? 'b' : 'p', (string) ($_POST['name'][$i] ?? ''), (string) ($_POST['start'][$i] ?? ''), (string) ($_POST['end'][$i] ?? '')];
+        }
+    } elseif (isset($_GET['done'])) {
+        $msg = msg_box('บันทึกคาบเรียนแล้ว — ตารางเรียน/ตารางสอนและหน้าพิมพ์ใช้เวลาชุดนี้ทันที');
+    }
+    // ตารางที่จัดไว้ในคาบที่ไม่มีแล้ว (ไม่แสดง แต่ยังเก็บไว้)
+    $pers = tt_periods();
+    $orph = 0;
+    foreach (tt_all() as $slots) {
+        foreach (array_keys($slots) as $slot) {
+            if (!isset($pers[(int) explode('-', (string) $slot)[1]])) {
+                $orph++;
+            }
+        }
+    }
+    if ($orph && !$post) {
+        $msg .= msg_box('มีวิชาที่จัดไว้ในคาบที่ถูกลบออก '.$orph.' ช่อง (ภาคเรียนนี้) — ไม่แสดงในตาราง แต่ยังเก็บไว้ ถ้าเพิ่มคาบกลับมาจะแสดงอีกครั้ง', false);
+    }
+    $tr = '';
+    foreach ($rows as $r) {
+        $tr .= tt_period_tr(...$r);
+    }
+    $tpl = tt_period_tr('p', '', '', '');
+    $html = '<style>#ttp{border-collapse:collapse;width:100%}#ttp th{background:#EAECEE;padding:5px;font-weight:normal;border:1px solid #D5D8DC}#ttp td{border:1px solid #E5E7E9;padding:4px 6px;text-align:center}'
+        .'#ttp tr.b td{background:#F4F6F6}#ttp .lb{font-weight:bold;white-space:nowrap}#ttp tr.b .lb{color:#7F8C8D}#ttp .s,#ttp .e{height:22px;width:70px;text-align:center}#ttp .nm{width:200px;height:22px}#ttp .dur{color:#888;font-size:12px;white-space:nowrap}'
+        .'.ttp-a{display:inline-block;margin:8px 6px 0 0;padding:4px 12px;border-radius:4px;background:#EAF2F8;color:#1F618D;text-decoration:none;cursor:pointer}.ttp-a.b{background:#F2F3F4;color:#555}#ttp a{cursor:pointer;text-decoration:none;margin:0 2px;font-size:14px}</style>'
+        .'<table id="ttp"><tr><th style="width:90px">ลำดับ</th><th>เวลาเริ่ม</th><th>เวลาสิ้นสุด</th><th>นาที</th><th>ชื่อช่วงพัก / หมายเหตุ</th><th style="width:90px">เลื่อน / ลบ</th></tr>'.$tr.'</table>'
+        .'<a class="ttp-a" onclick="ttpAdd(\'p\')">+ เพิ่มคาบเรียน</a><a class="ttp-a b" onclick="ttpAdd(\'b\')">+ เพิ่มช่วงพัก (เช่น พักกลางวัน)</a>'
+        .'<div class="gray_12" style="font-size:11px;margin-top:6px">เพิ่มแล้วเลื่อนขึ้น/ลงไปวางระหว่างคาบได้ · ช่วงพักแสดงเป็นช่องแนวตั้งในตารางเรียน/ตารางสอนและหน้าพิมพ์ · ลบคาบท้าย ๆ แล้ว วิชาที่จัดไว้ในคาบนั้นจะซ่อนไว้ ไม่ถูกลบ</div>'
+        .'<template id="ttpt">'.$tpl.'</template>'
+        .'<script>(function(){var T=document.getElementById("ttp");function mm(v){var m=/^\s*(\d{1,2})[:.](\d{2})\s*$/.exec(v||"");return m&&+m[1]<24&&+m[2]<60?(+m[1])*60+(+m[2]):null}function hm(m){m=((m%1440)+1440)%1440;return ("0"+Math.floor(m/60)).slice(-2)+":"+("0"+m%60).slice(-2)}'
+        .'function rows(){return Array.prototype.slice.call(T.querySelectorAll("tr.r"))}'
+        .'window.ttpFix=function(){var n=0;rows().forEach(function(r){var b=r.classList.contains("b");r.querySelector(".lb").textContent=b?"พัก":"คาบที่ "+(++n);var s=mm(r.querySelector(".s").value),e=mm(r.querySelector(".e").value);r.querySelector(".dur").textContent=(s!==null&&e!==null&&e>s)?(e-s)+" นาที":"";})};'
+        .'window.ttpAdd=function(t){var x=document.getElementById("ttpt").content.firstElementChild.cloneNode(true);var rs=rows(),last=rs[rs.length-1];var st=last?mm(last.querySelector(".e").value):510;if(st===null)st=510;'
+        .'var dur=50;for(var i=rs.length-1;i>=0;i--){if(!rs[i].classList.contains("b")){var a=mm(rs[i].querySelector(".s").value),b=mm(rs[i].querySelector(".e").value);if(a!==null&&b!==null&&b>a)dur=b-a;break;}}'
+        .'if(t=="b"){x.className="r b";x.querySelector(".ty").value="b";x.querySelector(".nm").value="พักกลางวัน";dur=60;}x.querySelector(".s").value=hm(st);x.querySelector(".e").value=hm(st+dur);T.querySelector("tbody").appendChild(x);ttpFix();};'
+        .'window.ttpMv=function(a,d){var r=a.closest("tr"),o=d<0?r.previousElementSibling:r.nextElementSibling;if(!o||!o.classList.contains("r"))return;if(d<0)r.parentNode.insertBefore(r,o);else r.parentNode.insertBefore(o,r);ttpFix();};'
+        .'window.ttpDel=function(a){a.closest("tr").remove();ttpFix();};T.addEventListener("change",ttpFix);ttpFix();})();</script>';
+    return ['กำหนดคาบเรียน', $msg.admin_form('กำหนดคาบเรียนและช่วงพัก', a_url('periods'), [['คาบเรียน / ช่วงพัก', $html, true]], a_url('timetable'))];
+}
+
+function tt_period_tr(string $t, string $name, string $s, string $e): string
+{
+    $b = $t === 'b';
+    return '<tr class="r'.($b ? ' b' : '').'"><td class="lb"></td>'
+        .'<td><input type="hidden" name="type[]" class="ty" value="'.($b ? 'b' : 'p').'"/><input type="text" name="start[]" class="s general radius grayborder" value="'.h($s).'" maxlength="5" placeholder="08:30" inputmode="numeric" autocomplete="off"/></td>'
+        .'<td><input type="text" name="end[]" class="e general radius grayborder" value="'.h($e).'" maxlength="5" placeholder="09:20" inputmode="numeric" autocomplete="off"/></td><td class="dur"></td>'
+        .'<td><input type="text" name="name[]" class="nm general radius grayborder" maxlength="40" value="'.h($name).'" placeholder="'.($b ? 'พักกลางวัน' : '(ไม่บังคับ)').'"/></td>'
+        .'<td style="white-space:nowrap"><a onclick="ttpMv(this,-1)" title="เลื่อนขึ้น">▲</a><a onclick="ttpMv(this,1)" title="เลื่อนลง">▼</a> <a onclick="ttpDel(this)" title="ลบ"><img src="../icon_tools/vec_bin_dark.png" height="15" style="vertical-align:middle"/></a></td></tr>';
 }
 
 /* ================================================================ เมนูพิมพ์ในโมดูลวิชาการ */

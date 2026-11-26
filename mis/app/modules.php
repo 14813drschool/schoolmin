@@ -461,13 +461,7 @@ function adm_school_days(bool $post)
     return admin_form('กำหนดวันเรียน', a_url('school_days'), [['วันที่มีการเรียนการสอน', $h, true]], 'index.php');
 }
 
-function adm_periods(bool $post)
-{
-    return cat_md('periods', 'periods', 'คาบเรียน', ['no' => f_num('คาบที่'), 'start' => f_text('เวลาเริ่ม (เช่น 08:30)', true), 'end' => f_text('เวลาสิ้นสุด', true), 'note' => f_text('หมายเหตุ')],
-        ['no' => 'คาบที่', 'start' => 'เริ่ม', 'end' => 'สิ้นสุด', 'note' => 'หมายเหตุ'], $post,
-        seed_rows(['no', 'start', 'end', 'note'], [[1, '08:30', '09:20', ''], [2, '09:20', '10:10', ''], [3, '10:10', '11:00', ''], [4, '11:00', '11:50', ''], [5, '12:50', '13:40', ''], [6, '13:40', '14:30', ''], [7, '14:30', '15:20', ''], [8, '15:20', '16:10', '']]));
-}
-
+// adm_periods (กำหนดคาบเรียน/ช่วงพัก) อยู่ที่ mis/app/timetable.php
 // adm_tt_print / adm_room_tt อยู่ที่ mis/app/timetable.php
 
 /* ---------------------------------------------------------------- เกณฑ์ประเมินผล */

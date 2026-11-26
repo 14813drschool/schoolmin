@@ -748,73 +748,127 @@ function act_merge_dups(): void
 }
 
 /**
- * ครั้งเดียว (ปีการศึกษาปัจจุบัน): กิจกรรมพัฒนาผู้เรียนรหัสเดิมที่ไม่อยู่ในรายการใหม่ (เช่น dr04, drx02)
- * จับคู่ประเภท/ระดับชั้น/ภาคเรียนกับรายการกิจกรรม → รวมกับรายการที่ระบบสร้างใหม่ (เก็บผลประเมิน/สถานะอนุมัติเดิม)
- * แล้วเปลี่ยนรหัส/ชื่อตามรายการใหม่ — ประเภทเดียวกันมีหลายรายการในช่องเดียว (ไม่แน่ใจ) จะไม่แตะ
+ * ปรับกิจกรรมพัฒนาผู้เรียนรหัสเดิม (เช่น dr04, drx02) ให้เป็นรหัส/ชื่อตามรายการกิจกรรมใหม่ — ปีการศึกษาปัจจุบัน/ที่เลือกดู
+ * จับคู่ประเภท/ระดับชั้น/ภาคเรียน: รายการเดิม (อาจมีหลายชุดแยกห้อง) เก็บไว้พร้อมผลประเมิน/สถานะอนุมัติ แล้วเปลี่ยนรหัส/ชื่อ
+ * รายการที่ระบบสร้างใหม่ซ้ำ: เอานักเรียนที่อยู่ในรายการเดิมออก (ไม่ลงทะเบียนซ้ำ) และลบทิ้งถ้าไม่เหลือนักเรียน
+ * ไม่แตะ: ช่องที่รายการเดิมหลายรายการซ้อนกันในห้องเดียวกัน (เช่น ชุมนุมหลายชุมนุม) หรือรายการใหม่ที่มีผล/อนุมัติแล้ว
+ * คืนบันทึกผล (แสดงที่หน้าลงทะเบียนกิจกรรม)
  */
-function act_recode(): void
+function act_recode(bool $force = false): array
 {
-    if (md_get('cfg', 'act_recode_ver') === '2611') {
-        return;
+    if (!$force && md_get('cfg', 'act_recode_ver') === '2611b') {
+        return [];
     }
+    md_set('cfg', 'act_recode_ver', '', '', '2611b');
     $types = [1 => 'แนะแนว', 2 => 'ลูกเสือ', 3 => 'ชุมนุม', 4 => 'สังคม'];
     $cat = [];
+    $codes = [];
     foreach (act_catalog() as $d) {
+        $codes[(string) ($d['code'] ?? '')] = true;
         foreach (act_classes($d) as $cl) {
             foreach (($d['term'] ?? '') === '1-2' ? [1, 2] : [(int) ($d['term'] ?? 0)] as $t) {
                 $cat[(int) $cl][$t][(string) ($d['type'] ?? '')][] = $d;
             }
         }
     }
+    $log = [];
     if (!$cat) {
-        return;
+        return ['ยังไม่มีรายการกิจกรรมพัฒนาผู้เรียน'];
     }
-    $codes = [];
-    foreach (act_catalog() as $d) {
-        $codes[(string) ($d['code'] ?? '')] = true;
-    }
-    $y = cur_term()[0];
-    $all = q('SELECT `id`, `course_code`, `course_name`, `class`, `term` FROM {course} WHERE `type`=9 AND `year`=?', [$y]);
-    $old = [];
-    foreach ($all as $c) {
-        if (!isset($codes[(string) $c['course_code']])) {
-            $ty = $types[act_rank((string) $c['course_name'])] ?? '';
-            $old[(int) $c['class']][(int) $c['term']][$ty][] = $c;
+    $years = array_unique([cur_term()[0], term()[0]]);
+    foreach ($years as $y) {
+        $all = q('SELECT `id`, `course_code`, `course_name`, `class`, `term` FROM {course} WHERE `type`=9 AND `year`=?', [$y]);
+        $old = [];
+        foreach ($all as $c) {
+            if (!isset($codes[(string) $c['course_code']])) {
+                $ty = $types[act_rank((string) $c['course_name'])] ?? '';
+                $old[(int) $c['class']][(int) $c['term']][$ty][] = $c;
+            }
         }
-    }
-    $weight = function (int $id): int {
-        $w = q1('SELECT COUNT(*) n FROM {mis_data} WHERE `kind` IN (\'approved\',\'ask\') AND `r1`=?', [(string) $id]);
-        $g = q1('SELECT COUNT(*) n FROM {attendance} WHERE `course_id`=?', [$id]);
-        return 1000 * (int) ($w['n'] ?? 0) + (int) ($g['n'] ?? 0);
-    };
-    foreach ($old as $cl => $byT) {
-        foreach ($byT as $t => $byType) {
-            foreach ($byType as $ty => $list) {
-                $target = $cat[$cl][$t][$ty] ?? [];
-                if ($ty === '' || count($list) !== 1 || count($target) !== 1) {
-                    continue; // ไม่แน่ใจ ไม่แตะ
-                }
-                $o = $list[0];
-                $d = $target[0];
-                $code = mb_substr((string) $d['code'], 0, 20);
-                $dup = q1('SELECT `id` FROM {course} WHERE `type`=9 AND `year`=? AND `term`=? AND `class`=? AND `course_code`=? AND `id`<>?', [$y, $t, $cl, $code, (int) $o['id']]);
-                $keep = (int) $o['id'];
-                if ($dup) {
-                    $dupId = (int) $dup['id'];
-                    if ($weight($dupId) > $weight($keep)) {
-                        [$keep, $dupId] = [$dupId, $keep];
+        foreach ($old as $cl => $byT) {
+            foreach ($byT as $t => $byType) {
+                foreach ($byType as $ty => $list) {
+                    $label = class_short($cl).' ภาค '.$t.'/'.$y;
+                    $names = implode(', ', array_map(fn($c) => trim($c['course_code'].' '.$c['course_name']), $list));
+                    $target = $cat[$cl][$t][$ty] ?? [];
+                    if ($ty === '' || count($target) !== 1) {
+                        $log[] = '✗ ข้าม '.$label.': '.$names.' — ไม่พบกิจกรรมที่ตรงกันในรายการใหม่';
+                        continue;
                     }
-                    imp_merge_course($dupId, $keep);
+                    $d = $target[0];
+                    $code = mb_substr((string) $d['code'], 0, 20);
+                    // ห้องของแต่ละรายการเดิม: ซ้อนกัน = ไม่แน่ใจ
+                    $rooms = [];
+                    $stud = [];
+                    $overlap = false;
+                    foreach ($list as $c) {
+                        foreach (q('SELECT `student_id`, `room` FROM {grade} WHERE `course_id`=?', [(int) $c['id']]) as $g) {
+                            $stud[(int) $g['student_id']] = true;
+                            $r = (int) $g['room'];
+                            if (isset($rooms[$r]) && $rooms[$r] !== (int) $c['id']) {
+                                $overlap = true;
+                            }
+                            $rooms[$r] = (int) $c['id'];
+                        }
+                    }
+                    if ($overlap) {
+                        $log[] = '✗ ข้าม '.$label.': '.$names.' — มีหลายรายการในห้องเดียวกัน (แก้รหัสเองที่หน้ารายวิชา)';
+                        continue;
+                    }
+                    $oldIds = array_map(fn($c) => (int) $c['id'], $list);
+                    foreach ($list as $c) {
+                        q('UPDATE {course} SET `course_code`=?, `course_name`=? WHERE `id`=?', [$code, mb_substr((string) $d['name'], 0, 150), (int) $c['id']]);
+                    }
+                    $msg = '✓ '.$label.': '.$names.' → '.$code.' '.$d['name'];
+                    // รายการใหม่ที่ระบบสร้างซ้ำ (รหัสใหม่ ระดับชั้นเดียวกัน)
+                    foreach (q('SELECT `id` FROM {course} WHERE `type`=9 AND `year`=? AND `term`=? AND `class`=? AND `course_code`=?', [$y, $t, $cl, $code]) as $n) {
+                        $nid = (int) $n['id'];
+                        if (in_array($nid, $oldIds, true)) {
+                            continue;
+                        }
+                        if (q1('SELECT 1 x FROM {mis_data} WHERE `kind` IN (\'approved\',\'ask\') AND `r1`=? LIMIT 1', [(string) $nid])) {
+                            $msg .= ' (รายการใหม่ #'.$nid.' มีการยืนยัน/อนุมัติแล้ว ไม่ลบ)';
+                            continue;
+                        }
+                        $moved = 0;
+                        foreach (q('SELECT `student_id` FROM {grade} WHERE `course_id`=?', [$nid]) as $g) {
+                            if (isset($stud[(int) $g['student_id']])) {
+                                q('DELETE FROM {grade} WHERE `course_id`=? AND `student_id`=?', [$nid, (int) $g['student_id']]);
+                                q('DELETE FROM {attendance} WHERE `course_id`=? AND `student_id`=?', [$nid, (int) $g['student_id']]);
+                                auto_enroll_out($nid, (int) $g['student_id']);
+                                $moved++;
+                            }
+                        }
+                        if (!q1('SELECT 1 x FROM {grade} WHERE `course_id`=? LIMIT 1', [$nid])) {
+                            q('DELETE FROM {attendance} WHERE `course_id`=?', [$nid]);
+                            q('DELETE FROM {mis_data} WHERE `kind` IN (\'att_hour\',\'enroll_auto\',\'enroll_out\',\'enroll_manual\') AND `r1`=?', [(string) $nid]);
+                            q('DELETE FROM {course} WHERE `id`=?', [$nid]);
+                            $msg .= ' · ลบรายการซ้ำที่ระบบสร้าง';
+                        } elseif ($moved) {
+                            $msg .= ' · เอานักเรียนซ้ำ '.$moved.' คนออกจากรายการที่ระบบสร้าง';
+                        }
+                    }
+                    $log[] = $msg;
                 }
-                q('UPDATE {course} SET `course_code`=?, `course_name`=? WHERE `id`=?', [$code, mb_substr((string) $d['name'], 0, 150), $keep]);
             }
         }
     }
-    md_set('cfg', 'act_recode_ver', '', '', '2611');
+    if (!$log) {
+        $log[] = 'ไม่พบกิจกรรมรหัสเดิมที่ต้องปรับ — ทุกรายการใช้รหัสตามรายการกิจกรรมใหม่แล้ว';
+    }
+    $hist = json_decode((string) md_get('cfg', 'act_recode_log'), true);
+    $hist = is_array($hist) && isset($hist[0]) ? $hist : [];
+    array_unshift($hist, ['at' => date('Y-m-d H:i'), 'log' => array_slice($log, 0, 80)]);
+    md_set('cfg', 'act_recode_log', '', '', json_encode(array_slice($hist, 0, 5), JSON_UNESCAPED_UNICODE));
+    return $log;
 }
 
 function adm_act_enroll(bool $post)
 {
+    if ($post && isset($_POST['act_recode'])) {
+        act_recode(true);
+        redirect(a_url('act_enroll', '&recoded=1'));
+    }
     [$y, $t] = term();
     $byc = rooms_by_class();
     // กิจกรรมของภาคเรียนนี้จากรายการกิจกรรม: ภาคเรียน 1-2 หรือตรงกับภาคเรียนที่เลือกดู
@@ -911,6 +965,14 @@ function adm_act_enroll(bool $post)
     $help = '<div style="width:983px;margin:0 auto 8px;text-align:left" class="gray_12">กิจกรรมดึงมาจาก <a href="'.h(a_url('dev_act')).'"><b>รายการกิจกรรมพัฒนาผู้เรียน</b></a> (ข้อมูลเดียวกับหน้าวิชาการ) เฉพาะกิจกรรมของภาคเรียนที่ '.$t.' หรือภาคเรียน 1-2<br>'
         .'<b style="color:#1E8449">ระบบลงทะเบียนให้อัตโนมัติ:</b> นักเรียนทุกห้องในระดับชั้นที่กำหนดในรายการกิจกรรม ทั้งภาคเรียน 1 และ 2 ของปีการศึกษาปัจจุบัน (นักเรียนใหม่ถูกเพิ่มให้เอง) — หน้านี้ใช้เมื่อต้องการปรับห้องเอง เช่น ยกเลิกบางห้อง แล้วกด "บันทึกการลงทะเบียน" (กิจกรรมที่ปรับเองระบบจะไม่ลงทับ)<br>'
         .'ครูประจำชั้นของห้องบันทึกผลได้ที่ งานรับผิดชอบหลัก &gt; บันทึกผลการเรียน</div>';
+    $rl = json_decode((string) md_get('cfg', 'act_recode_log'), true);
+    $help = '<div style="width:983px;margin:0 auto 8px;text-align:left;background:#fff;border:1px solid #ddd;border-radius:4px;padding:8px 12px;font-size:13px">'
+        .'<form method="post" action="'.h(a_url('act_enroll')).'" style="display:inline" onsubmit="return confirm(\'ปรับกิจกรรมรหัสเดิม (เช่น dr04) ให้เป็นรหัส/ชื่อตามรายการกิจกรรมใหม่ และลบรายการที่ระบบสร้างซ้ำ?\')"><input type="hidden" name="act_recode" value="1"/>'
+        .'<button type="submit" style="padding:4px 10px;cursor:pointer">🔁 ปรับกิจกรรมรหัสเดิมให้ตรงรายการกิจกรรมใหม่</button></form>'
+        .' <span class="gray_12">เก็บผลประเมิน/สถานะอนุมัติของรายการเดิม และลบรายการซ้ำที่ระบบสร้าง</span>'
+        .(is_array($rl) && isset($rl[0]) ? '<details'.(isset($_GET['recoded']) ? ' open' : '').' style="margin-top:6px"><summary>ผลการปรับ (ล่าสุด '.h((string) ($rl[0]['at'] ?? '')).')</summary>'
+            .implode('', array_map(fn($run) => '<div style="margin-top:4px"><b>'.h((string) ($run['at'] ?? '')).'</b><ul style="margin:2px 0 0 18px;padding:0">'.implode('', array_map(fn($x) => '<li>'.h((string) $x).'</li>', (array) ($run['log'] ?? []))).'</ul></div>', $rl)).'</details>' : '')
+        .'</div>'.$help;
     return ['ลงทะเบียนกิจกรรมพัฒนาผู้เรียน (รายห้อง) ภาคเรียนที่ '.$t.'/'.$y, $help.'<form method="post" action="'.h(a_url('act_enroll')).'">'
         .list_table('กิจกรรมพัฒนาผู้เรียน', ['#', 'รหัส', 'กิจกรรมพัฒนาผู้เรียน', 'ระดับชั้น', ['ชั่วโมง', ' style="text-align:center"'], 'ห้องเรียนที่ลงทะเบียน (จำนวนนักเรียน)', ['นักเรียน', ' style="text-align:center"']],
             $rows ?: '<tr><td colspan="7" align="center">ยังไม่มีกิจกรรมของภาคเรียนนี้ใน <a href="'.h(a_url('dev_act')).'">รายการกิจกรรมพัฒนาผู้เรียน</a></td></tr>', '', $items ? $save : '').'</form>'];

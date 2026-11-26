@@ -266,8 +266,8 @@ function rows_task_teacher_timetable()
     $tpl = (string) file_get_contents(MIS_APP.'pages/task_teacher_timetable.html');
     $tpl = timetable_grid($tpl, function ($d, $p) use ($grid, $cs, $vs) {
         $es = $grid[$d.'-'.$p] ?? [];
-        $c = $es ? ($cs[$es[0][1]] ?? null) : null;
-        return tt_cell($c, $c ? implode(', ', array_map(fn($x) => class_room_short($c['class'], $x[0]), $es)) : '', $c ? (string) ($vs[$es[0][2]] ?? '') : '', '', tt_tint($d)); // พื้นสีอ่อนตามวัน
+        $c = $es ? tt_course_of($es[0][3], $es[0][0]) : null;
+        return tt_cell($c, $c ? implode(', ', array_map(fn($x) => !empty($c['free']) ? (string) (room_options()[$x[0]] ?? room_short($x[0])) : class_room_short($c['class'], $x[0]), $es)) : '', $c ? (string) ($vs[$es[0][2]] ?? '') : '', '', tt_tint($d)); // พื้นสีอ่อนตามวัน
     });
     $tpl = str_replace('ตารางสอน {{TNAME}}', 'ตารางสอน '.name_nbsp($teacher['name'] ?? ''), $tpl);
     $pr = '?module=task&option=teacher_timetable&func=Print&kind=';

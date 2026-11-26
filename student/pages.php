@@ -192,8 +192,8 @@ function st_schedule(array $S, bool $post): string
                 continue;
             }
             $e = $slots[$d.'-'.$p] ?? null;
-            $c = $e ? ($cs[$e['c']] ?? null) : null;
-            $rows .= '<td style="background:'.$bg.'">'.($c ? '<div class="code" style="color:#22B38C">'.h($c['course_code']).'</div><div style="color:#C36BE0">'.h($c['course_name']).'</div><div style="font-size:13px;color:#E07B7B">'.h(tt_teacher_label((string) ($c['teacher'] ?? ''))).'</div>'
+            $c = $e ? tt_course_of($e, $room) : null;
+            $rows .= '<td style="background:'.$bg.'">'.($c ? '<div class="code" style="color:#22B38C">'.h($c['course_code']).'</div><div style="color:#C36BE0">'.h($c['course_name']).'</div><div style="font-size:13px;color:#E07B7B">'.h(tt_tlabel($c)).'</div>'
                 .(($vs[$e['v']] ?? '') !== '' ? '<div class="mut" style="font-size:11px">'.h($vs[$e['v']]).'</div>' : '') : '').'</td>';
         }
         $rows .= '</tr>';

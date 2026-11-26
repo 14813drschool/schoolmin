@@ -33,6 +33,7 @@ function tt_teacher_label(string $n): string
     $first = preg_split('/\s+/u', $n)[0] ?? '';
     return $first !== '' ? 'ครู'.$first : '';
 }
+const TT_FREE_COLOR = '#FFF6D5';
 const TT_COLORS = ['#E8F6F3', '#FEF5E7', '#EBF5FB', '#F5EEF8', '#FDEDEC', '#EAFAF1', '#FEF9E7', '#EBEDEF', '#F4ECF7', '#E8F8F5', '#FDF2E9', '#EAF2F8', '#F9EBEA', '#E9F7EF', '#FCF3CF', '#D6EAF8'];
 
 /** ผู้จัดตารางได้: ผู้ดูแลระบบ หรือผู้มีสิทธิ์โมดูลวิชาการ */
@@ -221,8 +222,9 @@ function tt_all(?string $yt = null): array
         $k = (string) $r['r1'];
         if (preg_match('/^R(\d+)$/', $k, $m)) {
             $d = json_decode((string) $r['value'], true) ?: [];
-            if ((int) ($d['c'] ?? 0) > 0) {
-                $o[(int) $m[1]][(string) $r['r3']] = ['c' => (int) $d['c'], 'v' => (string) ($d['v'] ?? '')];
+            $x = tt_x_clean($d['x'] ?? null);
+            if ((int) ($d['c'] ?? 0) > 0 || $x) {
+                $o[(int) $m[1]][(string) $r['r3']] = ['c' => $x ? 0 : (int) $d['c'], 'v' => (string) ($d['v'] ?? ''), 'x' => $x];
             }
         } else {
             $legacy[] = $r;
@@ -232,7 +234,7 @@ function tt_all(?string $yt = null): array
         [$c, $room] = array_pad(explode('|', (string) $r['value']), 2, 0);
         $slot = (string) $r['r3'];
         if ((int) $c > 0 && (int) $room > 0 && !isset($o[(int) $room][$slot])) {
-            $o[(int) $room][$slot] = ['c' => (int) $c, 'v' => ''];
+            $o[(int) $room][$slot] = ['c' => (int) $c, 'v' => '', 'x' => null];
             tt_put((int) $room, $slot, (int) $c, '', $yt);
         }
         md_set('tt', (string) $r['r1'], $yt, $slot, null);
@@ -240,17 +242,78 @@ function tt_all(?string $yt = null): array
     return $GLOBALS['__tt_cache'][$yt] = $o;
 }
 
-function tt_put(int $room, string $slot, int $cid, string $venue, ?string $yt = null): void
+function tt_put(int $room, string $slot, int $cid, string $venue, ?string $yt = null, ?array $x = null): void
 {
     $yt = $yt ?? yt();
-    md_set('tt', 'R'.$room, $yt, $slot, $cid > 0 ? json_encode(['c' => $cid, 'v' => $venue]) : null);
+    $x = tt_x_clean($x);
+    $on = $cid > 0 || $x;
+    md_set('tt', 'R'.$room, $yt, $slot, $on ? json_encode($x ? ['c' => 0, 'v' => $venue, 'x' => $x] : ['c' => $cid, 'v' => $venue], JSON_UNESCAPED_UNICODE) : null);
     if (isset($GLOBALS['__tt_cache'][$yt])) { // ให้การตรวจชนในคำขอเดียวกันเห็นค่าล่าสุด
-        if ($cid > 0) {
-            $GLOBALS['__tt_cache'][$yt][$room][$slot] = ['c' => $cid, 'v' => $venue];
+        if ($on) {
+            $GLOBALS['__tt_cache'][$yt][$room][$slot] = ['c' => $x ? 0 : $cid, 'v' => $venue, 'x' => $x];
         } else {
             unset($GLOBALS['__tt_cache'][$yt][$room][$slot]);
         }
     }
+}
+
+/* ---------------------------------------------------------------- รายการพิมพ์เอง (ไม่ผูกรายวิชา) เช่น ชุมนุม แนะแนว ว่าง
+ * x = ['n' => ชื่อวิชา/กิจกรรม, 'k' => รหัส, 't' => ครู (ข้อความ), 'ti' => รหัสบุคลากร ถ้าพิมพ์ตรงกับชื่อในระบบ] */
+
+function tt_x_clean($x): ?array
+{
+    if (!is_array($x)) {
+        return null;
+    }
+    $n = mb_substr(trim((string) ($x['n'] ?? '')), 0, 60);
+    if ($n === '') {
+        return null;
+    }
+    return ['n' => $n, 'k' => mb_substr(trim((string) ($x['k'] ?? '')), 0, 20), 't' => mb_substr(trim((string) ($x['t'] ?? '')), 0, 60), 'ti' => max(0, (int) ($x['ti'] ?? 0))];
+}
+
+/** รหัสบุคลากรจากชื่อที่พิมพ์ (ต้องตรงกับชื่อในระบบ เช่น เลือกจากรายการ) */
+function tt_match_teacher(string $t): int
+{
+    $t = preg_replace('/\s+/u', ' ', trim($t));
+    if ($t === '') {
+        return 0;
+    }
+    foreach (personnel_options() as $id => $n) {
+        $n = preg_replace('/\s+/u', ' ', trim((string) $n));
+        if ($t === $n || $t === name_short($n)) {
+            return (int) $id;
+        }
+    }
+    return 0;
+}
+
+/** ข้อมูลแบบรายวิชาของช่อง (รายวิชาจริง หรือรายการพิมพ์เอง) */
+function tt_course_of(?array $e, int $room = 0): ?array
+{
+    if (!$e) {
+        return null;
+    }
+    if (!empty($e['x'])) {
+        $x = $e['x'];
+        return ['id' => 0, 'course_code' => $x['k'], 'course_name' => $x['n'], 'teacher' => $x['t'], 'teacher_id' => $x['ti'], 'class' => $room ? tt_room_class($room) : 0, 'free' => true];
+    }
+    return tt_courses()[$e['c']] ?? null;
+}
+
+/** ชื่อครูสำหรับแสดงในช่อง: รายวิชาจริง = ครู+ชื่อ, พิมพ์เอง = ตามที่พิมพ์ */
+function tt_tlabel(?array $c): string
+{
+    if (!$c) {
+        return '';
+    }
+    return !empty($c['free']) ? (string) $c['teacher'] : tt_teacher_label((string) ($c['teacher'] ?? ''));
+}
+
+/** คีย์เทียบ "วิชาเดียวกัน" (เรียนรวม) */
+function tt_ekey(array $e): string
+{
+    return !empty($e['x']) ? 'x:'.$e['x']['n'].'|'.$e['x']['k'] : 'c:'.$e['c'];
 }
 
 /** รายวิชาของภาคเรียนปัจจุบันทั้งหมด (พร้อมชื่อครู) */
@@ -340,14 +403,17 @@ function tt_teacher_pairs(int $tid): array
 }
 
 /** ตารางของครู: [วัน-คาบ] => [[ห้อง, รายวิชา, สถานที่], ...] */
-function tt_teacher_grid(int $tid): array
+function tt_teacher_grid(int $tid, bool $free = true): array
 {
     $o = [];
     $cs = tt_courses();
     foreach (tt_all() as $r => $slots) {
         foreach ($slots as $slot => $e) {
-            if ($tid > 0 && (int) ($cs[$e['c']]['teacher_id'] ?? 0) === $tid) {
-                $o[$slot][] = [$r, $e['c'], $e['v']];
+            if ($tid <= 0) {
+                continue;
+            }
+            if (!empty($e['x']) ? ($free && $e['x']['ti'] === $tid) : (int) ($cs[$e['c']]['teacher_id'] ?? 0) === $tid) {
+                $o[$slot][] = [$r, $e['c'], $e['v'], $e];
             }
         }
     }
@@ -361,7 +427,7 @@ function tt_venue_grid(string $vid): array
     foreach (tt_all() as $r => $slots) {
         foreach ($slots as $slot => $e) {
             if ($e['v'] === $vid && $vid !== '') {
-                $o[$slot][] = [$r, $e['c']];
+                $o[$slot][] = [$r, $e['c'], $e];
             }
         }
     }
@@ -378,11 +444,33 @@ function tt_conflict(int $room, string $slot, int $cid, string $venue): string
             continue;
         }
         $e = $slots[$slot];
-        if ($tid > 0 && (int) ($cs[$e['c']]['teacher_id'] ?? 0) === $tid && $e['c'] !== $cid) {
-            return tt_teacher_word((string) ($cs[$cid]['teacher'] ?? '')).' สอน '.($cs[$e['c']]['course_code'] ?? '').' ห้อง '.room_short($r).' อยู่แล้ว';
+        $ec = tt_course_of($e) ?? [];
+        $same = empty($e['x']) && $e['c'] === $cid;
+        if ($tid > 0 && (int) ($ec['teacher_id'] ?? 0) === $tid && !$same) {
+            return tt_teacher_word((string) ($cs[$cid]['teacher'] ?? '')).' สอน '.(($ec['course_code'] ?? '') ?: ($ec['course_name'] ?? '')).' ห้อง '.room_short($r).' อยู่แล้ว';
         }
-        if ($venue !== '' && $e['v'] === $venue && $e['c'] !== $cid) {
-            return (tt_venues()[$venue] ?? 'สถานที่').' ถูกใช้โดย '.room_short($r).' ('.($cs[$e['c']]['course_code'] ?? '').') แล้ว';
+        if ($venue !== '' && $e['v'] === $venue && !$same) {
+            return (tt_venues()[$venue] ?? 'สถานที่').' ถูกใช้โดย '.room_short($r).' ('.(($ec['course_code'] ?? '') ?: ($ec['course_name'] ?? '')).') แล้ว';
+        }
+    }
+    return '';
+}
+
+/** ตรวจรายการพิมพ์เอง: ครูที่ผูกไว้ (ti) และห้อง/สถานที่ */
+function tt_conflict_x(int $room, string $slot, array $x, string $venue): string
+{
+    foreach (tt_all() as $r => $slots) {
+        if ($r === $room || !isset($slots[$slot])) {
+            continue;
+        }
+        $e = $slots[$slot];
+        $ec = tt_course_of($e) ?? [];
+        $same = tt_ekey($e) === 'x:'.$x['n'].'|'.$x['k'];
+        if ($x['ti'] > 0 && (int) ($ec['teacher_id'] ?? 0) === $x['ti'] && !$same) {
+            return tt_teacher_word($x['t']).' มี '.(($ec['course_code'] ?? '') ?: ($ec['course_name'] ?? '')).' ห้อง '.room_short($r).' อยู่แล้ว';
+        }
+        if ($venue !== '' && $e['v'] === $venue && !$same) {
+            return (tt_venues()[$venue] ?? 'สถานที่').' ถูกใช้โดย '.room_short($r).' แล้ว';
         }
     }
     return '';
@@ -395,22 +483,24 @@ function tt_conflicts_all(): array
     $seenT = $seenV = $o = [];
     foreach (tt_all() as $r => $slots) {
         foreach ($slots as $slot => $e) {
-            $tid = (int) ($cs[$e['c']]['teacher_id'] ?? 0);
+            $ec = tt_course_of($e) ?? [];
+            $tid = (int) ($ec['teacher_id'] ?? 0);
+            $key = tt_ekey($e);
             if ($tid > 0) {
                 foreach ($seenT[$tid][$slot] ?? [] as [$r2, $c2]) {
-                    if ($c2 !== $e['c']) {
-                        $o[] = [$slot, tt_teacher_word((string) ($cs[$e['c']]['teacher'] ?? '')).' สอนซ้อน '.room_short($r2).' และ '.room_short($r), $r];
+                    if ($c2 !== $key) {
+                        $o[] = [$slot, tt_teacher_word((string) ($ec['teacher'] ?? '')).' สอนซ้อน '.room_short($r2).' และ '.room_short($r), $r];
                     }
                 }
-                $seenT[$tid][$slot][] = [$r, $e['c']];
+                $seenT[$tid][$slot][] = [$r, $key];
             }
             if ($e['v'] !== '') {
                 foreach ($seenV[$e['v']][$slot] ?? [] as [$r2, $c2]) {
-                    if ($c2 !== $e['c']) {
+                    if ($c2 !== $key) {
                         $o[] = [$slot, (tt_venues()[$e['v']] ?? 'สถานที่').' ใช้ซ้อน '.room_short($r2).' และ '.room_short($r), $r];
                     }
                 }
-                $seenV[$e['v']][$slot][] = [$r, $e['c']];
+                $seenV[$e['v']][$slot][] = [$r, $key];
             }
         }
     }
@@ -453,13 +543,35 @@ function adm_timetable(bool $post)
         $id = (int) array_key_first($teachers);
     }
     $msgs = [];
-    if ($post && $id) {
+    if ($post && $id && $view === 'room' && isset($_POST['tt_act'])) {
+        $act = (string) $_POST['tt_act'];
+        if ($act === 'undo') {
+            $n = tt_room_undo($id);
+            redirect(a_url('timetable', '&view=room&id='.$id.'&ttm='.rawurlencode($n >= 0 ? 'ย้อนกลับตารางของห้องนี้เป็นก่อนการเปลี่ยนแปลงครั้งล่าสุดแล้ว' : 'ไม่มีข้อมูลให้ย้อนกลับ')));
+        }
+        if ($act === 'copy') {
+            [$y2, $r2] = [(string) ($_POST['src_yt'] ?? ''), (int) ($_POST['src_room'] ?? 0)];
+            [$ok, $bad] = tt_copy_room($id, $y2, $r2);
+            md_set('tt_msg', (int) me()['id'], '', '', $bad ? json_encode($bad, JSON_UNESCAPED_UNICODE) : null);
+            redirect(a_url('timetable', '&view=room&id='.$id.'&ttm='.rawurlencode('คัดลอกตารางจาก '.room_short($r2).' ภาคเรียน '.$y2.' แล้ว '.$ok.' ช่อง'.($bad ? ' (ข้าม '.count($bad).' ช่องที่ชนกัน)' : ''))));
+        }
+        if ($act === 'import') {
+            [$ok, $bad] = tt_import_room($id, (string) ($_POST['src_text'] ?? ''), !empty($_POST['src_clear']));
+            md_set('tt_msg', (int) me()['id'], '', '', $bad ? json_encode($bad, JSON_UNESCAPED_UNICODE) : null);
+            redirect(a_url('timetable', '&view=room&id='.$id.'&ttm='.rawurlencode('นำเข้าตารางแล้ว '.$ok.' ช่อง'.($bad ? ' (ข้าม/มีปัญหา '.count($bad).' รายการ)' : ''))));
+        }
+    }
+    if ($post && $id && !isset($_POST['tt_act'])) {
+        if ($view === 'room') {
+            tt_room_backup($id);
+        }
         $msgs = $view === 'room' ? tt_save_room($id) : tt_save_teacher($id);
         if (!$msgs && !isset($_GET['ajax'])) {
             redirect(a_url('timetable', '&view='.$view.'&id='.$id.'&msg=saved'));
         }
     }
     if (isset($_GET['clear']) && $view === 'room' && $id) {
+        tt_room_backup($id);
         foreach (array_keys(tt_all()[$id] ?? []) as $slot) {
             tt_put($id, (string) $slot, 0, '');
         }
@@ -499,6 +611,13 @@ function adm_timetable(bool $post)
         foreach ($all[$id] ?? [] as $e) {
             $placed[$e['c']] = ($placed[$e['c']] ?? 0) + 1;
         }
+        $free = [];
+        foreach ($all[$id] ?? [] as $e) {
+            if (!empty($e['x'])) {
+                $k = tt_ekey($e);
+                $free[$k] = [$e['x'], ($free[$k][1] ?? 0) + 1];
+            }
+        }
         foreach ($mine as $cid => $c) {
             $need = tt_need($c);
             $summary .= '<tr data-c="'.$cid.'"><td><span class="dot" style="background:'.tt_color($cid).'"></span><b>'.h($c['course_code']).'</b> '.h($c['course_name']).'</td><td>'.h($c['teacher'] ?? '-').'</td>'
@@ -508,20 +627,28 @@ function adm_timetable(bool $post)
         foreach ($days as $d => $dn) {
             foreach ($pers as $p => $x) {
                 $slot = $d.'-'.$p;
-                $cur = $all[$id][$slot] ?? ['c' => 0, 'v' => ''];
+                $cur = $all[$id][$slot] ?? ['c' => 0, 'v' => '', 'x' => null];
+                $cx = $cur['x'] ?? null;
                 $o = '<option value="">- ว่าง -</option>';
                 foreach ($mine as $cid => $c) {
-                    $why = $cid === $cur['c'] ? '' : tt_conflict($id, $slot, $cid, '');
-                    $o .= '<option value="'.$cid.'" data-col="'.tt_color($cid).'" data-t="'.h(name_short((string) ($c['teacher'] ?? ''))).'"'.($cid === $cur['c'] ? ' selected' : '').($why !== '' ? ' disabled' : '').'>'
+                    $sel = !$cx && $cid === $cur['c'];
+                    $why = $sel ? '' : tt_conflict($id, $slot, $cid, '');
+                    $o .= '<option value="'.$cid.'" data-col="'.tt_color($cid).'" data-t="'.h(name_short((string) ($c['teacher'] ?? ''))).'"'.($sel ? ' selected' : '').($why !== '' ? ' disabled' : '').'>'
                         .h($c['course_code'].' '.mb_substr((string) $c['course_name'], 0, 22).($why !== '' ? ' ✗ ครูไม่ว่าง' : '')).'</option>';
                 }
-                $cells[$slot] = [$o, tt_venue_select($slot, $cur['v'], $id, $cur['c']), $cur['c']];
+                $o .= '<option value="x" data-col="'.TT_FREE_COLOR.'"'.($cx ? ' selected' : '').'>✎ พิมพ์เอง...</option>';
+                $xin = '<div class="tt-x"'.($cx ? '' : ' style="display:none"').'><input name="xn['.$slot.']" value="'.h($cx['n'] ?? '').'" placeholder="ชื่อวิชา/กิจกรรม" maxlength="60"/>'
+                    .'<input name="xk['.$slot.']" value="'.h($cx['k'] ?? '').'" placeholder="รหัส" maxlength="20" class="k"/><input name="xt['.$slot.']" value="'.h($cx['t'] ?? '').'" placeholder="ครู" maxlength="60" class="t" list="ttppl"/></div>';
+                $cells[$slot] = [$o, $xin.tt_venue_select($slot, $cur['v'], $id, $cur['c']), $cx ? TT_FREE_COLOR : ($cur['c'] ? tt_color($cur['c']) : '')];
             }
+        }
+        foreach ($free as [$x, $n]) {
+            $summary .= '<tr><td><span class="dot" style="background:'.TT_FREE_COLOR.'"></span>'.($x['k'] !== '' ? '<b>'.h($x['k']).'</b> ' : '').h($x['n']).' <span class="gray_12">(พิมพ์เอง)</span></td><td>'.h($x['t'] ?: '-').'</td><td class="c">-</td><td class="c">'.$n.'</td></tr>';
         }
         $sumHead = '<tr><th>รายวิชา</th><th>ครูผู้สอน</th><th>ควรจัด<br>(คาบ/สัปดาห์)</th><th>จัดแล้ว</th></tr>';
     } else {
         $pairs = tt_teacher_pairs($id);
-        $grid = tt_teacher_grid($id);
+        $grid = tt_teacher_grid($id, false);
         $placed = [];
         foreach ($grid as $es) {
             foreach ($es as [$r, $cid]) {
@@ -546,7 +673,7 @@ function adm_timetable(bool $post)
                         .h(($cs[$cid]['course_code'] ?? '').' '.class_room_short($cs[$cid]['class'] ?? 0, $r).($busy && $k !== $curK ? ' ✗ ห้องมีวิชาอื่น' : '')).'</option>';
                 }
                 $extra = count($curs) > 1 ? '<div class="tt-note">เรียนรวม: '.h(implode(', ', array_map(fn($x) => room_short($x[0]), $curs))).'</div>' : '';
-                $cells[$slot] = [$o, tt_venue_select($slot, $curs[0][2] ?? '', $curs[0][0] ?? 0, $curs[0][1] ?? 0).$extra, $curs ? $curs[0][1] : 0];
+                $cells[$slot] = [$o, tt_venue_select($slot, $curs[0][2] ?? '', $curs[0][0] ?? 0, $curs[0][1] ?? 0).$extra, $curs ? tt_color($curs[0][1]) : ''];
             }
         }
         $sumHead = '<tr><th>รายวิชา</th><th>ห้อง</th><th>ควรจัด<br>(คาบ/สัปดาห์)</th><th>จัดแล้ว</th></tr>';
@@ -567,8 +694,8 @@ function adm_timetable(bool $post)
                 continue;
             }
             $slot = $d.'-'.$p;
-            [$o, $v, $c] = $cells[$slot];
-            $rows .= '<td class="tt-c"'.($c ? ' style="background:'.tt_color($c).'"' : '').'><select name="c['.$slot.']" class="tt-s">'.$o.'</select><div class="tt-t"></div>'.$v.'</td>';
+            [$o, $v, $col] = $cells[$slot];
+            $rows .= '<td class="tt-c"'.($col !== '' ? ' style="background:'.$col.'"' : '').'><select name="c['.$slot.']" class="tt-s">'.$o.'</select><div class="tt-t"></div>'.$v.'</td>';
         }
         $rows .= '</tr>';
         $first = false;
@@ -583,6 +710,17 @@ function adm_timetable(bool $post)
         $confHtml = '<div class="tt-warn"><b>พบตารางชนกัน '.count($conf).' รายการ</b> (เช่น เปลี่ยนครูผู้สอนหลังจัดตาราง) กรุณาแก้ไข:<ul>'.$li.'</ul></div>';
     }
     $err = $msgs ? '<div class="tt-warn"><b>บันทึกแล้ว ยกเว้น '.count($msgs).' ช่องที่ชนกัน (คงค่าเดิมไว้):</b><ul><li>'.implode('</li><li>', array_map('h', $msgs)).'</li></ul></div>' : '';
+    if (isset($_GET['ttm'])) {
+        $bad = (array) (json_decode((string) md_get('tt_msg', (int) me()['id']), true) ?: []);
+        md_set('tt_msg', (int) me()['id'], '', '', null);
+        $err .= msg_box(h((string) $_GET['ttm'])).($bad ? '<div class="tt-warn"><b>รายการที่ข้าม:</b><ul><li>'.implode('</li><li>', array_map('h', array_slice($bad, 0, 40))).'</li></ul></div>' : '');
+    }
+    $dl = '<datalist id="ttppl">';
+    foreach (personnel_options() as $n) {
+        $dl .= '<option value="'.h((string) $n).'">';
+    }
+    $dl .= '</datalist>';
+    $tools = $view === 'room' ? tt_room_tools($id) : '';
     $who = $view === 'room' ? 'ห้อง '.($rooms[$id] ?? '') : ($teachers[$id] ?? '');
     $form = '<form method="post" id="ttf" action="'.h(a_url('timetable', '&view='.$view.'&id='.$id)).'">'
         .'<div class="tt-wrap"><table class="tt-g">'.$head.'</tr>'.$rows.'</table></div>'
@@ -591,7 +729,194 @@ function adm_timetable(bool $post)
         .' <a href="javascript:void(0)" onclick="document.getElementById(\'ttf\').submit()" id="pinkgreenbtns"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึกตาราง</a></div></form>';
     $side = '<div class="tt-sum"><div class="tt-sh">รายวิชาของ'.h($who).' ภาคเรียน '.h(yt()).'</div><table>'.$sumHead.($summary ?: '<tr><td colspan="4" class="c gray_12">ยังไม่มีรายวิชา — เพิ่มรายวิชาและลงทะเบียนเรียนก่อน</td></tr>').'</table>'
         .'<div class="gray_12" style="padding:6px 8px">ควรจัด = ชั่วโมงต่อภาค ÷ 20 สัปดาห์ (หรือหน่วยกิต × 2) · สีแดง = ยังจัดไม่ครบ / เกิน</div></div>';
-    return ['จัดตารางเรียน', tt_css().saved_msg().$confHtml.$err.'<div class="tt-box">'.$top.$form.$side.'</div>'.tt_js()];
+    return ['จัดตารางเรียน', tt_css().saved_msg().$confHtml.$err.'<div class="tt-box">'.$top.$tools.$form.$side.'</div>'.$dl.tt_js()];
+}
+
+/* ---------------------------------------------------------------- สำรอง / คัดลอก / นำเข้า (รายห้อง) */
+
+/** สำรองตารางของห้องก่อนเปลี่ยนแปลง (ย้อนกลับได้ ๑ ครั้ง) */
+function tt_room_backup(int $room): void
+{
+    $slots = tt_all()[$room] ?? [];
+    md_set('tt_bak', 'R'.$room, yt(), '', json_encode(['at' => date('Y-m-d H:i'), 'slots' => $slots], JSON_UNESCAPED_UNICODE));
+}
+
+/** ย้อนกลับตารางของห้องเป็นชุดที่สำรองไว้ (คืนจำนวนช่อง, -1 = ไม่มีข้อมูล) */
+function tt_room_undo(int $room): int
+{
+    $b = json_decode((string) md_get('tt_bak', 'R'.$room, yt()), true);
+    if (!is_array($b) || !isset($b['slots'])) {
+        return -1;
+    }
+    tt_room_backup($room);   // สลับกัน กดซ้ำเพื่อกลับมาได้
+    foreach (array_keys(tt_all()[$room] ?? []) as $slot) {
+        tt_put($room, (string) $slot, 0, '');
+    }
+    $n = 0;
+    foreach ((array) $b['slots'] as $slot => $e) {
+        tt_put($room, (string) $slot, (int) ($e['c'] ?? 0), (string) ($e['v'] ?? ''), null, $e['x'] ?? null);
+        $n++;
+    }
+    return $n;
+}
+
+/** ภาคเรียนที่มีข้อมูลตาราง [yt => yt] (ใหม่ → เก่า) */
+function tt_terms(): array
+{
+    $o = [yt() => yt()];
+    foreach (q('SELECT DISTINCT `r2` FROM {mis_data} WHERE `kind`=?', ['tt']) as $r) {
+        if (preg_match('#^\d{4}/\d$#', (string) $r['r2'])) {
+            $o[(string) $r['r2']] = (string) $r['r2'];
+        }
+    }
+    krsort($o);
+    return $o;
+}
+
+/** แทนตารางของห้องด้วยรายการ [slot => ['c'=>, 'v'=>, 'x'=>]] (ตรวจชน) คืน [จำนวนที่ลง, รายการที่ข้าม] */
+function tt_room_replace(int $room, array $items): array
+{
+    tt_room_backup($room);
+    foreach (array_keys(tt_all()[$room] ?? []) as $slot) {
+        tt_put($room, (string) $slot, 0, '');
+    }
+    $ok = 0;
+    $bad = [];
+    foreach ($items as $slot => $e) {
+        $x = tt_x_clean($e['x'] ?? null);
+        $v = (string) ($e['v'] ?? '');
+        $why = $x ? tt_conflict_x($room, (string) $slot, $x, $v) : tt_conflict($room, (string) $slot, (int) $e['c'], $v);
+        if ($why !== '' && $v !== '' && str_contains($why, 'ถูกใช้')) { // สถานที่ไม่ว่าง: ลงวิชาไว้ ใช้ห้องประจำชั้นแทน
+            $v = '';
+            $why = $x ? tt_conflict_x($room, (string) $slot, $x, '') : tt_conflict($room, (string) $slot, (int) $e['c'], '');
+        }
+        if ($why !== '') {
+            $bad[] = tt_slot_text((string) $slot).': '.$why;
+            continue;
+        }
+        tt_put($room, (string) $slot, $x ? 0 : (int) $e['c'], $v, null, $x);
+        $ok++;
+    }
+    return [$ok, $bad];
+}
+
+/** แปลงรายวิชาของตารางต้นทางให้เป็นของห้อง/ภาคเรียนนี้: รายวิชาเดียวกัน → รหัสวิชาเดียวกัน → พิมพ์เอง */
+function tt_map_course(int $room, array $src): array
+{
+    static $byCode = [];
+    if (!isset($byCode[$room])) {
+        $byCode[$room] = [];
+        foreach (tt_room_courses($room) as $id => $c) {
+            $byCode[$room][mb_strtolower(trim((string) $c['course_code']))] ??= (int) $id;
+        }
+    }
+    $code = mb_strtolower(trim((string) ($src['course_code'] ?? '')));
+    if (!empty($src['id']) && isset(tt_room_courses($room)[(int) $src['id']])) {
+        return ['c' => (int) $src['id'], 'x' => null];
+    }
+    if ($code !== '' && isset($byCode[$room][$code])) {
+        return ['c' => $byCode[$room][$code], 'x' => null];
+    }
+    return ['c' => 0, 'x' => ['n' => (string) ($src['course_name'] ?? ''), 'k' => (string) ($src['course_code'] ?? ''), 't' => (string) ($src['teacher'] ?? ''), 'ti' => (int) ($src['teacher_id'] ?? 0)]];
+}
+
+/** คัดลอกตารางจากห้อง/ภาคเรียนอื่น (แทนตารางเดิมของห้องนี้) */
+function tt_copy_room(int $room, string $srcYt, int $srcRoom): array
+{
+    if (!isset(tt_terms()[$srcYt]) || !isset(room_options()[$srcRoom]) || ($srcYt === yt() && $srcRoom === $room)) {
+        return [0, ['เลือกห้อง/ภาคเรียนต้นทางไม่ถูกต้อง']];
+    }
+    $src = tt_all($srcYt)[$srcRoom] ?? [];
+    if (!$src) {
+        return [0, ['ห้อง '.room_short($srcRoom).' ภาคเรียน '.$srcYt.' ยังไม่มีตาราง']];
+    }
+    $cids = array_filter(array_map(fn($e) => empty($e['x']) ? (int) $e['c'] : 0, $src));
+    $cs = courses_by_id($cids);
+    $items = [];
+    foreach ($src as $slot => $e) {
+        $m = !empty($e['x']) ? ['c' => 0, 'x' => $e['x']] : tt_map_course($room, $cs[(int) $e['c']] ?? []);
+        if (!$m['c'] && !tt_x_clean($m['x'])) {
+            continue;
+        }
+        $items[$slot] = $m + ['v' => (string) $e['v']];
+    }
+    return tt_room_replace($room, $items);
+}
+
+/**
+ * นำเข้าจากข้อความ บรรทัดละช่อง: วัน คาบ | รหัสวิชา | ชื่อวิชา | ครู
+ *   เช่น  จันทร์ 1 | ท31102 | ภาษาไทย | อ.อภินัทธ์   หรือ  จันทร์ 3-4 | ว31202 | ฟิสิกส์ | อ.กัมปนาถ
+ * รหัสวิชาตรงกับรายวิชาของห้อง → ผูกรายวิชา (ครูตามรายวิชา) ไม่ตรง → พิมพ์เอง
+ */
+function tt_import_room(int $room, string $text, bool $clear): array
+{
+    $days = [];
+    foreach (WEEKDAYS as $k => $n) {
+        $days[$n] = $k;
+    }
+    $days += ['พฤหัส' => 4, 'จ' => 1, 'อ' => 2, 'พ' => 3, 'พฤ' => 4, 'ศ' => 5, 'ส' => 6, 'อา' => 0];
+    $items = $clear ? [] : (tt_all()[$room] ?? []);
+    $bad = [];
+    $n = 0;
+    foreach (preg_split('/\r?\n/', $text) as $i => $line) {
+        $line = trim(tt_ar($line));
+        if ($line === '' || str_starts_with($line, '#')) {
+            continue;
+        }
+        $f = array_map('trim', explode('|', str_replace("\t", '|', $line)));
+        if (!preg_match('/^(\S+)\s*(?:คาบ(?:ที่)?)?\s*(\d{1,2})\s*(?:-\s*(\d{1,2}))?$/u', $f[0], $m) || !isset($days[$m[1]])) {
+            $bad[] = 'บรรทัด '.($i + 1).': อ่านวัน/คาบไม่ได้ "'.$f[0].'"';
+            continue;
+        }
+        $d = $days[$m[1]];
+        $p1 = (int) $m[2];
+        $p2 = (int) ($m[3] ?? 0) ?: $p1;
+        $code = (string) ($f[1] ?? '');
+        $name = (string) ($f[2] ?? '');
+        $t = (string) ($f[3] ?? '');
+        if ($code === '' && $name === '') {
+            for ($p = $p1; $p <= $p2; $p++) {   // ว่าง = ลบช่อง
+                unset($items[$d.'-'.$p]);
+            }
+            continue;
+        }
+        $mm = tt_map_course($room, ['course_code' => $code, 'course_name' => $name !== '' ? $name : $code, 'teacher' => $t, 'teacher_id' => tt_match_teacher($t)]);
+        for ($p = min($p1, $p2); $p <= max($p1, $p2) && $p <= 15; $p++) {
+            $items[$d.'-'.$p] = $mm + ['v' => ''];
+            $n++;
+        }
+    }
+    if (!$n && !$clear) {
+        return [0, $bad ?: ['ไม่พบรายการที่นำเข้าได้']];
+    }
+    [$ok, $b2] = tt_room_replace($room, $items);
+    return [$ok, array_merge($bad, $b2)];
+}
+
+/** แถบเครื่องมือ: คัดลอกจากห้อง/ภาคอื่น, นำเข้าจากข้อความ, ย้อนกลับ */
+function tt_room_tools(int $room): string
+{
+    $act = h(a_url('timetable', '&view=room&id='.$room));
+    $yo = '';
+    foreach (tt_terms() as $k) {
+        $yo .= '<option value="'.h($k).'"'.($k === yt() ? ' selected' : '').'>'.h($k).($k === yt() ? ' (ภาคนี้)' : '').'</option>';
+    }
+    $ro = '';
+    foreach (room_options() as $k => $n) {
+        $ro .= '<option value="'.(int) $k.'"'.($k === $room ? ' selected' : '').'>'.h($n).'</option>';
+    }
+    $bak = json_decode((string) md_get('tt_bak', 'R'.$room, yt()), true);
+    $undo = is_array($bak) ? '<form method="post" action="'.$act.'" style="display:inline" onsubmit="return confirm(\'ย้อนกลับตารางของห้องนี้เป็นก่อนการเปลี่ยนแปลงครั้งล่าสุด ('.h((string) ($bak['at'] ?? '')).')?\')"><input type="hidden" name="tt_act" value="undo"/><button type="submit">↶ ย้อนกลับการเปลี่ยนแปลงครั้งล่าสุด ('.h((string) ($bak['at'] ?? '')).')</button></form>' : '';
+    return '<details class="tt-tools"><summary>📋 คัดลอกตารางจากห้อง/ปีการศึกษาอื่น · นำเข้าจากข้อความ'.($undo ? ' · ย้อนกลับ' : '').'</summary><div class="in">'
+        .'<fieldset><legend>คัดลอกตาราง (แทนตารางเดิมของห้องนี้)</legend><form method="post" action="'.$act.'" onsubmit="return confirm(\'แทนตารางของห้องนี้ด้วยตารางที่เลือก? (ย้อนกลับได้)\')"><input type="hidden" name="tt_act" value="copy"/>'
+        .'จากภาคเรียน <select name="src_yt">'.$yo.'</select> ห้อง <select name="src_room">'.$ro.'</select> <button type="submit">คัดลอกมาที่ห้องนี้</button>'
+        .'<div class="gray_12" style="font-size:11px;margin-top:4px">วิชาที่ห้องนี้มีรายวิชารหัสเดียวกัน จะผูกกับรายวิชาของภาคนี้ให้ (นับคาบ/ตารางครูได้) — ที่ไม่มี จะลงเป็น "พิมพ์เอง" ตามชื่อ/ครูเดิม · ช่องที่ครูชนกับห้องอื่นจะข้ามและแจ้งให้ทราบ</div></form></fieldset>'
+        .'<fieldset><legend>นำเข้าจากข้อความ</legend><form method="post" action="'.$act.'" onsubmit="return confirm(\'นำเข้าตารางให้ห้องนี้? (ย้อนกลับได้)\')"><input type="hidden" name="tt_act" value="import"/>'
+        .'<textarea name="src_text" placeholder="บรรทัดละช่อง:  วัน คาบ | รหัสวิชา | ชื่อวิชา | ครู&#10;จันทร์ 1 | ท31102 | ภาษาไทย | อ.อภินัทธ์&#10;จันทร์ 3-4 | ว31202 | ฟิสิกส์ | อ.กัมปนาถ&#10;ศุกร์ 6 | | ว่าง | อ.กัมปนาถ"></textarea>'
+        .'<label><input type="checkbox" name="src_clear" value="1" checked/> ล้างตารางเดิมของห้องนี้ก่อน</label> <button type="submit">นำเข้า</button>'
+        .'<div class="gray_12" style="font-size:11px;margin-top:4px">วัน: จันทร์–อาทิตย์ · คาบ: เลขเดียว หรือช่วง เช่น 3-4 · รหัสวิชาตรงกับรายวิชาของห้อง = ผูกรายวิชา (ครูตามรายวิชา) ไม่ตรง = พิมพ์เอง · คั่นด้วย | หรือ Tab (วางจาก Excel ได้)</div></form></fieldset>'
+        .($undo ? '<fieldset><legend>ย้อนกลับ</legend>'.$undo.'</fieldset>' : '')
+        .'</div></details>';
 }
 
 /** ตัวเลือกห้อง/สถานที่ของช่อง */
@@ -605,7 +930,7 @@ function tt_venue_select(string $slot, string $cur, int $room, int $cid): string
     $used = [];
     foreach (tt_all() as $r => $slots) {
         $e = $slots[$slot] ?? null;
-        if ($r !== $room && $e && $e['v'] !== '' && $e['c'] !== $cid) {
+        if ($r !== $room && $e && $e['v'] !== '' && ($e['c'] !== $cid || !empty($e['x']))) {
             $used[$e['v']] = true; // ห้อง/สถานที่ถูกห้องอื่นใช้ในคาบนี้ (วิชาเดียวกัน = เรียนรวม ใช้ร่วมได้)
         }
     }
@@ -626,14 +951,35 @@ function tt_save_room(int $room): array
     foreach (tt_days() as $d => $x) {
         foreach (tt_periods() as $p => $y) {
             $slot = $d.'-'.$p;
-            $cid = (int) ($_POST['c'][$slot] ?? 0);
+            $raw = (string) ($_POST['c'][$slot] ?? '');
             $v = (string) ($_POST['v'][$slot] ?? '');
             $v = isset($venues[$v]) ? $v : '';
+            $old = $cur[$slot] ?? null;
+            if ($raw === 'x') { // พิมพ์เอง
+                $t = trim((string) ($_POST['xt'][$slot] ?? ''));
+                $x = tt_x_clean(['n' => $_POST['xn'][$slot] ?? '', 'k' => $_POST['xk'][$slot] ?? '', 't' => $t, 'ti' => tt_match_teacher($t)]);
+                if (!$x) {
+                    if ($old) {
+                        $bad[] = tt_slot_text($slot).': เลือก "พิมพ์เอง" แต่ไม่ได้กรอกชื่อวิชา/กิจกรรม (คงค่าเดิมไว้)';
+                    }
+                    continue;
+                }
+                if ($old && ($old['x'] ?? null) == $x && $old['v'] === $v) {
+                    continue;
+                }
+                $why = tt_conflict_x($room, $slot, $x, $v);
+                if ($why !== '') {
+                    $bad[] = tt_slot_text($slot).': '.$why;
+                    continue;
+                }
+                tt_put($room, $slot, 0, $v, null, $x);
+                continue;
+            }
+            $cid = (int) $raw;
             if ($cid && !isset($mine[$cid])) {
                 continue;
             }
-            $old = $cur[$slot] ?? null;
-            if ($old && $old['c'] === $cid && $old['v'] === $v) {
+            if ($old && empty($old['x']) && $old['c'] === $cid && $old['v'] === $v) {
                 continue;
             }
             if ($cid) {
@@ -654,7 +1000,7 @@ function tt_save_teacher(int $tid): array
 {
     $pairs = tt_teacher_pairs($tid);
     $venues = tt_venues();
-    $grid = tt_teacher_grid($tid);
+    $grid = tt_teacher_grid($tid, false);
     $all = tt_all();
     $cs = tt_courses();
     $bad = [];
@@ -713,6 +1059,8 @@ function tt_css(): string
         .'.tt-g th{background:#5b9aa0;color:#fff;font-size:12px;padding:4px 2px;border:1px solid #ccc;font-weight:bold;line-height:1.2}.tt-g .tm{font-weight:normal;font-size:11px}'
         .'.tt-g th.dh{width:70px;color:#333;font-size:14px}.tt-c{border:1px solid #ddd;padding:3px;vertical-align:top;height:58px}.tt-s,.tt-v{width:100%;font-size:11px;height:22px;margin-bottom:2px;background:#fff;border:1px solid #bbb;border-radius:3px}'
         .'.tt-t{font-size:10px;color:#1F618D;line-height:1.2;min-height:0;margin:-1px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tt-v{color:#555;height:20px;font-size:10px}.tt-note{font-size:10px;color:#1F618D}'
+        .'.tt-x input{width:100%;box-sizing:border-box;font-size:11px;height:20px;margin-bottom:2px;border:1px solid #d4ac0d;border-radius:3px;padding:0 3px;background:#fff}.tt-x .k{width:38%}.tt-x .t{width:60%;margin-left:2%}'
+        .'.tt-tools{background:#fff;border:1px solid #ddd;border-radius:4px;margin-bottom:8px;font-size:13px}.tt-tools summary{padding:7px 10px;cursor:pointer;color:#1F618D}.tt-tools .in{padding:4px 12px 10px}.tt-tools textarea{width:100%;box-sizing:border-box;height:150px;font-size:12px;font-family:monospace}.tt-tools fieldset{border:1px solid #e5e7e9;border-radius:4px;margin:6px 0;padding:6px 10px}'
         .'.tt-bar{text-align:right;padding:8px 0}.tt-sum{background:#fff;border:1px solid #ddd;border-radius:4px;margin-top:6px}.tt-sh{background:#EAF2F8;padding:6px 8px;font-weight:bold}'
         .'.tt-sum table{width:100%;border-collapse:collapse;font-size:13px}.tt-sum th{background:#f4f6f7;font-size:12px;padding:4px;border-bottom:1px solid #ddd}.tt-sum td{padding:4px 6px;border-bottom:1px solid #eee}.tt-sum .c{text-align:center}'
         .'.tt-sum tr.bad .cnt{color:#c0392b;font-weight:bold}.tt-sum tr.ok .cnt{color:#1e8449;font-weight:bold}.dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;border:1px solid #bbb;vertical-align:-1px}'
@@ -722,7 +1070,7 @@ function tt_css(): string
 /** สีช่อง + นับคาบที่จัดแล้วแบบทันที */
 function tt_js(): string
 {
-    return '<script>(function(){var f=document.getElementById("ttf");if(!f)return;function upd(){var n={};f.querySelectorAll(".tt-s").forEach(function(s){var o=s.options[s.selectedIndex];s.parentNode.style.background=s.value?(o.getAttribute("data-col")||""):"";var tl=s.parentNode.querySelector(".tt-t");if(tl)tl.textContent=s.value?(o.getAttribute("data-t")||""):"";if(s.value)n[s.value]=(n[s.value]||0)+1;});'
+    return '<script>(function(){var f=document.getElementById("ttf");if(!f)return;function upd(){var n={};f.querySelectorAll(".tt-s").forEach(function(s){var o=s.options[s.selectedIndex];s.parentNode.style.background=s.value?(o.getAttribute("data-col")||""):"";var tl=s.parentNode.querySelector(".tt-t");if(tl)tl.textContent=s.value&&s.value!=="x"?(o.getAttribute("data-t")||""):"";var bx=s.parentNode.querySelector(".tt-x");if(bx)bx.style.display=s.value==="x"?"":"none";if(s.value&&s.value!=="x")n[s.value]=(n[s.value]||0)+1;});'
         .'document.querySelectorAll(".tt-sum tr[data-c]").forEach(function(r){var c=n[r.getAttribute("data-c")]||0,need=+r.querySelector(".need").textContent;r.querySelector(".cnt").textContent=c;r.className=c===need?"ok":"bad";});}'
         .'f.addEventListener("change",upd);upd();var dirty=false;f.addEventListener("change",function(){dirty=true;});f.addEventListener("submit",function(){dirty=false;});window.addEventListener("beforeunload",function(e){if(dirty){e.preventDefault();e.returnValue="";}});'
         .'document.querySelectorAll("#ttf a#pinkgreenbtns").forEach(function(a){a.addEventListener("click",function(){dirty=false;});});})();</script>';
@@ -794,60 +1142,59 @@ function tt_print_summary(array $rows, string $colLabel): string
 /** สร้างหน้าพิมพ์: kind = room | teacher | venue, ids = รายการ */
 function tt_print_out(string $kind, array $ids): void
 {
-    $cs = tt_courses();
     $all = tt_all();
     $vs = tt_venues();
     $pages = '';
     $adv = advisors();
+    // สรุปรายวิชา: นับตามคีย์ (รายวิชา/รายการพิมพ์เอง) + ห้อง
+    $summ = function (array $list, callable $who) {
+        $cnt = [];
+        foreach ($list as [$e, $r]) {
+            $k = tt_ekey($e).'#'.$r;
+            $cnt[$k] = [$e, $r, ($cnt[$k][2] ?? 0) + 1];
+        }
+        $sum = [];
+        foreach ($cnt as [$e, $r, $n]) {
+            $c = tt_course_of($e, $r) ?? [];
+            $sum[] = [$c['course_code'] ?? '', $c['course_name'] ?? '', $who($c, $r), $n];
+        }
+        usort($sum, fn($a, $b) => strcmp($a[0].$a[1].$a[2], $b[0].$b[1].$b[2]));
+        return $sum;
+    };
     foreach ($ids as $id) {
         if ($kind === 'room') {
             $id = (int) $id;
             $slots = $all[$id] ?? [];
-            $cnt = [];
-            foreach ($slots as $e) {
-                $cnt[$e['c']] = ($cnt[$e['c']] ?? 0) + 1;
-            }
-            $sum = [];
-            foreach ($cnt as $cid => $n) {
-                $c = $cs[$cid] ?? [];
-                $sum[] = [$c['course_code'] ?? '', $c['course_name'] ?? '', $c['teacher'] ?? '', $n];
-            }
-            usort($sum, fn($a, $b) => strcmp($a[0], $b[0]));
+            $sum = $summ(array_map(fn($e) => [$e, 0], array_values($slots)), fn($c, $r) => (string) (!empty($c['free']) ? $c['teacher'] : ($c['teacher'] ?? '')));
             $pages .= tt_print_page('ตารางเรียน ชั้น '.(room_options()[$id] ?? room_short($id)),
                 ($adv[$id] ?? []) ? 'ครูที่ปรึกษา '.implode(', ', $adv[$id]) : '',
-                function ($slot) use ($slots, $cs, $vs) {
+                function ($slot) use ($slots, $vs, $id) {
                     $e = $slots[$slot] ?? null;
                     if (!$e) {
                         return '';
                     }
-                    $c = $cs[$e['c']] ?? [];
-                    return tt_print_cell([['cd', h($c['course_code'] ?? '')], ['nm', h($c['course_name'] ?? '')], ['tc', h(tt_teacher_label((string) ($c['teacher'] ?? '')))], ['vn', h($vs[$e['v']] ?? '')]]);
+                    $c = tt_course_of($e, $id) ?? [];
+                    return tt_print_cell([['cd', h($c['course_code'] ?? '')], ['nm', h($c['course_name'] ?? '')], ['tc', h(tt_tlabel($c))], ['vn', h($vs[$e['v']] ?? '')]]);
                 }, tt_print_summary($sum, 'ครูผู้สอน'));
         } elseif ($kind === 'teacher') {
             $id = (int) $id;
             $grid = tt_teacher_grid($id);
-            $cnt = [];
+            $list = [];
             foreach ($grid as $es) {
-                foreach ($es as [$r, $cid]) {
-                    $cnt[$cid.'|'.$r] = ($cnt[$cid.'|'.$r] ?? 0) + 1;
+                foreach ($es as $x) {
+                    $list[] = [$x[3], $x[0]];
                 }
             }
-            $sum = [];
-            foreach ($cnt as $k => $n) {
-                [$cid, $r] = explode('|', $k);
-                $c = $cs[(int) $cid] ?? [];
-                $sum[] = [$c['course_code'] ?? '', $c['course_name'] ?? '', class_room_short($c['class'] ?? 0, (int) $r), $n];
-            }
-            usort($sum, fn($a, $b) => strcmp($a[0].$a[2], $b[0].$b[2]));
+            $sum = $summ($list, fn($c, $r) => !empty($c['free']) ? (string) (room_options()[$r] ?? room_short($r)) : class_room_short($c['class'] ?? 0, (int) $r));
             $name = (string) (personnel_options()[$id] ?? q1('SELECT `name` FROM {user} WHERE `id`=?', [$id])['name'] ?? '');
-            $pages .= tt_print_page('ตารางสอน '.$name, '', function ($slot) use ($grid, $cs, $vs) {
+            $pages .= tt_print_page('ตารางสอน '.$name, '', function ($slot) use ($grid, $vs) {
                 $es = $grid[$slot] ?? [];
                 if (!$es) {
                     return '';
                 }
-                $c = $cs[$es[0][1]] ?? [];
+                $c = tt_course_of($es[0][3], $es[0][0]) ?? [];
                 return tt_print_cell([['cd', h($c['course_code'] ?? '')], ['nm', h($c['course_name'] ?? '')],
-                    ['tc', h(implode(', ', array_map(fn($x) => class_room_short($c['class'] ?? 0, $x[0]), $es)))], ['vn', h($vs[$es[0][2]] ?? '')]]);
+                    ['tc', h(implode(', ', array_map(fn($x) => !empty($c['free']) ? (string) (room_options()[$x[0]] ?? room_short($x[0])) : class_room_short($c['class'] ?? 0, $x[0]), $es)))], ['vn', h($vs[$es[0][2]] ?? '')]]);
             }, tt_print_summary($sum, 'ชั้น/ห้อง'));
         } else {
             $id = (string) $id;
@@ -855,27 +1202,21 @@ function tt_print_out(string $kind, array $ids): void
                 continue;
             }
             $grid = tt_venue_grid($id);
-            $cnt = [];
+            $list = [];
             foreach ($grid as $es) {
                 foreach ($es as $x) {
-                    $cnt[$x[1].'|'.$x[0]] = ($cnt[$x[1].'|'.$x[0]] ?? 0) + 1;
+                    $list[] = [$x[2], $x[0]];
                 }
             }
-            $sum = [];
-            foreach ($cnt as $k => $n) {
-                [$cid, $r] = explode('|', $k);
-                $c = $cs[(int) $cid] ?? [];
-                $sum[] = [$c['course_code'] ?? '', $c['course_name'] ?? '', room_short((int) $r).' · '.tt_teacher_label((string) ($c['teacher'] ?? '')), $n];
-            }
-            usort($sum, fn($a, $b) => strcmp($a[0].$a[2], $b[0].$b[2]));
-            $pages .= tt_print_page('ตารางการใช้ '.$vs[$id], '', function ($slot) use ($grid, $cs) {
+            $sum = $summ($list, fn($c, $r) => room_short((int) $r).' · '.tt_tlabel($c));
+            $pages .= tt_print_page('ตารางการใช้ '.$vs[$id], '', function ($slot) use ($grid) {
                 $es = $grid[$slot] ?? [];
                 if (!$es) {
                     return '';
                 }
-                $c = $cs[$es[0][1]] ?? [];
+                $c = tt_course_of($es[0][2], $es[0][0]) ?? [];
                 return tt_print_cell([['cd', h($c['course_code'] ?? '')], ['nm', h($c['course_name'] ?? '')], ['tc', h(implode(', ', array_map(fn($x) => room_short($x[0]), $es)))],
-                    ['vn', h(tt_teacher_label((string) ($c['teacher'] ?? '')))]]);
+                    ['vn', h(tt_tlabel($c))]]);
             }, tt_print_summary($sum, 'ห้อง / ครูผู้สอน'));
         }
     }

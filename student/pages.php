@@ -167,22 +167,27 @@ function st_schedule(array $S, bool $post): string
     $cs = tt_courses();
     $vs = tt_venues();
     $pers = tt_periods();
-    $head = '<tr><th>วัน / คาบ</th>';
+    // หัวตาราง: เวลา (เทาเข้ม) / คาบที่ (เทาอ่อน)
+    $head = '<tr><th rowspan="2" style="background:#9E9E9E;color:#fff;width:86px">วัน/เวลา</th>';
+    $h2 = '';
     foreach ($pers as $p => [$s1, $e1]) {
-        $head .= '<th>'.$p.($s1 !== '' ? '<div style="font-weight:normal;font-size:11px">'.h(str_replace(':', '.', $s1)).'-'.h(str_replace(':', '.', $e1)).'</div>' : '').'</th>';
+        $head .= '<th style="background:#9E9E9E;color:#fff;font-size:13px;white-space:nowrap">'.($s1 !== '' ? h(str_replace(':', '.', $s1)).'-'.h(str_replace(':', '.', $e1)) : '&nbsp;').'</th>';
+        $h2 .= '<th style="background:#DCDCDC;color:#222;font-weight:normal;font-size:14px;white-space:nowrap">คาบที่ '.$p.'</th>';
     }
+    $head .= '</tr><tr>'.$h2;
     $rows = '';
     foreach (tt_days() as $d => $name) {
         $rows .= '<tr><td class="day" style="background:'.(TT_DAY_COLOR[$d] ?? '#ccc').'">'.h($name).'</td>';
+        $bg = tt_tint($d);
         foreach ($pers as $p => $x) {
             $e = $slots[$d.'-'.$p] ?? null;
             $c = $e ? ($cs[$e['c']] ?? null) : null;
-            $rows .= '<td>'.($c ? '<div class="code">'.h($c['course_code']).'</div><div>'.h($c['course_name']).'</div><div class="mut" style="font-size:12px">'.h($c['teacher'] ?? '').'</div>'
+            $rows .= '<td style="background:'.$bg.'">'.($c ? '<div class="code" style="color:#22B38C">'.h($c['course_code']).'</div><div style="color:#C36BE0">'.h($c['course_name']).'</div><div style="font-size:13px;color:#E07B7B">'.h(tt_teacher_label((string) ($c['teacher'] ?? ''))).'</div>'
                 .(($vs[$e['v']] ?? '') !== '' ? '<div class="mut" style="font-size:11px">'.h($vs[$e['v']]).'</div>' : '') : '').'</td>';
         }
         $rows .= '</tr>';
     }
-    return '<div class="tbw"><table class="tb tt"><tr class="cap"><th colspan="'.(count($pers) + 1).'">ตารางเรียน ชั้น '.h(class_room_short($S['class'], $S['room'])).' ภาคเรียนที่ '.st_ytl()[1].' ปีการศึกษา '.st_ytl()[0].'</th></tr>'.$head.'</tr>'.$rows.'</table></div>';
+    return '<div class="tbw"><table class="tb tt" style="table-layout:fixed;min-width:760px"><tr class="cap"><th colspan="'.(count($pers) + 1).'">ตารางเรียน ชั้น '.h(class_room_short($S['class'], $S['room'])).' ภาคเรียนที่ '.st_ytl()[1].' ปีการศึกษา '.st_ytl()[0].'</th></tr>'.$head.'</tr>'.$rows.'</table></div>';
 }
 
 /** คะแนนรายส่วนของนักเรียนในรายวิชา: [[รายการ, เต็ม, ได้], ...] */

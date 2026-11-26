@@ -187,10 +187,10 @@ function print_page(string $title, string $body): void
 
 
 /** ช่องตารางสอนแบบหน้าระบบเดิม */
-function tt_cell(?array $course, string $roomText, string $teacher = '', string $edit = ''): string
+function tt_cell(?array $course, string $roomText, string $teacher = '', string $edit = '', string $bg = ''): string
 {
     $rows = $course ? [h($course['course_code']), h($course['course_name']), h($roomText), h($teacher)] : ['&nbsp;', '&nbsp;', '&nbsp;', '&nbsp;'];
-    return '<td align="center" valign="middle" class="'.($course ? 'schedule-subject' : 'schedule-empty').'" style="padding:5px'.($course ? ';background:#F2FFFB' : '').'">'
+    return '<td align="center" valign="middle" class="'.($course ? 'schedule-subject' : 'schedule-empty').'" style="padding:5px'.($bg !== '' ? ';background:'.$bg : ($course ? ';background:#F2FFFB' : '')).'">'
         .'<div id="display-table"><div id="display-row" class=\'bold\' style="color:#00cea4;text-align:center;padding:1px 10px">'.$rows[0].'</div>'
         .'<div id="display-row" style="font-size:11px;color:#DE6CFF; text-align:center; padding:1px 10px">'.$rows[1].'</div>'
         .'<div id="display-row" style="text-align:center;padding:1px 10px">'.$rows[2].'</div>'
@@ -207,12 +207,15 @@ function timetable_grid(string $tpl, callable $cell): string
         return $tpl;
     }
     $start = strrpos(substr($tpl, 0, $h), '<tr>');
-    $out = "<tr>\n <th width=\"100\" align=\"center\" valign=\"middle\" class=\"head\" style=\"border-radius:0px\"><h1 style=\"font-size:25px\">วัน/เวลา</h1></th>";
+    // หัวตาราง 2 แถว: เวลา (เทาเข้ม) / คาบที่ (เทาอ่อน)
+    $out = "<tr>\n <th width=\"100\" rowspan=\"2\" align=\"center\" valign=\"middle\" class=\"head\" style=\"border-radius:0px\"><h1 style=\"font-size:25px\">วัน/เวลา</h1></th>";
+    $row2 = '';
     foreach (tt_periods() as $p => [$s, $e]) {
-        $out .= "\n <td align=\"center\" valign=\"middle\" class=\"schedule-period\" style=\"height:30px;border-left:1px solid #bbb;border-top-right-radius:0px\"><h1 style=\"font-size:18px\">คาบที่ $p<br/>"
+        $out .= "\n <td align=\"center\" valign=\"middle\" style=\"height:30px;background:#9E9E9E;color:#fff;border-left:1px solid #bbb\"><h1 style=\"font-size:16px;color:#fff\">"
             .h($s !== '' ? str_replace(':', '.', $s).'-'.str_replace(':', '.', $e) : '---').'</h1></td>';
+        $row2 .= "\n <td align=\"center\" valign=\"middle\" class=\"schedule-period\" style=\"height:28px;border-left:1px solid #bbb;border-top-right-radius:0px\"><h1 style=\"font-size:18px\">คาบที่ $p</h1></td>";
     }
-    $out .= "\n </tr>";
+    $out .= "\n </tr>\n <tr>".$row2."\n </tr>";
     foreach (tt_days() as $d => $name) {
         $color = TT_DAY_COLOR[$d] ?? '#ccc';
         $out .= "\n <tr>\n <td height=\"95\" align=\"center\" valign=\"middle\" bgcolor=\"$color\" class=\"schedule-weekday\" style=\"border-top:#aaa solid 1px\"><h1 style=\"font-size:25px;color:#fff\">".h($name).'</h1></td>';
@@ -250,7 +253,7 @@ function rows_task_teacher_timetable()
     $tpl = timetable_grid($tpl, function ($d, $p) use ($grid, $cs, $vs) {
         $es = $grid[$d.'-'.$p] ?? [];
         $c = $es ? ($cs[$es[0][1]] ?? null) : null;
-        return tt_cell($c, $c ? implode(', ', array_map(fn($x) => class_room_short($c['class'], $x[0]), $es)) : '', $c ? (string) ($vs[$es[0][2]] ?? '') : '');
+        return tt_cell($c, $c ? implode(', ', array_map(fn($x) => class_room_short($c['class'], $x[0]), $es)) : '', $c ? (string) ($vs[$es[0][2]] ?? '') : '', '', tt_tint($d)); // พื้นสีอ่อนตามวัน
     });
     $tpl = str_replace('ตารางสอน {{TNAME}}', 'ตารางสอน '.name_nbsp($teacher['name'] ?? ''), $tpl);
     $pr = '?module=task&option=teacher_timetable&func=Print&kind=';

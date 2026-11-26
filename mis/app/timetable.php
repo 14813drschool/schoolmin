@@ -13,7 +13,26 @@
  */
 defined('MIS') or exit;
 
-const TT_DAY_COLOR = [1 => '#FFD939', 2 => '#FFAC9D', 3 => '#00E1AE', 4 => '#FF9C42', 5 => '#AEB7FF', 6 => '#C39BD3', 0 => '#F1948A'];
+const TT_DAY_COLOR = [1 => '#F7D358', 2 => '#F2A293', 3 => '#5DD5A4', 4 => '#F3A35B', 5 => '#AEB7FF', 6 => '#C39BD3', 0 => '#F1948A'];
+
+/** สีพื้นอ่อนของแถววัน (ผสมสีประจำวันกับสีขาว) */
+function tt_tint(int $day, float $white = 0.86): string
+{
+    $hex = ltrim(TT_DAY_COLOR[$day] ?? '#DDDDDD', '#');
+    $o = '#';
+    foreach (str_split($hex, 2) as $c) {
+        $o .= sprintf('%02X', (int) round(hexdec($c) * (1 - $white) + 255 * $white));
+    }
+    return $o;
+}
+
+/** ชื่อครูแบบในตารางเรียน: ครู + ชื่อต้น (ไม่มีคำนำหน้า/นามสกุล) */
+function tt_teacher_label(string $n): string
+{
+    $n = trim(preg_replace('/^(ครู|นางสาว|นาง|นาย|ว่าที่\s*ร(้อย)?\.?\s*ต(รี)?\.?|ดร\.|Mr\.|Mrs\.|Ms\.|Miss)\s*/u', '', trim($n)));
+    $first = preg_split('/\s+/u', $n)[0] ?? '';
+    return $first !== '' ? 'ครู'.$first : '';
+}
 const TT_COLORS = ['#E8F6F3', '#FEF5E7', '#EBF5FB', '#F5EEF8', '#FDEDEC', '#EAFAF1', '#FEF9E7', '#EBEDEF', '#F4ECF7', '#E8F8F5', '#FDF2E9', '#EAF2F8', '#F9EBEA', '#E9F7EF', '#FCF3CF', '#D6EAF8'];
 
 /** ผู้จัดตารางได้: ผู้ดูแลระบบ หรือผู้มีสิทธิ์โมดูลวิชาการ */
@@ -616,15 +635,20 @@ function tt_print_cell(array $lines): string
 /** หน้าพิมพ์ตาราง 1 หน้า */
 function tt_print_page(string $title, string $sub, callable $cell, string $foot): string
 {
-    $head = '<tr><th class="dh">วัน / เวลา</th>';
+    // หัวตาราง 2 แถว: เวลา (เทาเข้ม) / คาบที่ (เทาอ่อน)
+    $h1 = '<tr><th class="dh hd" rowspan="2">วัน/เวลา</th>';
+    $h2 = '<tr>';
     foreach (tt_periods() as $p => [$s, $e, $note]) {
-        $head .= '<th>คาบที่ '.$p.($s !== '' ? '<br><span class="tm">'.h(str_replace(':', '.', $s)).' - '.h(str_replace(':', '.', $e)).' น.</span>' : '').'</th>';
+        $h1 .= '<th class="ht">'.($s !== '' ? h(str_replace(':', '.', $s)).'-'.h(str_replace(':', '.', $e)) : '&nbsp;').'</th>';
+        $h2 .= '<th class="hp">คาบที่ '.$p.'</th>';
     }
+    $head = $h1.'</tr>'.$h2;
     $rows = '';
     foreach (tt_days() as $d => $dn) {
-        $rows .= '<tr><th class="dh" style="background:'.(TT_DAY_COLOR[$d] ?? '#ddd').'">'.h($dn).'</th>';
+        $bg = tt_tint($d);
+        $rows .= '<tr><th class="dh dy" style="background:'.(TT_DAY_COLOR[$d] ?? '#ddd').'">'.h($dn).'</th>';
         foreach (tt_periods() as $p => $x) {
-            $rows .= '<td>'.$cell($d.'-'.$p).'</td>';
+            $rows .= '<td style="background:'.$bg.'">'.$cell($d.'-'.$p).'</td>';
         }
         $rows .= '</tr>';
     }
@@ -678,7 +702,7 @@ function tt_print_out(string $kind, array $ids): void
                         return '';
                     }
                     $c = $cs[$e['c']] ?? [];
-                    return tt_print_cell([['cd', h($c['course_code'] ?? '')], ['nm', h($c['course_name'] ?? '')], ['tc', h(name_short((string) ($c['teacher'] ?? '')))], ['vn', h($vs[$e['v']] ?? '')]]);
+                    return tt_print_cell([['cd', h($c['course_code'] ?? '')], ['nm', h($c['course_name'] ?? '')], ['tc', h(tt_teacher_label((string) ($c['teacher'] ?? '')))], ['vn', h($vs[$e['v']] ?? '')]]);
                 }, tt_print_summary($sum, 'ครูผู้สอน'));
         } elseif ($kind === 'teacher') {
             $id = (int) $id;
@@ -719,7 +743,7 @@ function tt_print_out(string $kind, array $ids): void
                 }
                 $c = $cs[$es[0][1]] ?? [];
                 return tt_print_cell([['cd', h($c['course_code'] ?? '')], ['nm', h($c['course_name'] ?? '')], ['tc', h(implode(', ', array_map(fn($x) => room_short($x[0]), $es)))],
-                    ['vn', h(name_short((string) ($c['teacher'] ?? '')))]]);
+                    ['vn', h(tt_teacher_label((string) ($c['teacher'] ?? '')))]]);
             }, '');
         }
     }
@@ -732,8 +756,9 @@ function tt_print_out(string $kind, array $ids): void
         .'.pg{width:297mm;min-height:210mm;margin:10px auto;background:#fff;padding:8mm 9mm;box-shadow:0 2px 10px rgba(0,0,0,.35);page-break-after:always;break-after:page}.pg:last-child{page-break-after:auto;break-after:auto}'
         .'.ph{display:flex;align-items:center;gap:10px;margin-bottom:6px}.ph img{height:16mm}.t1{font-size:22pt;font-weight:bold;line-height:1.1}.t2{font-size:14pt}'
         .'table.g{width:100%;border-collapse:collapse;table-layout:fixed}table.g th,table.g td{border:1px solid #555;text-align:center;vertical-align:middle}'
-        .'table.g th{background:#e5e8e8;font-size:13pt;line-height:1.05;padding:2px}table.g .tm{font-weight:normal;font-size:11pt}table.g th.dh{width:22mm;font-size:16pt}'
-        .'table.g td{height:24mm;padding:1px 2px;line-height:1.05}.cd{font-weight:bold;font-size:14pt}.nm{font-size:12pt}.tc{font-size:12pt}.vn{font-size:11pt;font-style:italic;color:#333}'
+        .'table.g th{font-size:13pt;line-height:1.1;padding:2px}table.g th.ht{background:#9E9E9E;color:#fff;font-weight:bold}table.g th.hp{background:#DCDCDC;color:#222;font-weight:normal}'
+        .'table.g th.dh{width:24mm}table.g th.hd{background:#9E9E9E;color:#fff;font-size:17pt}table.g th.dy{color:#fff;font-size:19pt;text-shadow:0 0 1px rgba(0,0,0,.25)}'
+        .'table.g td{height:24mm;padding:1px 2px;line-height:1.1}.cd{font-weight:bold;font-size:14pt;color:#22B38C}.nm{font-size:13pt;color:#C36BE0}.tc{font-size:13pt;color:#E07B7B}.vn{font-size:11pt;font-style:italic;color:#777}'
         .'table.sm{border-collapse:collapse;margin-top:6px;font-size:13pt;min-width:60%}table.sm th,table.sm td{border:1px solid #888;padding:0 6px;line-height:1.15}table.sm th{background:#f2f3f4}.c{text-align:center}.r{text-align:right}'
         .'.bar{position:sticky;top:0;background:#333;color:#fff;padding:8px;text-align:center;z-index:9;font:13px Tahoma}.bar button{font:14px Tahoma;padding:4px 14px;margin:0 4px}'
         .'@media print{body{background:#fff}.pg{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}.bar{display:none}}'

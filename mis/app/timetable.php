@@ -1485,13 +1485,13 @@ function adm_periods(bool $post)
     $html = '<style>#ttp{border-collapse:collapse;width:100%}#ttp th{background:#EAECEE;padding:5px;font-weight:normal;border:1px solid #D5D8DC}#ttp td{border:1px solid #E5E7E9;padding:4px 6px;text-align:center}'
         .'#ttp tr.b td{background:#F4F6F6}#ttp .lb{font-weight:bold;white-space:nowrap}#ttp tr.b .lb{color:#7F8C8D}#ttp .s,#ttp .e{height:22px;width:70px;text-align:center}#ttp .nm{width:200px;height:22px}#ttp .dur{color:#888;font-size:12px;white-space:nowrap}'
         .'.ttp-a{display:inline-block;margin:8px 6px 0 0;padding:4px 12px;border-radius:4px;background:#EAF2F8;color:#1F618D;text-decoration:none;cursor:pointer}.ttp-a.b{background:#F2F3F4;color:#555}#ttp a{cursor:pointer;text-decoration:none;margin:0 2px;font-size:14px}</style>'
-        .'<table id="ttp"><tr><th style="width:90px">ลำดับ</th><th>เวลาเริ่ม</th><th>เวลาสิ้นสุด</th><th>นาที</th><th>ชื่อช่วงพัก / หมายเหตุ</th><th style="width:90px">เลื่อน / ลบ</th></tr>'.$tr.'</table>'
+        .'<table id="ttp"><tr><th style="width:150px">ประเภท / ลำดับ</th><th>เวลาเริ่ม</th><th>เวลาสิ้นสุด</th><th>นาที</th><th>ชื่อช่วงพัก / หมายเหตุ</th><th style="width:90px">เลื่อน / ลบ</th></tr>'.$tr.'</table>'
         .'<a class="ttp-a" onclick="ttpAdd(\'p\')">+ เพิ่มคาบเรียน</a><a class="ttp-a b" onclick="ttpAdd(\'b\')">+ เพิ่มช่วงพัก (เช่น พักกลางวัน)</a>'
         .'<div class="gray_12" style="font-size:11px;margin-top:6px">เพิ่มแล้วเลื่อนขึ้น/ลงไปวางระหว่างคาบได้ · ช่วงพักแสดงเป็นช่องแนวตั้งในตารางเรียน/ตารางสอนและหน้าพิมพ์ · ลบคาบท้าย ๆ แล้ว วิชาที่จัดไว้ในคาบนั้นจะซ่อนไว้ ไม่ถูกลบ</div>'
         .'<template id="ttpt">'.$tpl.'</template>'
         .'<script>(function(){var T=document.getElementById("ttp");function mm(v){var m=/^\s*(\d{1,2})[:.](\d{2})\s*$/.exec(v||"");return m&&+m[1]<24&&+m[2]<60?(+m[1])*60+(+m[2]):null}function hm(m){m=((m%1440)+1440)%1440;return ("0"+Math.floor(m/60)).slice(-2)+":"+("0"+m%60).slice(-2)}'
         .'function rows(){return Array.prototype.slice.call(T.querySelectorAll("tr.r"))}'
-        .'window.ttpFix=function(){var n=0;rows().forEach(function(r){var b=r.classList.contains("b");r.querySelector(".lb").textContent=b?"พัก":"คาบที่ "+(++n);var s=mm(r.querySelector(".s").value),e=mm(r.querySelector(".e").value);r.querySelector(".dur").textContent=(s!==null&&e!==null&&e>s)?(e-s)+" นาที":"";})};'
+        .'window.ttpFix=function(){var n=0;rows().forEach(function(r){var ty=r.querySelector(".ty"),b=ty.value==="b";r.classList.toggle("b",b);ty.options[0].text="คาบที่ "+(b?"-":(++n));var nm=r.querySelector(".nm");nm.placeholder=b?"พักกลางวัน":"(ไม่บังคับ)";if(b&&!nm.value)nm.value="พักเที่ยง";var s=mm(r.querySelector(".s").value),e=mm(r.querySelector(".e").value);r.querySelector(".dur").textContent=(s!==null&&e!==null&&e>s)?(e-s)+" นาที":"";})};'
         .'window.ttpAdd=function(t){var x=document.getElementById("ttpt").content.firstElementChild.cloneNode(true);var rs=rows(),last=rs[rs.length-1];var st=last?mm(last.querySelector(".e").value):510;if(st===null)st=510;'
         .'var dur=50;for(var i=rs.length-1;i>=0;i--){if(!rs[i].classList.contains("b")){var a=mm(rs[i].querySelector(".s").value),b=mm(rs[i].querySelector(".e").value);if(a!==null&&b!==null&&b>a)dur=b-a;break;}}'
         .'if(t=="b"){x.className="r b";x.querySelector(".ty").value="b";x.querySelector(".nm").value="พักกลางวัน";dur=60;}x.querySelector(".s").value=hm(st);x.querySelector(".e").value=hm(st+dur);T.querySelector("tbody").appendChild(x);ttpFix();};'
@@ -1503,8 +1503,8 @@ function adm_periods(bool $post)
 function tt_period_tr(string $t, string $name, string $s, string $e): string
 {
     $b = $t === 'b';
-    return '<tr class="r'.($b ? ' b' : '').'"><td class="lb"></td>'
-        .'<td><input type="hidden" name="type[]" class="ty" value="'.($b ? 'b' : 'p').'"/><input type="text" name="start[]" class="s general radius grayborder" value="'.h($s).'" maxlength="5" placeholder="08:30" inputmode="numeric" autocomplete="off"/></td>'
+    return '<tr class="r'.($b ? ' b' : '').'"><td><select name="type[]" class="ty" title="คาบเรียน หรือ ช่วงพัก (ช่วงพักไม่นับเป็นคาบ)"><option value="p"'.($b ? '' : ' selected').'>คาบที่</option><option value="b"'.($b ? ' selected' : '').'>ช่วงพัก (ไม่นับคาบ)</option></select></td>'
+        .'<td><input type="text" name="start[]" class="s general radius grayborder" value="'.h($s).'" maxlength="5" placeholder="08:30" inputmode="numeric" autocomplete="off"/></td>'
         .'<td><input type="text" name="end[]" class="e general radius grayborder" value="'.h($e).'" maxlength="5" placeholder="09:20" inputmode="numeric" autocomplete="off"/></td><td class="dur"></td>'
         .'<td><input type="text" name="name[]" class="nm general radius grayborder" maxlength="40" value="'.h($name).'" placeholder="'.($b ? 'พักกลางวัน' : '(ไม่บังคับ)').'"/></td>'
         .'<td style="white-space:nowrap"><a onclick="ttpMv(this,-1)" title="เลื่อนขึ้น">▲</a><a onclick="ttpMv(this,1)" title="เลื่อนลง">▼</a> <a onclick="ttpDel(this)" title="ลบ"><img src="../icon_tools/vec_bin_dark.png" height="15" style="vertical-align:middle"/></a></td></tr>';

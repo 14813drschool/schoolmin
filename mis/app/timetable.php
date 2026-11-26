@@ -952,6 +952,7 @@ function tt_periods_save(array $type, array $name, array $start, array $end): ar
     if ($err) {
         return $err;
     }
+    tt_periods_backup();
     q('DELETE FROM {mis_data} WHERE `kind`=?', ['periods']);
     $no = 0;
     foreach ($rows as [$t, $n, $s, $e]) {
@@ -966,6 +967,82 @@ function tt_periods_save(array $type, array $name, array $start, array $end): ar
     return [];
 }
 
+/** สำรองค่าคาบเรียนชุดปัจจุบัน (ใช้ "ย้อนกลับการบันทึกครั้งล่าสุด") */
+function tt_periods_backup(): void
+{
+    $rows = array_map(fn($r) => [$r['r1'], $r['r2'], $r['r3'], $r['value']], md_rows('periods'));
+    md_set('cfg', 'periods_prev', '', '', json_encode(['at' => date('Y-m-d H:i'), 'by' => (int) (me()['id'] ?? 0), 'rows' => $rows], JSON_UNESCAPED_UNICODE));
+}
+
+/** ย้อนกลับเป็นชุดก่อนบันทึกครั้งล่าสุด (สลับกัน จึงกดซ้ำเพื่อกลับมาได้) */
+function tt_periods_undo(): bool
+{
+    $b = json_decode((string) md_get('cfg', 'periods_prev'), true);
+    if (!is_array($b) || !isset($b['rows'])) {
+        return false;
+    }
+    tt_periods_backup();
+    q('DELETE FROM {mis_data} WHERE `kind`=?', ['periods']);
+    foreach ($b['rows'] as [$r1, $r2, $r3, $v]) {
+        md_set('periods', $r1, $r2, $r3, (string) $v);
+    }
+    return true;
+}
+
+/** คาบสูงสุดที่มีวิชาจัดไว้ (ทุกภาคเรียน) */
+function tt_max_used_period(): int
+{
+    $max = 0;
+    foreach (md_rows('tt') as $r) {
+        $p = (int) (explode('-', (string) $r['r3'])[1] ?? 0);
+        if ($p <= 15 && $p > $max) {
+            $max = $p;
+        }
+    }
+    return $max;
+}
+
+/**
+ * เติมคาบที่ขาดให้ครบ ๑..N (คงเวลาของคาบที่มีอยู่ เวลาคาบที่เติมเป็นค่าประมาณ ๕๐ นาที ให้ตรวจแล้วบันทึก)
+ * คืนแถวสำหรับฟอร์ม [type, ชื่อ, เริ่ม, สิ้นสุด]
+ */
+function tt_period_fill_rows(): array
+{
+    $pers = tt_periods();
+    $br = tt_breaks();
+    $n = max($pers ? max(array_keys($pers)) : 0, tt_max_used_period(), 1);
+    $mm = fn($t) => preg_match('/^(\d{1,2})[:.](\d{2})$/', (string) $t, $m) ? (int) $m[1] * 60 + (int) $m[2] : null;
+    $hm = fn($x) => sprintf('%02d:%02d', intdiv(max(0, $x), 60) % 24, max(0, $x) % 60);
+    $t = [];  // p => [start, end] เป็นนาที
+    foreach ($pers as $p => [$a, $b]) {
+        if ($p <= $n && $mm($a) !== null && $mm($b) !== null) {
+            $t[$p] = [$mm($a), $mm($b)];
+        }
+    }
+    $len = 50;
+    // ย้อนหลังจากคาบที่รู้เวลา แล้วไล่ไปข้างหน้า
+    for ($p = $n; $p >= 1; $p--) {
+        if (!isset($t[$p]) && isset($t[$p + 1])) {
+            $end = $t[$p + 1][0] - (isset($br[$p]) && $mm($br[$p][1]) !== null && $mm($br[$p][2]) !== null ? $mm($br[$p][2]) - $mm($br[$p][1]) : 0);
+            $t[$p] = [$end - $len, $end];
+        }
+    }
+    for ($p = 1; $p <= $n; $p++) {
+        if (!isset($t[$p])) {
+            $st = isset($t[$p - 1]) ? $t[$p - 1][1] + (isset($br[$p - 1]) && $mm($br[$p - 1][1]) !== null && $mm($br[$p - 1][2]) !== null ? $mm($br[$p - 1][2]) - $mm($br[$p - 1][1]) : 0) : 8 * 60 + 30;
+            $t[$p] = [$st, $st + $len];
+        }
+    }
+    $rows = [];
+    for ($p = 1; $p <= $n; $p++) {
+        $rows[] = ['p', $pers[$p][2] ?? '', $hm($t[$p][0]), $hm($t[$p][1])];
+        if (isset($br[$p]) && $p < $n) {
+            $rows[] = ['b', $br[$p][0], $br[$p][1], $br[$p][2]];
+        }
+    }
+    return $rows;
+}
+
 function adm_periods(bool $post)
 {
     if (!tt_can_edit()) {
@@ -973,6 +1050,13 @@ function adm_periods(bool $post)
     }
     $msg = '';
     $rows = tt_period_rows();
+    if ($post && isset($_POST['undo'])) {
+        redirect(a_url('periods', tt_periods_undo() ? '&undone=1' : ''));
+    }
+    if (isset($_GET['fill'])) {
+        $rows = tt_period_fill_rows();
+        $msg = msg_box('เติมคาบที่หายไปให้ครบแล้ว (ยังไม่บันทึก) — เวลาของคาบที่เติมเป็นค่าประมาณ กรุณาตรวจ/แก้เวลาให้ถูกต้อง แล้วกด "บันทึก" ด้านล่าง วิชาที่จัดไว้จะกลับมาแสดงตามคาบเดิม', false);
+    }
     if ($post) {
         $type = (array) ($_POST['type'] ?? []);
         $err = tt_periods_save($type, (array) ($_POST['name'] ?? []), (array) ($_POST['start'] ?? []), (array) ($_POST['end'] ?? []));
@@ -986,6 +1070,8 @@ function adm_periods(bool $post)
         }
     } elseif (isset($_GET['done'])) {
         $msg = msg_box('บันทึกคาบเรียนแล้ว — ตารางเรียน/ตารางสอนและหน้าพิมพ์ใช้เวลาชุดนี้ทันที');
+    } elseif (isset($_GET['undone'])) {
+        $msg = msg_box('ย้อนกลับเป็นค่าคาบเรียนชุดก่อนการบันทึกครั้งล่าสุดแล้ว');
     }
     // ตารางที่จัดไว้ในคาบที่ไม่มีแล้ว (ไม่แสดง แต่ยังเก็บไว้)
     $pers = tt_periods();
@@ -997,9 +1083,20 @@ function adm_periods(bool $post)
             }
         }
     }
-    if ($orph && !$post) {
-        $msg .= msg_box('มีวิชาที่จัดไว้ในคาบที่ถูกลบออก '.$orph.' ช่อง (ภาคเรียนนี้) — ไม่แสดงในตาราง แต่ยังเก็บไว้ ถ้าเพิ่มคาบกลับมาจะแสดงอีกครั้ง', false);
+    $gap = $pers && array_keys($pers) !== range(1, count($pers));   // เลขคาบไม่ต่อเนื่อง เช่น มีแต่คาบที่ ๕
+    if ($gap && !$post && !isset($_GET['fill'])) {
+        // ห้ามแสดงแบบนับใหม่ (คาบที่ ๕ จะกลายเป็นคาบที่ ๑ เมื่อบันทึก) — เติมคาบที่ขาดให้ครบก่อน
+        $rows = tt_period_fill_rows();
+        $msg .= msg_box('เลขคาบในการตั้งค่าไม่ต่อเนื่อง (มีเฉพาะคาบที่ '.implode(', ', array_keys($pers)).') ระบบเติมคาบที่ขาดให้ในตารางด้านล่างแล้ว (ยังไม่บันทึก) — ตรวจ/แก้เวลาให้ถูกต้อง แล้วกด "บันทึก" วิชาที่จัดไว้จะกลับมาแสดงตามคาบเดิม', false);
+    } elseif (($orph || tt_max_used_period() > ($pers ? max(array_keys($pers)) : 0)) && !$post && !isset($_GET['fill'])) {
+        $msg .= msg_box(($orph ? 'มีวิชาที่จัดไว้ในคาบที่ไม่มีในการตั้งค่าตอนนี้ '.$orph.' ช่อง (ภาคเรียนนี้) — ข้อมูลยังอยู่ครบ แค่ไม่แสดง' : 'เลขคาบในการตั้งค่าไม่ต่อเนื่อง')
+            .' &nbsp; <a href="'.h(a_url('periods', '&fill=1')).'"><b>» กดเพื่อเติมคาบที่หายไปให้ครบ</b></a> (ตรวจเวลาแล้วกดบันทึก วิชาจะกลับมาแสดงตามคาบเดิม)', false);
     }
+    $prev = json_decode((string) md_get('cfg', 'periods_prev'), true);
+    $undo = is_array($prev) && isset($prev['rows'])
+        ? '<form method="post" action="'.h(a_url('periods')).'" style="width:970px;margin:6px auto 0;text-align:right;font-size:12px" onsubmit="return confirm(\'ย้อนกลับค่าคาบเรียนเป็นชุดก่อนการบันทึกครั้งล่าสุด ('.h((string) ($prev['at'] ?? '')).')?\')">'
+            .'<input type="hidden" name="undo" value="1"/><button type="submit" style="font-size:12px;padding:3px 10px;cursor:pointer">↶ ย้อนกลับการบันทึกครั้งล่าสุด ('.h((string) ($prev['at'] ?? '')).')</button></form>'
+        : '';
     $tr = '';
     foreach ($rows as $r) {
         $tr .= tt_period_tr(...$r);
@@ -1020,7 +1117,7 @@ function adm_periods(bool $post)
         .'if(t=="b"){x.className="r b";x.querySelector(".ty").value="b";x.querySelector(".nm").value="พักกลางวัน";dur=60;}x.querySelector(".s").value=hm(st);x.querySelector(".e").value=hm(st+dur);T.querySelector("tbody").appendChild(x);ttpFix();};'
         .'window.ttpMv=function(a,d){var r=a.closest("tr"),o=d<0?r.previousElementSibling:r.nextElementSibling;if(!o||!o.classList.contains("r"))return;if(d<0)r.parentNode.insertBefore(r,o);else r.parentNode.insertBefore(o,r);ttpFix();};'
         .'window.ttpDel=function(a){a.closest("tr").remove();ttpFix();};T.addEventListener("change",ttpFix);ttpFix();})();</script>';
-    return ['กำหนดคาบเรียน', $msg.admin_form('กำหนดคาบเรียนและช่วงพัก', a_url('periods'), [['คาบเรียน / ช่วงพัก', $html, true]], a_url('timetable'))];
+    return ['กำหนดคาบเรียน', $msg.admin_form('กำหนดคาบเรียนและช่วงพัก', a_url('periods'), [['คาบเรียน / ช่วงพัก', $html, true]], a_url('timetable')).$undo];
 }
 
 function tt_period_tr(string $t, string $name, string $s, string $e): string

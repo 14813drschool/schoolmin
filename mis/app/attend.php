@@ -606,6 +606,7 @@ function auto_enroll(bool $force = false): void
     md_set('auto_enroll', 'stamp', '', '', (string) time());
     $years = array_unique(array_filter([cur_term()[0], term()[0]], fn($v) => $v >= cur_term()[0]));
     act_merge_dups();
+    act_recode();
     // นักเรียนที่ศึกษาอยู่ แยกตามระดับชั้น
     $byClass = [];
     foreach (q('SELECT S.`id`, S.`class`, S.`room`, S.`number` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE U.`active`=1 AND S.`class`>0 AND S.`room`>0') as $s) {
@@ -744,6 +745,72 @@ function act_merge_dups(): void
         imp_merge_course((int) $r['dup'], (int) $r['keep']);
         q('UPDATE {course} SET `course_code`=? WHERE `id`=?', [(string) $r['code'], (int) $r['keep']]);
     }
+}
+
+/**
+ * ครั้งเดียว (ปีการศึกษาปัจจุบัน): กิจกรรมพัฒนาผู้เรียนรหัสเดิมที่ไม่อยู่ในรายการใหม่ (เช่น dr04, drx02)
+ * จับคู่ประเภท/ระดับชั้น/ภาคเรียนกับรายการกิจกรรม → รวมกับรายการที่ระบบสร้างใหม่ (เก็บผลประเมิน/สถานะอนุมัติเดิม)
+ * แล้วเปลี่ยนรหัส/ชื่อตามรายการใหม่ — ประเภทเดียวกันมีหลายรายการในช่องเดียว (ไม่แน่ใจ) จะไม่แตะ
+ */
+function act_recode(): void
+{
+    if (md_get('cfg', 'act_recode_ver') === '2611') {
+        return;
+    }
+    $types = [1 => 'แนะแนว', 2 => 'ลูกเสือ', 3 => 'ชุมนุม', 4 => 'สังคม'];
+    $cat = [];
+    foreach (act_catalog() as $d) {
+        foreach (act_classes($d) as $cl) {
+            foreach (($d['term'] ?? '') === '1-2' ? [1, 2] : [(int) ($d['term'] ?? 0)] as $t) {
+                $cat[(int) $cl][$t][(string) ($d['type'] ?? '')][] = $d;
+            }
+        }
+    }
+    if (!$cat) {
+        return;
+    }
+    $codes = [];
+    foreach (act_catalog() as $d) {
+        $codes[(string) ($d['code'] ?? '')] = true;
+    }
+    $y = cur_term()[0];
+    $all = q('SELECT `id`, `course_code`, `course_name`, `class`, `term` FROM {course} WHERE `type`=9 AND `year`=?', [$y]);
+    $old = [];
+    foreach ($all as $c) {
+        if (!isset($codes[(string) $c['course_code']])) {
+            $ty = $types[act_rank((string) $c['course_name'])] ?? '';
+            $old[(int) $c['class']][(int) $c['term']][$ty][] = $c;
+        }
+    }
+    $weight = function (int $id): int {
+        $w = q1('SELECT COUNT(*) n FROM {mis_data} WHERE `kind` IN (\'approved\',\'ask\') AND `r1`=?', [(string) $id]);
+        $g = q1('SELECT COUNT(*) n FROM {attendance} WHERE `course_id`=?', [$id]);
+        return 1000 * (int) ($w['n'] ?? 0) + (int) ($g['n'] ?? 0);
+    };
+    foreach ($old as $cl => $byT) {
+        foreach ($byT as $t => $byType) {
+            foreach ($byType as $ty => $list) {
+                $target = $cat[$cl][$t][$ty] ?? [];
+                if ($ty === '' || count($list) !== 1 || count($target) !== 1) {
+                    continue; // ไม่แน่ใจ ไม่แตะ
+                }
+                $o = $list[0];
+                $d = $target[0];
+                $code = mb_substr((string) $d['code'], 0, 20);
+                $dup = q1('SELECT `id` FROM {course} WHERE `type`=9 AND `year`=? AND `term`=? AND `class`=? AND `course_code`=? AND `id`<>?', [$y, $t, $cl, $code, (int) $o['id']]);
+                $keep = (int) $o['id'];
+                if ($dup) {
+                    $dupId = (int) $dup['id'];
+                    if ($weight($dupId) > $weight($keep)) {
+                        [$keep, $dupId] = [$dupId, $keep];
+                    }
+                    imp_merge_course($dupId, $keep);
+                }
+                q('UPDATE {course} SET `course_code`=?, `course_name`=? WHERE `id`=?', [$code, mb_substr((string) $d['name'], 0, 150), $keep]);
+            }
+        }
+    }
+    md_set('cfg', 'act_recode_ver', '', '', '2611');
 }
 
 function adm_act_enroll(bool $post)

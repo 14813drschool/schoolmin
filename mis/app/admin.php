@@ -1047,10 +1047,7 @@ function adm_enroll(bool $post)
     return ['ลงทะเบียนนักเรียนเข้ารายวิชา', $f.'<form method="post" action="'.h(a_url('enroll', '&course='.$cid)).'">'.list_table('นักเรียนที่ลงทะเบียน', ['#', 'รหัสนร.', 'ชื่อ-นามสกุล', 'ห้อง', 'เลขที่', ['เลือกลบ', ' style="text-align:center"']], $rows, '', $add).'</form>'];
 }
 
-function adm_timetable(bool $post)
-{
-    redirect('?module=academic&option=teacher_timetable');
-}
+// adm_timetable อยู่ที่ mis/app/timetable.php
 
 function adm_calendar(bool $post)
 {

@@ -159,38 +159,30 @@ function st_courses(int $sid, int $y, int $t): array
 
 function st_schedule(array $S, bool $post): string
 {
-    $grid = [];
-    $cids = [];
-    foreach (md_rows('tt', null, yt()) as $r) {
-        [$c, $room] = array_pad(explode('|', (string) $r['value']), 2, 0);
-        if ((int) $room === (int) $S['room'] && (int) $S['room'] > 0) {
-            $grid[(string) $r['r3']] = [(int) $c, (int) $r['r1']];
-            $cids[] = (int) $c;
-        }
-    }
-    if (!$grid) {
+    $room = (int) $S['room'];
+    $slots = $room > 0 ? (tt_all()[$room] ?? []) : [];
+    if (!$slots) {
         return '<div class="empty">"ระบบยังไม่มีข้อมูล กรุณาตรวจสอบข้อมูลรายวิชาที่ลงทะเบียน"</div>';
     }
-    $cs = courses_by_id($cids);
-    $tn = [];
-    foreach (q('SELECT `id`, `name` FROM {user} WHERE `id` IN ('.implode(',', array_unique(array_map(fn($g) => $g[1], $grid))).')') as $u) {
-        $tn[(int) $u['id']] = $u['name'];
-    }
+    $cs = tt_courses();
+    $vs = tt_venues();
+    $pers = tt_periods();
     $head = '<tr><th>วัน / คาบ</th>';
-    for ($p = 1; $p <= 8; $p++) {
-        $head .= '<th>'.$p.'</th>';
+    foreach ($pers as $p => [$s1, $e1]) {
+        $head .= '<th>'.$p.($s1 !== '' ? '<div style="font-weight:normal;font-size:11px">'.h(str_replace(':', '.', $s1)).'-'.h(str_replace(':', '.', $e1)).'</div>' : '').'</th>';
     }
     $rows = '';
-    foreach (TT_DAYS as $d => [$name, $color]) {
-        $rows .= '<tr><td class="day" style="background:'.$color.'">'.h($name).'</td>';
-        for ($p = 1; $p <= 8; $p++) {
-            [$c, $t] = $grid[$d.'-'.$p] ?? [0, 0];
-            $x = $cs[$c] ?? null;
-            $rows .= '<td>'.($x ? '<div class="code">'.h($x['course_code']).'</div><div>'.h($x['course_name']).'</div><div class="mut" style="font-size:12px">'.h($tn[$t] ?? '').'</div>' : '').'</td>';
+    foreach (tt_days() as $d => $name) {
+        $rows .= '<tr><td class="day" style="background:'.(TT_DAY_COLOR[$d] ?? '#ccc').'">'.h($name).'</td>';
+        foreach ($pers as $p => $x) {
+            $e = $slots[$d.'-'.$p] ?? null;
+            $c = $e ? ($cs[$e['c']] ?? null) : null;
+            $rows .= '<td>'.($c ? '<div class="code">'.h($c['course_code']).'</div><div>'.h($c['course_name']).'</div><div class="mut" style="font-size:12px">'.h($c['teacher'] ?? '').'</div>'
+                .(($vs[$e['v']] ?? '') !== '' ? '<div class="mut" style="font-size:11px">'.h($vs[$e['v']]).'</div>' : '') : '').'</td>';
         }
         $rows .= '</tr>';
     }
-    return '<div class="tbw"><table class="tb tt"><tr class="cap"><th colspan="9">ตารางเรียน ชั้น '.h(class_room_short($S['class'], $S['room'])).' ภาคเรียนที่ '.st_ytl()[1].' ปีการศึกษา '.st_ytl()[0].'</th></tr>'.$head.'</tr>'.$rows.'</table></div>';
+    return '<div class="tbw"><table class="tb tt"><tr class="cap"><th colspan="'.(count($pers) + 1).'">ตารางเรียน ชั้น '.h(class_room_short($S['class'], $S['room'])).' ภาคเรียนที่ '.st_ytl()[1].' ปีการศึกษา '.st_ytl()[0].'</th></tr>'.$head.'</tr>'.$rows.'</table></div>';
 }
 
 /** คะแนนรายส่วนของนักเรียนในรายวิชา: [[รายการ, เต็ม, ได้], ...] */

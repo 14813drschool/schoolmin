@@ -468,24 +468,7 @@ function adm_periods(bool $post)
         seed_rows(['no', 'start', 'end', 'note'], [[1, '08:30', '09:20', ''], [2, '09:20', '10:10', ''], [3, '10:10', '11:00', ''], [4, '11:00', '11:50', ''], [5, '12:50', '13:40', ''], [6, '13:40', '14:30', ''], [7, '14:30', '15:20', ''], [8, '15:20', '16:10', '']]));
 }
 
-function adm_tt_print(bool $post)
-{
-    $rows = '';
-    foreach (personnel_rows() as $i => $p) {
-        $rows .= zrow([$i + 1, name_nbsp($p['name']), h(cat('department', $p['department'])), ['<a href="?module=task&option=teacher_timetable&TeacherId='.(int) $p['id'].'">ดู/พิมพ์ตารางสอน</a>', ' align="center"']], $i);
-    }
-    return list_table('พิมพ์ตารางสอนรายบุคคล ภาคเรียน '.yt(), ['#', 'ชื่อ-นามสกุล', 'กลุ่มสาระ', ''], $rows);
-}
-
-function adm_room_tt(bool $post)
-{
-    $rows = '';
-    $i = 0;
-    foreach (room_options() as $rid => $n) {
-        $rows .= zrow([++$i, h($n), ['<a target="_blank" href="?module=academic&option=student_timetable&func=RoomTable&RoomNum='.(int) $rid.'">พิมพ์ตารางการใช้ห้องเรียน</a>', ' align="center"']], $i);
-    }
-    return list_table('พิมพ์ตารางการใช้ห้องเรียน ภาคเรียน '.yt(), ['#', 'ห้องเรียน', ''], $rows);
-}
+// adm_tt_print / adm_room_tt อยู่ที่ mis/app/timetable.php
 
 /* ---------------------------------------------------------------- เกณฑ์ประเมินผล */
 

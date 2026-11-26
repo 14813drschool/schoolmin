@@ -28,6 +28,7 @@ require MIS_APP.'gradeedit.php';
 require MIS_APP.'attend.php';
 require MIS_APP.'saraban.php';
 require MIS_APP.'payment.php';
+require MIS_APP.'timetable.php';
 require MIS_APP.'pages.php';
 
 mis_csrf_guard();

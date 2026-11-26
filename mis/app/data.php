@@ -383,7 +383,7 @@ function rows_academic_teacher_timetable()
     foreach (personnel_rows() as $p) {
         [$pre, $first, $last] = split_name($p['name']);
         $o .= "\n <tr onclick=\"SelecteachRow(event,\$(this))\">\n <td>".++$i."</td>\n <td>".h($p['username'])."</td>\n <td><span style='float:left;min-width: 80px'>".h($pre.$first)."</span><span style='float:left;padding-left:10px'>".h($last)."</span></td>\n <td>".h(cat('position', $p['position'], ''))."</td>\n <td width=\"50\" style=\"text-align:center;padding:5px 5px; vertical-align:middle\">\n "
-            .icon_link('?module=task&option=teacher_timetable&TeacherId='.(int) $p['id'], 'พิมพ์ตารางสอน', 'print')."\n</td> </tr>";
+            .icon_link('?module=task&option=teacher_timetable&func=Print&kind=teacher&ids='.(int) $p['id'], 'พิมพ์ตารางสอน', 'print')."\n</td> </tr>";
     }
     return $o;
 }

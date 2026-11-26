@@ -185,22 +185,11 @@ function print_page(string $title, string $body): void
 
 /* ================================================================ ตารางสอน */
 
-const TT_DAYS = [1 => ['จันทร์', '#FFD939'], 2 => ['อังคาร', '#FFAC9D'], 3 => ['พุธ', '#00E1AE'], 4 => ['พฤหัสบดี', '#FF9C42'], 5 => ['ศุกร์', '#AEB7FF']];
 
-/** ตารางสอนของครู [day-period => [course, room]] */
-function timetable_of(int $teacher): array
+/** ช่องตารางสอนแบบหน้าระบบเดิม */
+function tt_cell(?array $course, string $roomText, string $teacher = '', string $edit = ''): string
 {
-    $out = [];
-    foreach (md_rows('tt', $teacher, yt()) as $r) {
-        [$c, $room] = array_pad(explode('|', (string) $r['value']), 2, 0);
-        $out[$r['r3']] = [(int) $c, (int) $room];
-    }
-    return $out;
-}
-
-function tt_cell(?array $course, $room, string $teacher = '', string $edit = ''): string
-{
-    $rows = $course ? [h($course['course_code']), h($course['course_name']), h(class_room_short($course['class'], $room)), h($teacher)] : ['&nbsp;', '&nbsp;', '&nbsp;', '&nbsp;'];
+    $rows = $course ? [h($course['course_code']), h($course['course_name']), h($roomText), h($teacher)] : ['&nbsp;', '&nbsp;', '&nbsp;', '&nbsp;'];
     return '<td align="center" valign="middle" class="'.($course ? 'schedule-subject' : 'schedule-empty').'" style="padding:5px'.($course ? ';background:#F2FFFB' : '').'">'
         .'<div id="display-table"><div id="display-row" class=\'bold\' style="color:#00cea4;text-align:center;padding:1px 10px">'.$rows[0].'</div>'
         .'<div id="display-row" style="font-size:11px;color:#DE6CFF; text-align:center; padding:1px 10px">'.$rows[1].'</div>'
@@ -209,24 +198,30 @@ function tt_cell(?array $course, $room, string $teacher = '', string $edit = '')
         .'<div id="display-row" style="text-align:right;padding:0px 5px 0px 0px">'.($edit ?: '&nbsp;').'</div></div></td>';
 }
 
-/** แทนแถววันในตารางสอนของแม่แบบ ด้วยข้อมูลจริง */
+/** แทนหัวตารางและแถววันในตารางสอนของแม่แบบ ด้วยวัน/คาบที่ตั้งค่าไว้ */
 function timetable_grid(string $tpl, callable $cell): string
 {
-    $i = strpos($tpl, '<td height="95"');
-    $end = strrpos($tpl, '</table>', $i ?: 0);
-    if ($i === false || $end === false) {
+    $h = strpos($tpl, '<th width="100"');
+    $end = $h === false ? false : strpos($tpl, '</table>', $h);
+    if ($h === false || $end === false) {
         return $tpl;
     }
-    $start = strrpos(substr($tpl, 0, $i), '<tr>');
-    $rows = '';
-    foreach (TT_DAYS as $d => [$name, $color]) {
-        $rows .= "\n <tr>\n <td height=\"95\" align=\"center\" valign=\"middle\" bgcolor=\"$color\" class=\"schedule-weekday\" style=\"border-top:#aaa solid 1px\"><h1 style=\"font-size:25px;color:#fff\">$name</h1></td>";
-        for ($p = 1; $p <= 8; $p++) {
-            $rows .= $cell($d, $p);
-        }
-        $rows .= "\n </tr>";
+    $start = strrpos(substr($tpl, 0, $h), '<tr>');
+    $out = "<tr>\n <th width=\"100\" align=\"center\" valign=\"middle\" class=\"head\" style=\"border-radius:0px\"><h1 style=\"font-size:25px\">วัน/เวลา</h1></th>";
+    foreach (tt_periods() as $p => [$s, $e]) {
+        $out .= "\n <td align=\"center\" valign=\"middle\" class=\"schedule-period\" style=\"height:30px;border-left:1px solid #bbb;border-top-right-radius:0px\"><h1 style=\"font-size:18px\">คาบที่ $p<br/>"
+            .h($s !== '' ? str_replace(':', '.', $s).'-'.str_replace(':', '.', $e) : '---').'</h1></td>';
     }
-    return substr($tpl, 0, $start).$rows."\n ".substr($tpl, $end);
+    $out .= "\n </tr>";
+    foreach (tt_days() as $d => $name) {
+        $color = TT_DAY_COLOR[$d] ?? '#ccc';
+        $out .= "\n <tr>\n <td height=\"95\" align=\"center\" valign=\"middle\" bgcolor=\"$color\" class=\"schedule-weekday\" style=\"border-top:#aaa solid 1px\"><h1 style=\"font-size:25px;color:#fff\">".h($name).'</h1></td>';
+        foreach (tt_periods() as $p => $x) {
+            $out .= $cell($d, $p);
+        }
+        $out .= "\n </tr>";
+    }
+    return substr($tpl, 0, $start).$out."\n ".substr($tpl, $end);
 }
 
 function courses_by_id(array $ids): array
@@ -242,90 +237,50 @@ function courses_by_id(array $ids): array
     return $out;
 }
 
+/** ตารางสอนของครู (ดู/พิมพ์อย่างเดียว — จัดตารางได้เฉพาะผู้ดูแลและฝ่ายวิชาการ) */
 function rows_task_teacher_timetable()
 {
     $me = (int) me()['id'];
-    $tid = isset($_GET['TeacherId']) && is_manager() ? (int) $_GET['TeacherId'] : $me;
+    $tid = isset($_GET['TeacherId']) && (is_manager() || tt_can_edit()) ? (int) $_GET['TeacherId'] : $me;
     $teacher = q1('SELECT `name` FROM {user} WHERE `id`=?', [$tid]);
-    $tt = timetable_of($tid);
-    $courses = courses_by_id(array_column($tt, 0));
-    $edit = isset($_GET['edit']) && ($tid === $me || is_manager());
+    $grid = tt_teacher_grid($tid);
+    $cs = tt_courses();
+    $vs = tt_venues();
     $tpl = (string) file_get_contents(MIS_APP.'pages/task_teacher_timetable.html');
-    $opts = ['' => '- ว่าง -'];
-    if ($edit) {
-        $mine = q('SELECT * FROM {course} WHERE `teacher_id`=? AND `year`=? AND `term`=? ORDER BY `course_code`', [$tid, ...term()]);
-        $rooms = course_rooms($mine);
-        foreach ($mine as $c) {
-            foreach (($rooms[(int) $c['id']] ?? [0 => 0]) as $room => $n) {
-                $opts[$c['id'].'|'.$room] = $c['course_code'].' '.class_room_short($c['class'], $room);
-            }
-        }
-    }
-    $tpl = timetable_grid($tpl, function ($d, $p) use ($tt, $courses, $edit, $opts) {
-        [$cid, $room] = $tt[$d.'-'.$p] ?? [0, 0];
-        $c = $courses[$cid] ?? null;
-        $e = $edit ? sel("tt[$d-$p]", $opts, $cid ? $cid.'|'.$room : '', 'style="width:96px;height:22px;font-size:11px"') : '';
-        return tt_cell($c, $room, '', $e);
+    $tpl = timetable_grid($tpl, function ($d, $p) use ($grid, $cs, $vs) {
+        $es = $grid[$d.'-'.$p] ?? [];
+        $c = $es ? ($cs[$es[0][1]] ?? null) : null;
+        return tt_cell($c, $c ? implode(', ', array_map(fn($x) => class_room_short($c['class'], $x[0]), $es)) : '', $c ? (string) ($vs[$es[0][2]] ?? '') : '');
     });
     $tpl = str_replace('ตารางสอน {{TNAME}}', 'ตารางสอน '.name_nbsp($teacher['name'] ?? ''), $tpl);
-    $bar = $edit
-        ? '<div style="width:983px;margin:0 auto;text-align:right;padding:8px 0">'.btn('ยกเลิก', '?module=task&option=teacher_timetable'.($tid !== $me ? '&TeacherId='.$tid : ''), 'back')
-            .'<a href="javascript:void(0);" onclick="document.forms.list.submit();" id="pinkgreenbtns" style="margin-left:4px"><img src="../icon_tools/vec_add_white.png" border="0" height="16"/> บันทึกตารางสอน</a></div>'
-        : '<div style="width:983px;margin:0 auto;text-align:right;padding:8px 0">'.(($tid === $me || is_manager()) ? btn('จัดตารางสอน', '?module=task&option=teacher_timetable&edit=1'.($tid !== $me ? '&TeacherId='.$tid : ''), 'edit') : '')
-            .'<a href="javascript:window.print();" id="pinkgreenbtns" style="margin-left:4px"><img src="../icon_tools/vec_print_white.png" border="0" height="16"/> พิมพ์ตารางสอน</a></div>';
-    $tpl = preg_replace('/<form id="list" name="list" method="post">/', saved_msg().'<form id="list" name="list" method="post" action="?module=task&option=teacher_timetable&func=SaveTimetable&TeacherId='.$tid.'">', $tpl, 1);
+    $pr = '?module=task&option=teacher_timetable&func=Print&kind=';
+    // ไอคอน "พิมพ์" มุมขวาบน: หน้าพิมพ์ A4 แนวนอนแบบใหม่
+    $tpl = str_replace("ReportLandscape('print_landscape.php?module=task&option=teacher_timetable&func=PrintTimetable');", "window.open('".$pr."teacher&ids=".$tid."','_blank');", $tpl);
+    $roomOpts = '<option value="">- เลือกห้อง -</option>';
+    $myRoom = (int) (q1('SELECT `room` FROM {personnel} WHERE `id`=?', [$me])['room'] ?? 0);
+    foreach (room_options() as $rid => $n) {
+        $roomOpts .= '<option value="'.(int) $rid.'"'.($rid === $myRoom ? ' selected' : '').'>'.h($n).'</option>';
+    }
+    $bar = '<div style="width:983px;margin:0 auto;text-align:right;padding:8px 0">'
+        .'<span style="float:left;font-size:13px">พิมพ์ตารางเรียนของห้อง <select id="ttroom" style="height:26px">'.$roomOpts.'</select> '
+        .'<a href="javascript:void(0)" onclick="var r=document.getElementById(\'ttroom\').value;if(r)window.open(\''.$pr.'room&ids=\'+r,\'_blank\');else alert(\'กรุณาเลือกห้อง\');" class="tt-btn" style="display:inline-block;padding:4px 10px;border-radius:4px;background:#EAF2F8;color:#1F618D">พิมพ์ตารางเรียน</a></span>'
+        .(tt_can_edit() ? btn('จัดตารางสอน', 'index.php?module=admin&option=timetable&view=teacher&id='.$tid, 'edit') : '')
+        .'<a href="'.h($pr.'teacher&ids='.$tid).'" target="_blank" id="pinkgreenbtns" style="margin-left:4px"><img src="../icon_tools/vec_print_white.png" border="0" height="16"/> พิมพ์ตารางสอน</a></div>';
+    $tpl = preg_replace('/<form id="list" name="list" method="post">/', '<form id="list" name="list" method="get" onsubmit="return false">', $tpl, 1);
     $tpl = preg_replace('/<\/form>/', $bar.'</form>', $tpl, 1);
     return ['__CONTENT__' => $tpl];
 }
 
+/** เดิมครูบันทึกตารางเองได้ — ปัจจุบันจัดได้เฉพาะผู้ดูแลระบบ/ฝ่ายวิชาการที่หน้า "จัดตารางเรียน" */
 function act_task_teacher_timetable_SaveTimetable(): void
 {
-    $me = (int) me()['id'];
-    $tid = (int) ($_GET['TeacherId'] ?? $me);
-    if ($tid !== $me && !is_manager()) {
-        redirect('?module=task&option=teacher_timetable');
-    }
-    $mine = [];
-    foreach (q('SELECT `id` FROM {course} WHERE `teacher_id`=?', [$tid]) as $c) {
-        $mine[(int) $c['id']] = true;
-    }
-    foreach (TT_DAYS as $d => $x) {
-        for ($p = 1; $p <= 8; $p++) {
-            $v = (string) ($_POST['tt'][$d.'-'.$p] ?? '');
-            $ok = preg_match('/^(\d+)\|(\d+)$/', $v, $m) && isset($mine[(int) $m[1]]);
-            md_set('tt', $tid, yt(), $d.'-'.$p, $ok ? $v : null);
-        }
-    }
-    redirect('?module=task&option=teacher_timetable'.($tid !== $me ? '&TeacherId='.$tid : '').'&msg=saved');
+    redirect(tt_can_edit() ? 'index.php?module=admin&option=timetable&view=teacher&id='.(int) ($_GET['TeacherId'] ?? me()['id']) : '?module=task&option=teacher_timetable');
 }
 
-/** ตารางเรียนของห้อง (รวมตารางสอนของครูทุกคน) */
+/** ตารางเรียนของห้อง */
 function act_academic_student_timetable_RoomTable(): void
 {
-    $room = (int) ($_GET['RoomNum'] ?? 0);
-    $cells = [];
-    foreach (md_rows('tt', null, yt()) as $r) {
-        [$c, $rm] = array_pad(explode('|', (string) $r['value']), 2, 0);
-        if ((int) $rm === $room) {
-            $cells[$r['r3']] = (int) $c;
-        }
-    }
-    $courses = courses_by_id($cells);
-    [$y, $t] = term();
-    $html = '<h2>ตารางเรียน ห้อง '.h(room_short($room)).' ภาคเรียนที่ '.$t.' ปีการศึกษา '.$y.'</h2><table><tr><th>วัน/คาบ</th>';
-    for ($p = 1; $p <= 8; $p++) {
-        $html .= "<th>คาบที่ $p</th>";
-    }
-    $html .= '</tr>';
-    foreach (TT_DAYS as $d => [$name]) {
-        $html .= "<tr><th>$name</th>";
-        for ($p = 1; $p <= 8; $p++) {
-            $c = $courses[$cells[$d.'-'.$p] ?? 0] ?? null;
-            $html .= '<td class="c" style="height:60px">'.($c ? h($c['course_code']).'<br><small>'.h($c['course_name']).'</small><br><small>'.h($c['teacher']).'</small>' : '').'</td>';
-        }
-        $html .= '</tr>';
-    }
-    print_page('ตารางเรียน', $html.'</table>');
+    tt_print_out('room', [(int) ($_GET['RoomNum'] ?? 0)]);
 }
 
 /* ================================================================ การมาโรงเรียน (ครูที่ปรึกษา) */

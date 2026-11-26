@@ -539,6 +539,7 @@ function adm_dev_act(bool $post)
         'req' => f_sel('บังคับ/เลือก', ACT_REQS), 'class' => ['ระดับชั้น (เลือกได้หลายระดับ)', 'checks', 'act_class_options', true], 'term' => f_sel('ภาคเรียน', ACT_TERMS), 'hours' => f_num('ชั่วโมง', false),
         'teacher' => f_sel('ครูผู้รับผิดชอบ', 'personnel_options', false),
     ], ['code' => 'รหัสกิจกรรม', 'name' => 'ชื่อกิจกรรม', 'type' => 'ประเภท', 'plan' => 'หลักสูตร', 'req' => 'บังคับ/เลือก', 'class' => 'ระดับชั้น', 'term' => 'ภาคเรียน', 'hours' => 'ชั่วโมง'], $post, act_seed());
+    act_sync_courses(); // ครูผู้รับผิดชอบ/ชั่วโมงที่แก้ไข ไปยังกิจกรรมของภาคเรียนทันที
     $link = '<div style="width:983px;margin:0 auto 8px;text-align:right;font-size:13px"><a href="'.h(a_url('csv_import').'#dev_act').'"><i class="fa fa-file-excel-o"></i> นำเข้า / ดาวน์โหลดรายการกิจกรรมเป็นไฟล์ CSV</a></div>';
     if (is_string($r)) {
         $r = $link.$r;
@@ -615,6 +616,7 @@ function auto_enroll(bool $force = false): void
     $years = array_unique(array_filter([cur_term()[0], term()[0]], fn($v) => $v >= cur_term()[0]));
     act_merge_dups();
     act_recode();
+    act_sync_courses();
     // นักเรียนที่ศึกษาอยู่ แยกตามระดับชั้น
     $byClass = [];
     foreach (q('SELECT S.`id`, S.`class`, S.`room`, S.`number` FROM {student} S JOIN {user} U ON U.`id`=S.`id` WHERE U.`active`=1 AND S.`class`>0 AND S.`room`>0') as $s) {
@@ -869,6 +871,58 @@ function act_recode(bool $force = false): array
     array_unshift($hist, ['at' => date('Y-m-d H:i'), 'log' => array_slice($log, 0, 80)]);
     md_set('cfg', 'act_recode_log', '', '', json_encode(array_slice($hist, 0, 5), JSON_UNESCAPED_UNICODE));
     return $log;
+}
+
+/**
+ * ส่งค่าจากรายการกิจกรรม (ครูผู้รับผิดชอบ / ชั่วโมง / ชื่อ) ไปยังกิจกรรมของภาคเรียนปัจจุบัน/ที่เลือกดู ที่รหัส+ระดับชั้น+ภาคเรียนตรงกัน
+ * ค่าว่างในรายการกิจกรรมไม่ทับค่าเดิม — ชั่วโมงเปลี่ยน: คำนวณผลประเมินใหม่ (เฉพาะที่ยังไม่อนุมัติ)
+ */
+function act_sync_courses(): void
+{
+    $map = [];
+    foreach (act_catalog() as $d) {
+        $code = (string) ($d['code'] ?? '');
+        if ($code === '') {
+            continue;
+        }
+        foreach (act_classes($d) as $cl) {
+            foreach (($d['term'] ?? '') === '1-2' || ($d['term'] ?? '') === '' ? [1, 2] : [(int) $d['term']] as $t) {
+                $map[$code.'|'.$cl.'|'.$t] = $d;
+            }
+        }
+    }
+    if (!$map) {
+        return;
+    }
+    foreach (array_unique([cur_term()[0], term()[0]]) as $y) {
+        foreach (q('SELECT `id`, `course_code`, `course_name`, `teacher_id`, `period`, `class`, `term` FROM {course} WHERE `type`=9 AND `year`=?', [$y]) as $c) {
+            $d = $map[$c['course_code'].'|'.(int) $c['class'].'|'.(int) $c['term']] ?? null;
+            if (!$d) {
+                continue;
+            }
+            $tid = (int) ($d['teacher'] ?? 0) ?: (int) $c['teacher_id'];
+            $hrs = (int) ($d['hours'] ?? 0) ?: (int) $c['period'];
+            $name = trim((string) ($d['name'] ?? '')) !== '' ? mb_substr(trim((string) $d['name']), 0, 150) : (string) $c['course_name'];
+            if ($tid === (int) $c['teacher_id'] && $hrs === (int) $c['period'] && $name === (string) $c['course_name']) {
+                continue;
+            }
+            q('UPDATE {course} SET `teacher_id`=?, `period`=?, `course_name`=? WHERE `id`=?', [$tid, $hrs, $name, (int) $c['id']]);
+            if ($hrs !== (int) $c['period'] && md_get('approved', (int) $c['id']) === null) {
+                $gids = array_map('intval', array_column(q('SELECT `id` FROM {grade} WHERE `course_id`=?', [(int) $c['id']]), 'id'));
+                $hr = act_hours($gids);
+                $fails = [];
+                foreach ($gids ? md_rows('act_fail', $gids) : [] as $r) {
+                    $fails[(int) $r['r1']] = true;
+                }
+                foreach ($gids as $gid) {
+                    if (isset($hr[$gid])) {
+                        $res = act_result($hr[$gid], $hrs, isset($fails[$gid]));
+                        q('UPDATE {grade} SET `grade`=? WHERE `id`=?', [$res !== '' ? $res : null, $gid]);
+                    }
+                }
+            }
+        }
+    }
 }
 
 function adm_act_enroll(bool $post)

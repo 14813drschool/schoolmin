@@ -858,6 +858,9 @@ function adm_csv_import(bool $post)
             $result = msg_box('ไม่พบข้อมูลในไฟล์ — กรุณาเลือกไฟล์ .csv', false);
         } else {
             auto_enroll_dirty();
+            if ($key === 'dev_act') {
+                act_sync_courses();
+            }
             if (in_array($key, ['scores', 'enroll', 'stroom'], true)) {
                 sync_hist_grade_rooms(); // ปีที่ผ่านมา: ใช้ห้องตามประวัติห้องเรียน
             }

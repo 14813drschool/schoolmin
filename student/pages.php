@@ -246,13 +246,16 @@ function st_subject(array $S, bool $post): string
     }
     $rows = '';
     $mo = '';
+    $acts = array_values(array_filter($cs, fn($c) => (int) $c['type'] === 9));   // กิจกรรมพัฒนาผู้เรียน: แยกตารางด้านล่าง
+    $cs = array_values(array_filter($cs, fn($c) => (int) $c['type'] !== 9));
+    $tname = fn($n) => $n !== '' ? 'อ.'.preg_replace('/^(นาย|นางสาว|นาง|ว่าที่ร้อยตรี|ดร\.)\s*/u', '', $n) : '-';
     foreach ($cs as $c) {
         $parts = st_score_parts($c);
         $full = array_sum(array_column($parts, 1));
         $got = array_filter(array_column($parts, 2), fn($v) => $v !== null);
         $approved = md_get('approved', (int) $c['id']) !== null;
         $id = 'mc'.(int) $c['id'];
-        $rows .= '<tr><td>'.h($c['course_code']).'</td><td>'.h($c['course_name']).'</td><td>'.st_dash($c['teacher'] ? 'อ.'.preg_replace('/^(นาย|นางสาว|นาง|ว่าที่ร้อยตรี|ดร\.)\s*/u', '', (string) $c['teacher']) : 'อ.').'</td>'
+        $rows .= '<tr><td>'.h($c['course_code']).'</td><td>'.h($c['course_name']).'</td><td>'.h($tname((string) ($c['teacher'] ?? ''))).'</td>'
             .'<td class="c">'.st_n($full ?: null).'</td><td class="c">'.($got ? st_n(array_sum($got)) : '-').'</td><td class="c"><b>'.($approved && $c['grade'] !== '' ? h($c['grade']) : '-').'</b></td>'
             .'<td class="c"><button type="button" class="btn ok sm" data-mo="'.$id.'" title="รายละเอียดคะแนน"><i class="fa fa-file-text"></i></button></td></tr>';
         $pr = '';
@@ -262,9 +265,30 @@ function st_subject(array $S, bool $post): string
         $mo .= st_modal($id, '<b>รายละเอียดคะแนน '.h($c['course_code']).' วิชา '.h($c['course_name']).'</b>', '<table class="tb"><tr><th>รายการ</th><th>คะแนนเต็ม</th><th>คะแนนที่ได้</th></tr>'.$pr
             .'<tr><td><b>รวมคะแนน</b></td><td class="c"><b>'.st_n($full ?: null).'</b></td><td class="c"><b>'.($got ? st_n(array_sum($got)) : '-').'</b></td></tr></table>', '<button type="button" class="btn warn" data-x="1">Close</button>', 'lg');
     }
-    return '<div class="tbw"><table class="tb st sm"><tr class="cap"><th colspan="7">ภาคเรียนที่ '.$t.' ปีการศึกษา '.$y.'<br>รหัส '.h($S['student_id']).' '.h($S['name']).'</th></tr>'
+    // กิจกรรมพัฒนาผู้เรียน: ประเมินจากเวลาเข้าร่วม (ไม่ใช่คะแนน 100) — เกณฑ์ผ่าน: เข้าร่วมร้อยละ 80 ของเวลาที่กำหนด และผ่านการปฏิบัติกิจกรรม
+    $arows = '';
+    if ($acts) {
+        $hrs = act_hours(array_map(fn($c) => (int) $c['gid'], $acts));
+        $adv = function_exists('advisors') ? (advisors()[(int) ($S['room'] ?? 0)] ?? []) : [];
+        foreach (act_sort($acts) as $c) {
+            $full = (int) $c['period'];
+            $need = $full ? (float) ceil($full * 0.8 * 10) / 10 : null;
+            $hr = $hrs[(int) $c['gid']] ?? null;
+            $approved = md_get('approved', (int) $c['id']) !== null;
+            $res = $approved ? (string) ($c['grade'] ?? '') : '';
+            $who = (string) ($c['teacher'] ?? '') !== '' ? $tname((string) $c['teacher']) : ($adv ? implode(', ', array_map($tname, $adv)).' (ครูที่ปรึกษา)' : '-');
+            $arows .= '<tr><td>'.h($c['course_code']).'</td><td>'.h($c['course_name']).'</td><td>'.h($who).'</td>'
+                .'<td class="c">'.($full ?: '-').'</td><td class="c">'.($need !== null ? st_n($need) : '-').'</td><td class="c">'.($hr !== null && $hr !== '' ? st_n((float) $hr) : '-').'</td>'
+                .'<td class="c"><b style="color:'.($res === 'มผ' ? '#CC0000' : '#008800').'">'.($res !== '' ? h($res) : '-').'</b></td></tr>';
+        }
+    }
+    $main = $rows !== '' ? '<div class="tbw"><table class="tb st sm"><tr class="cap"><th colspan="7">ภาคเรียนที่ '.$t.' ปีการศึกษา '.$y.'<br>รหัส '.h($S['student_id']).' '.h($S['name']).'</th></tr>'
         .'<tr><th>รหัสวิชา</th><th>ชื่อวิชา</th><th>ผู้สอน</th><th>คะแนนเต็ม</th><th>คะแนนที่ได้</th><th>เกรด</th><th>รายละเอียด</th></tr>'.$rows.'</table></div>'
-        .'<p class="mut" style="font-size:13px;margin:10px 0 0">ผลการเรียน (เกรด) จะแสดงเมื่อรายวิชาได้รับการอนุมัติผลการเรียนแล้ว</p>'.$mo;
+        .'<p class="mut" style="font-size:13px;margin:10px 0 0">ผลการเรียน (เกรด) จะแสดงเมื่อรายวิชาได้รับการอนุมัติผลการเรียนแล้ว</p>' : '';
+    $act = $arows !== '' ? '<div class="tbw" style="margin-top:22px"><table class="tb st sm"><tr class="cap"><th colspan="7">กิจกรรมพัฒนาผู้เรียน ภาคเรียนที่ '.$t.' ปีการศึกษา '.$y.'</th></tr>'
+        .'<tr><th>รหัส</th><th>กิจกรรม</th><th>ผู้รับผิดชอบ</th><th>เวลาที่กำหนด<br>(ชั่วโมง)</th><th>เกณฑ์ผ่าน<br>(ชั่วโมง)</th><th>เข้าร่วม<br>(ชั่วโมง)</th><th>ผลการประเมิน</th></tr>'.$arows.'</table></div>'
+        .'<p class="mut" style="font-size:13px;margin:10px 0 0">กิจกรรมพัฒนาผู้เรียนไม่มีคะแนน ประเมินจากเวลาเข้าร่วม: เข้าร่วมร้อยละ 80 ของเวลาที่กำหนดขึ้นไป และผ่านการปฏิบัติกิจกรรม = <b style="color:#008800">ผ</b> (ผ่าน) ไม่ถึงเกณฑ์ = <b style="color:#CC0000">มผ</b> (ไม่ผ่าน) — ผลการประเมินแสดงเมื่อได้รับการอนุมัติแล้ว</p>' : '';
+    return $main.$act.$mo;
 }
 
 function st_gpa(array $S, bool $post): string

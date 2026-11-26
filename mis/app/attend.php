@@ -534,11 +534,19 @@ function act_migrate(): void
 function adm_dev_act(bool $post)
 {
     act_migrate();
-    return cat_md('dev_act', 'dev_act', 'กิจกรรมพัฒนาผู้เรียน', [
+    $r = cat_md('dev_act', 'dev_act', 'กิจกรรมพัฒนาผู้เรียน', [
         'code' => f_text('รหัสกิจกรรม', true), 'name' => f_text('ชื่อกิจกรรม', true), 'type' => f_sel('ประเภท', ACT_TYPES), 'plan' => f_sel('หลักสูตร', ACT_PLANS),
         'req' => f_sel('บังคับ/เลือก', ACT_REQS), 'class' => ['ระดับชั้น (เลือกได้หลายระดับ)', 'checks', 'act_class_options', true], 'term' => f_sel('ภาคเรียน', ACT_TERMS), 'hours' => f_num('ชั่วโมง', false),
         'teacher' => f_sel('ครูผู้รับผิดชอบ', 'personnel_options', false),
     ], ['code' => 'รหัสกิจกรรม', 'name' => 'ชื่อกิจกรรม', 'type' => 'ประเภท', 'plan' => 'หลักสูตร', 'req' => 'บังคับ/เลือก', 'class' => 'ระดับชั้น', 'term' => 'ภาคเรียน', 'hours' => 'ชั่วโมง'], $post, act_seed());
+    $link = '<div style="width:983px;margin:0 auto 8px;text-align:right;font-size:13px"><a href="'.h(a_url('csv_import').'#dev_act').'"><i class="fa fa-file-excel-o"></i> นำเข้า / ดาวน์โหลดรายการกิจกรรมเป็นไฟล์ CSV</a></div>';
+    if (is_string($r)) {
+        $r = $link.$r;
+    }
+    if (is_array($r) && isset($r[1]) && is_string($r[1])) {
+        $r[1] = '<div style="width:983px;margin:0 auto 8px;text-align:right;font-size:13px"><a href="'.h(a_url('csv_import').'#dev_act').'"><i class="fa fa-file-excel-o"></i> นำเข้า / ดาวน์โหลดรายการกิจกรรมเป็นไฟล์ CSV</a></div>'.$r[1];
+    }
+    return $r;
 }
 
 /** หน้าวิชาการ (ครู): รายการกิจกรรมพัฒนาผู้เรียน */

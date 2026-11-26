@@ -34,6 +34,9 @@ function import_sets(): array
         'scores' => ['ผลการเรียน (ได้ทุกปีการศึกษา)', 'academic', ['ปีการศึกษา' => '2568', 'ภาคเรียน' => '1', 'รหัสวิชา' => 'ค21101', 'รหัสนักเรียน' => '12345', 'คะแนนระหว่างภาค' => '60', 'คะแนนปลายภาค' => '25',
             'ผลการเรียน (เว้นว่างให้คำนวณ)' => '', 'ชื่อวิชา' => 'คณิตศาสตร์ 1', 'หน่วยกิต' => '1.5', 'ระดับชั้นของรายวิชา' => 'ม.1', 'ประเภท (พื้นฐาน/เพิ่มเติม/กิจกรรม)' => 'พื้นฐาน'],
             'ไฟล์เดียวใส่ผลการเรียนหลายปี/หลายภาคได้ ถ้ายังไม่มีรายวิชาในภาคนั้นและกรอกชื่อวิชาไว้ ระบบจะสร้างรายวิชาให้ / ผลการเรียนใส่ได้ทั้งตัวเลขและ ร มส มผ ผ'],
+        'dev_act' => ['กิจกรรมพัฒนาผู้เรียน (รายการกิจกรรม)', 'academic', ['รหัสกิจกรรม' => 'ก31901', 'ชื่อกิจกรรม' => 'แนะแนว 4', 'ประเภท (ลูกเสือ/แนะแนว/ชุมนุม/สังคม/นักเรียน)' => 'แนะแนว', 'หลักสูตร (รายภาค/รายปี)' => 'รายภาค',
+            'บังคับ/เลือกเสรี' => 'บังคับ', 'ระดับชั้น (หลายชั้นคั่นด้วย ,)' => 'ม.4', 'ภาคเรียน (1/2/1-2)' => '1', 'ชั่วโมง' => '20', 'ชื่อผู้ใช้ครูผู้รับผิดชอบ' => ''],
+            'รหัสกิจกรรม+ระดับชั้น+ภาคเรียนเดิม = ปรับปรุง ไม่สร้างซ้ำ / ติ๊ก "ลบรายการเดิมทั้งหมดก่อน" เพื่อแทนที่ทั้งรายการ (สำรองของเดิมไว้) / กิจกรรมที่ลงทะเบียนและบันทึกผลแล้วไม่ถูกลบ'],
         'clubs' => ['ชุมนุม', 'academic', ['ชื่อชุมนุม' => 'ชุมนุมดนตรีไทย', 'ชื่อผู้ใช้ครูที่ปรึกษา' => 'teacher01', 'สถานที่' => 'ห้องดนตรี', 'จำนวนรับ' => '30', 'ระดับชั้น (ว่าง=ทุกชั้น)' => ''], 'ภาคเรียน '.yt()],
         'behavior' => ['พฤติกรรมบกพร่อง (ตัดคะแนน)', 'affairs', ['รหัสนักเรียน' => '12345', 'วันที่' => '08/11/2569', 'พฤติกรรม/ความผิด' => 'มาสาย', 'คะแนนที่ตัด' => '5', 'รายละเอียด' => ''],
             'พฤติกรรมที่ยังไม่มีในเกณฑ์จะถูกเพิ่มในเกณฑ์ตัดคะแนนให้'],
@@ -471,6 +474,41 @@ function imp_row(string $set, array $c): string
             q('INSERT INTO {grade} (`student_id`,`course_id`,`number`,`room`,`type`,`midterm`,`final`,`grade`) VALUES (?,?,?,?,0,?,?,?)', [(int) $s['id'], (int) $course['id'], (int) $s['number'], (int) $s['room'], $mid, $fin, $g]);
             return 'add';
 
+        case 'dev_act':
+            [$code, $name, $type, $plan, $req, $cls, $term, $hours, $un] = $c;
+            $need($name, 'ชื่อกิจกรรม');
+            $types = [1 => 'แนะแนว', 2 => 'ลูกเสือ', 3 => 'ชุมนุม', 4 => 'สังคม'];
+            $ty = isset(ACT_TYPES[trim($type)]) ? trim($type) : ($types[act_rank($type !== '' ? $type : $name)] ?? (str_contains($type.$name, 'นักเรียน') ? 'นักเรียน' : ''));
+            if ($ty === '') {
+                throw new \RuntimeException('ประเภทไม่ถูกต้อง (ลูกเสือ/แนะแนว/ชุมนุม/สังคม/นักเรียน)');
+            }
+            $ids = [];
+            foreach (preg_split('/[,\/;|]+|\s{2,}/u', trim($cls)) as $x) {
+                if (trim($x) === '') {
+                    continue;
+                }
+                $cid = imp_class($x);
+                if (!$cid) {
+                    throw new \RuntimeException('ไม่พบระดับชั้น "'.trim($x).'"');
+                }
+                $ids[] = $cid;
+            }
+            $term = str_replace([' ', 'ทั้งปี'], ['', '1-2'], tt_ar(trim($term)));
+            $term = in_array($term, ['1', '2', '1-2'], true) ? $term : ($term === '' ? '1-2' : throw new \RuntimeException('ภาคเรียนต้องเป็น 1, 2 หรือ 1-2'));
+            $d = ['code' => mb_substr(trim($code), 0, 20), 'name' => mb_substr(trim($name), 0, 150), 'type' => $ty, 'plan' => trim($plan) === 'รายปี' ? 'รายปี' : 'รายภาค',
+                'req' => str_contains($req, 'เลือก') ? 'เลือกเสรี' : 'บังคับ', 'class' => implode(',', $ids), 'term' => $term, 'hours' => (string) max(0, (int) tt_ar($hours)), 'teacher' => (string) (imp_user($un) ?: '')];
+            $key = fn(array $x) => ((string) ($x['code'] ?? '') !== '' ? 'c:'.$x['code'] : 'n:'.trim((string) ($x['name'] ?? ''))).'|'.implode(',', act_classes($x)).'|'.($x['term'] ?? '');
+            foreach (md_rows('dev_act') as $r) {
+                $old = json_decode((string) $r['value'], true) ?: [];
+                if ($key($old) === $key($d)) {
+                    md_set('dev_act', (string) $r['r1'], '', '', json_encode($d + $old, JSON_UNESCAPED_UNICODE));
+                    return 'upd';
+                }
+            }
+            static $seq = 0;
+            md_set('dev_act', (string) ((int) round(microtime(true) * 1000) + ++$seq), '', '', json_encode($d, JSON_UNESCAPED_UNICODE));
+            return 'add';
+
         case 'clubs':
             [$name, $un, $place, $seats, $cls] = $c;
             $need($name, 'ชื่อชุมนุม');
@@ -686,6 +724,13 @@ function imp_export(string $set, int $year = 0): array
             }
             break;
 
+        case 'dev_act':
+            foreach (act_catalog() as $d) {
+                $o[] = [(string) ($d['code'] ?? ''), (string) ($d['name'] ?? ''), (string) ($d['type'] ?? ''), (string) ($d['plan'] ?? ''), (string) ($d['req'] ?? ''),
+                    implode(',', array_map('class_short', act_classes($d))), (string) ($d['term'] ?? ''), (string) ($d['hours'] ?? ''), $uname((int) ($d['teacher'] ?? 0))];
+            }
+            break;
+
         case 'clubs':
             foreach (md_rows('club', null, yt()) as $r) {
                 $d = json_decode((string) $r['value'], true) ?: [];
@@ -786,9 +831,18 @@ function adm_csv_import(bool $post)
         $rows = csv_rows('csv');
         $add = $upd = 0;
         $errs = [];
+        if ($key === 'dev_act' && $rows && !empty($_POST['replace'])) {
+            act_migrate(); // ให้การแทนที่รายการครั้งเดียวทำไปก่อน จะได้ไม่ทับรายการที่นำเข้า
+            $old = array_map(fn($r) => [$r['r1'], $r['r2'], $r['value']], md_rows('dev_act'));
+            md_set('cfg', 'dev_act_bak_csv', '', '', json_encode(['at' => date('Y-m-d H:i'), 'rows' => $old], JSON_UNESCAPED_UNICODE));
+            q('DELETE FROM {mis_data} WHERE `kind`=?', ['dev_act']);
+        }
+        // กิจกรรมพัฒนาผู้เรียน: รับไฟล์ที่มีคอลัมน์ลำดับ (#) นำหน้า เช่น คัดลอกจากหน้ารายการกิจกรรม
+        $shift = $key === 'dev_act' && $rows && in_array(trim((string) ($rows[0][0] ?? '')), ['#', 'ลำดับ', 'ที่', 'ลำดับที่'], true) ? 1 : 0;
         foreach ($rows as $i => $r) {
+            $r = $shift ? array_slice($r, $shift) : $r;
             // ข้ามแถวหัวตาราง
-            if ($i === 0 && trim((string) ($r[0] ?? '')) === $headers[0]) {
+            if ($i === 0 && (trim((string) ($r[0] ?? '')) === $headers[0] || ($key === 'dev_act' && str_starts_with(trim((string) ($r[0] ?? '')), 'รหัส')))) {
                 continue;
             }
             if (!array_filter($r, fn($v) => trim((string) $v) !== '')) {
@@ -830,7 +884,8 @@ function adm_csv_import(bool $post)
         $rows .= zrow([++$i, '<a id="'.$k.'"></a><b>'.h($label).'</b><br><span class="gray_12">'.h($mods[$mod][3] ?? $mods[$mod][0]).'</span>', '<span style="font-size:11px">'.h(implode(', ', array_keys($cols))).'</span><br><span class="gray_12" style="font-size:11px">'.h($note).'</span>',
             ['<a href="'.a_url('csv_import', '&tpl='.$k).'"><i class="fa fa-download"></i> ไฟล์ตัวอย่าง</a><br>'.(in_array($k, ['courses', 'enroll', 'scores'], true) ? '<select style="font-size:11px;height:20px;margin:2px 0" onchange="var a=this.parentNode.querySelector(\'a.exp\');a.href=a.href.replace(/&y=\\d*/,\'\')+(this.value?\'&y=\'+this.value:\'\')">'.$yopt.'</select><br>' : '').'<a class="exp" href="'.a_url('csv_import', '&export='.$k).'" style="color:#1E8449"><i class="fa fa-download"></i> ข้อมูลเดิมในระบบ</a>', ' align="center" style="white-space:nowrap"'],
             ['<form method="post" enctype="multipart/form-data" action="'.h(a_url('csv_import', '&set='.$k)).'" style="margin:0;white-space:nowrap"><input type="hidden" name="set" value="'.$k.'"/>'
-                .'<input type="file" name="csv" accept=".csv,.txt" required style="width:190px;font-size:11px"/> <input type="submit" value="นำเข้า" class="general radius" style="height:24px"/></form>', ' align="center"']], $i);
+                .'<input type="file" name="csv" accept=".csv,.txt" required style="width:190px;font-size:11px"/> <input type="submit" value="นำเข้า" class="general radius" style="height:24px"/>'
+                .($k === 'dev_act' ? '<br><label style="font-size:11px;color:#C0392B"><input type="checkbox" name="replace" value="1" onclick="return !this.checked||confirm(\'ลบรายการกิจกรรมพัฒนาผู้เรียนเดิมทั้งหมด แล้วใช้รายการจากไฟล์แทน?\')"/> ลบรายการเดิมทั้งหมดก่อน (แทนที่)</label>' : '').'</form>', ' align="center"']], $i);
     }
     $help = '<p style="width:983px;margin:0 auto 8px;text-align:left" class="gray_12">ขั้นตอน: 1) ดาวน์โหลดไฟล์ตัวอย่าง 2) กรอกข้อมูลใน Excel ตามหัวคอลัมน์ (ลบแถวตัวอย่างออก) 3) บันทึกเป็น CSV (UTF-8) 4) เลือกไฟล์แล้วกด "นำเข้า"<br>'
         .'แก้ไขข้อมูลเดิม: กด "ข้อมูลเดิมในระบบ" เพื่อดาวน์โหลดข้อมูลที่มีอยู่ (รายวิชา/ลงทะเบียน/ผลการเรียน ได้ทุกปีการศึกษา หรือเลือกเฉพาะปี / ชุมนุม/พฤติกรรม/ทุน/การลา/ค่าบำรุง/การชำระเงิน เป็นของภาคเรียนที่เลือกดู '.yt().' — เปลี่ยนภาคเรียนด้านบนเพื่อดาวน์โหลดภาคอื่น) แก้ไขใน Excel แล้วนำเข้ากลับ — รหัสผ่านบุคลากรเว้นว่างไว้ (ไม่เปลี่ยนรหัสผ่านเดิม)<br>'

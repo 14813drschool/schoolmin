@@ -66,18 +66,60 @@ function tt_periods(): array
     $p = [];
     foreach (md_rows('periods') as $r) {
         $d = json_decode((string) $r['value'], true) ?: [];
-        $no = (int) ($d['no'] ?? 0);
+        $no = (int) preg_replace('/\D+/', '', tt_ar((string) ($d['no'] ?? '')));   // รับเลขไทย/ข้อความ เช่น "คาบที่ ๓"
         if (($d['type'] ?? '') !== 'break' && $no >= 1 && $no <= 15) {
-            $p[$no] = [(string) ($d['start'] ?? ''), (string) ($d['end'] ?? ''), (string) ($d['note'] ?? '')];
+            $p[$no] = [tt_hm((string) ($d['start'] ?? '')), tt_hm((string) ($d['end'] ?? '')), (string) ($d['note'] ?? '')];
         }
     }
     ksort($p);
+    // ตั้งค่าไว้ไม่ครบ (เช่น เพิ่มไว้แค่คาบที่ ๕) — เติมคาบที่ขาดถึงคาบสุดท้ายที่มีวิชาจัดไว้ ไม่ให้ตารางที่จัดแล้วหายไป
+    $GLOBALS['tt_periods_filled'] = false;
+    if ($p && array_keys($p) !== range(1, count($p))) {
+        $n = max(max(array_keys($p)), tt_max_used_period());
+        $mm = fn($t) => preg_match('/^(\d{2}):(\d{2})$/', $t, $m) ? (int) $m[1] * 60 + (int) $m[2] : null;
+        $hm = fn($x) => sprintf('%02d:%02d', intdiv(max(0, $x), 60) % 24, max(0, $x) % 60);
+        $t = [];
+        foreach ($p as $no => [$a, $b]) {
+            if ($mm($a) !== null && $mm($b) !== null) {
+                $t[$no] = [$mm($a), $mm($b)];
+            }
+        }
+        for ($i = $n; $i >= 1; $i--) {
+            if (!isset($t[$i]) && isset($t[$i + 1]) && !isset($p[$i])) {
+                $t[$i] = [$t[$i + 1][0] - 50, $t[$i + 1][0]];
+            }
+        }
+        for ($i = 1; $i <= $n; $i++) {
+            if (!isset($t[$i])) {
+                $st = isset($t[$i - 1]) ? $t[$i - 1][1] : 8 * 60 + 30;
+                $t[$i] = [$st, $st + 50];
+            }
+            if (!isset($p[$i])) {
+                $p[$i] = [$hm($t[$i][0]), $hm($t[$i][1]), ''];
+            }
+        }
+        ksort($p);
+        $GLOBALS['tt_periods_filled'] = true;
+    }
     if (!$p) {
         foreach (['08:30', '09:20', '10:10', '11:00', '12:50', '13:40', '14:30', '15:20'] as $i => $s) {
             $p[$i + 1] = [$s, date('H:i', strtotime($s) + 50 * 60), ''];
         }
     }
     return $p;
+}
+
+/** เลขไทย → อารบิก */
+function tt_ar(string $s): string
+{
+    return strtr($s, ['๐' => '0', '๑' => '1', '๒' => '2', '๓' => '3', '๔' => '4', '๕' => '5', '๖' => '6', '๗' => '7', '๘' => '8', '๙' => '9']);
+}
+
+/** เวลา "8.30" / "๐๘:๓๐" / "08:30:00" → "08:30" (รูปแบบอื่นคืนตามเดิม) */
+function tt_hm(string $s): string
+{
+    $s = trim(tt_ar($s));
+    return preg_match('/^([01]?\d|2[0-3])\s*[:.]\s*([0-5]\d)/', $s, $m) ? sprintf('%02d:%02d', $m[1], $m[2]) : $s;
 }
 
 /** ช่วงพัก [หลังคาบที่ => [ชื่อ, เริ่ม, สิ้นสุด]] — ยังไม่เคยตั้งค่า: เว้นช่วงระหว่างคาบตั้งแต่ 40 นาที = พักกลางวัน */
@@ -915,7 +957,7 @@ function tt_periods_save(array $type, array $name, array $start, array $end): ar
 {
     $rows = [];
     $err = [];
-    $tm = fn($x) => preg_match('/^([01]?\d|2[0-3])[:.]([0-5]\d)$/', trim((string) $x), $m) ? sprintf('%02d:%02d', $m[1], $m[2]) : null;
+    $tm = fn($x) => preg_match('/^([01]?\d|2[0-3])[:.]([0-5]\d)$/', trim(tt_ar((string) $x)), $m) ? sprintf('%02d:%02d', $m[1], $m[2]) : null;
     foreach (array_values($type) as $i => $t) {
         $t = $t === 'b' ? 'b' : 'p';
         $s = $tm($start[$i] ?? '');
@@ -1083,11 +1125,8 @@ function adm_periods(bool $post)
             }
         }
     }
-    $gap = $pers && array_keys($pers) !== range(1, count($pers));   // เลขคาบไม่ต่อเนื่อง เช่น มีแต่คาบที่ ๕
-    if ($gap && !$post && !isset($_GET['fill'])) {
-        // ห้ามแสดงแบบนับใหม่ (คาบที่ ๕ จะกลายเป็นคาบที่ ๑ เมื่อบันทึก) — เติมคาบที่ขาดให้ครบก่อน
-        $rows = tt_period_fill_rows();
-        $msg .= msg_box('เลขคาบในการตั้งค่าไม่ต่อเนื่อง (มีเฉพาะคาบที่ '.implode(', ', array_keys($pers)).') ระบบเติมคาบที่ขาดให้ในตารางด้านล่างแล้ว (ยังไม่บันทึก) — ตรวจ/แก้เวลาให้ถูกต้อง แล้วกด "บันทึก" วิชาที่จัดไว้จะกลับมาแสดงตามคาบเดิม', false);
+    if (!empty($GLOBALS['tt_periods_filled']) && !$post && !isset($_GET['fill'])) {
+        $msg .= msg_box('การตั้งค่าคาบเดิมมีไม่ครบ (บันทึกไว้บางคาบ) ระบบเติมคาบที่ขาดให้อัตโนมัติแล้ว ตารางเรียนและหน้าพิมพ์แสดงครบทุกคาบ — เวลาของคาบที่เติมเป็นค่าประมาณ ตรวจ/แก้เวลาด้านล่าง แล้วกด "บันทึก" เพื่อยืนยัน', false);
     } elseif (($orph || tt_max_used_period() > ($pers ? max(array_keys($pers)) : 0)) && !$post && !isset($_GET['fill'])) {
         $msg .= msg_box(($orph ? 'มีวิชาที่จัดไว้ในคาบที่ไม่มีในการตั้งค่าตอนนี้ '.$orph.' ช่อง (ภาคเรียนนี้) — ข้อมูลยังอยู่ครบ แค่ไม่แสดง' : 'เลขคาบในการตั้งค่าไม่ต่อเนื่อง')
             .' &nbsp; <a href="'.h(a_url('periods', '&fill=1')).'"><b>» กดเพื่อเติมคาบที่หายไปให้ครบ</b></a> (ตรวจเวลาแล้วกดบันทึก วิชาจะกลับมาแสดงตามคาบเดิม)', false);
